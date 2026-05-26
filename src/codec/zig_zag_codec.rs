@@ -8,7 +8,12 @@
  *
  ******************************************************************************/
 
-use core::marker::PhantomData;
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+};
+
+use qubit_codec::Codec;
 
 use crate::{
     DecodePolicy,
@@ -32,7 +37,7 @@ macro_rules! impl_zig_zag_codec {
         where
             P: DecodePolicy,
         {
-            /// Minimum number of bytes required to encode or decode this type.
+            /// Maximum number of bytes required to encode or decode this type.
             pub const REQUIRED_MIN_BUFFER_LEN: usize = Leb128Codec::<$unsigned, NonStrict>::REQUIRED_MIN_BUFFER_LEN;
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
@@ -123,6 +128,45 @@ macro_rules! impl_zig_zag_codec {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for this type.
                 unsafe { Leb128Codec::<$unsigned, NonStrict>::write_unchecked(output, index, encoded) }
+            }
+        }
+
+        unsafe impl<P> Codec<$signed, u8> for ZigZagCodec<$signed, P>
+        where
+            P: DecodePolicy,
+        {
+            type DecodeError = Leb128DecodeError;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                1
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(
+                &self,
+                input: &[u8],
+                index: usize,
+            ) -> Result<($signed, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                unsafe { Self::read_unchecked(input, index) }
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $signed,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                Ok(unsafe { Self::write_unchecked(output, index, value) })
             }
         }
     };

@@ -18,6 +18,7 @@ pub use crate::{
     BinaryCodec,
     ByteOrder,
     ByteOrderSpec,
+    Codec,
     Coder,
     CoderProgress,
     CoderStatus,

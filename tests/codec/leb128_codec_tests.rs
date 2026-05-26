@@ -1,3 +1,4 @@
+use qubit_codec::Codec;
 use qubit_codec_binary::{
     Leb128Codec,
     Leb128DecodeErrorKind,
@@ -36,6 +37,47 @@ fn test_leb128_codec_reads_and_writes_unsigned_values_unchecked() {
     let len = unsafe { Leb128Codec::<u16, NonStrict>::write_unchecked(&mut output, 0, u16::MAX) };
     let decoded = unsafe { Leb128Codec::<u16, NonStrict>::read_unchecked(&output, 0) }.expect("u16::MAX should decode");
     assert_eq!((u16::MAX, len), decoded);
+}
+
+#[test]
+fn test_leb128_codec_encodes_and_decodes_through_codec_trait() {
+    let codec = Leb128Codec::<u16, NonStrict>::default();
+    let mut output = [0u8; Leb128Codec::<u16, NonStrict>::REQUIRED_MIN_BUFFER_LEN + 2];
+
+    assert_eq!(1, codec.min_units_per_value());
+    assert_eq!(
+        Leb128Codec::<u16, NonStrict>::REQUIRED_MIN_BUFFER_LEN,
+        codec.max_units_per_value()
+    );
+
+    let written =
+        unsafe { Codec::encode_unchecked(&codec, 300, &mut output, 1) }.expect("LEB128 encoding should be infallible");
+    assert_eq!(2, written);
+    assert_eq!([0x00, 0xac, 0x02, 0x00, 0x00], output);
+
+    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }.expect("valid LEB128 value should decode");
+    assert_eq!((300, 2), decoded);
+}
+
+#[test]
+fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
+    let codec = Leb128Codec::<i16, NonStrict>::default();
+    let mut output = [0u8; Leb128Codec::<i16, NonStrict>::REQUIRED_MIN_BUFFER_LEN + 2];
+
+    assert_eq!(1, codec.min_units_per_value());
+    assert_eq!(
+        Leb128Codec::<i16, NonStrict>::REQUIRED_MIN_BUFFER_LEN,
+        codec.max_units_per_value()
+    );
+
+    let written = unsafe { Codec::encode_unchecked(&codec, -300, &mut output, 1) }
+        .expect("signed LEB128 encoding should be infallible");
+    assert_eq!(2, written);
+    assert_eq!([0x00, 0xd4, 0x7d, 0x00, 0x00], output);
+
+    let decoded =
+        unsafe { Codec::decode_unchecked(&codec, &output, 1) }.expect("valid signed LEB128 value should decode");
+    assert_eq!((-300, 2), decoded);
 }
 
 #[test]

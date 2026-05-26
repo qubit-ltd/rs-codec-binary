@@ -1,3 +1,4 @@
+use qubit_codec::Codec;
 use qubit_codec_binary::{
     Leb128DecodeErrorKind,
     NonStrict,
@@ -28,6 +29,26 @@ fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
 
     let decoded =
         unsafe { ZigZagCodec::<i16, NonStrict>::read_unchecked(&output, 1) }.expect("valid i16 should decode");
+    assert_eq!((-300, 2), decoded);
+}
+
+#[test]
+fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
+    let codec = ZigZagCodec::<i16, NonStrict>::default();
+    let mut output = [0u8; ZigZagCodec::<i16, NonStrict>::REQUIRED_MIN_BUFFER_LEN + 2];
+
+    assert_eq!(1, codec.min_units_per_value());
+    assert_eq!(
+        ZigZagCodec::<i16, NonStrict>::REQUIRED_MIN_BUFFER_LEN,
+        codec.max_units_per_value()
+    );
+
+    let written =
+        unsafe { Codec::encode_unchecked(&codec, -300, &mut output, 1) }.expect("ZigZag encoding should be infallible");
+    assert_eq!(2, written);
+    assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
+
+    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }.expect("valid ZigZag value should decode");
     assert_eq!((-300, 2), decoded);
 }
 

@@ -33,6 +33,7 @@ pub use qubit_codec::{
     BigEndian,
     ByteOrder,
     ByteOrderSpec,
+    Codec,
     Coder,
     CoderProgress,
     CoderStatus,

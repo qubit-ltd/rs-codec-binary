@@ -9,9 +9,12 @@
  ******************************************************************************/
 
 use core::{
+    convert::Infallible,
     marker::PhantomData,
     ptr,
 };
+
+use qubit_codec::Codec;
 
 use crate::{
     BigEndian,
@@ -20,9 +23,9 @@ use crate::{
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
-/// `BinaryCodec` is intentionally a static namespace. It does not provide safe
-/// checked helpers, constructors, or instance methods. Callers must validate
-/// buffer lengths before entering the hot path.
+/// `BinaryCodec` is intentionally a zero-sized codec type. It keeps the legacy
+/// static unchecked helpers and also implements [`Codec`] for generic codec
+/// pipelines. Callers must validate buffer lengths before entering the hot path.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BinaryCodec<T, O> {
     marker: PhantomData<fn() -> (T, O)>,
@@ -75,6 +78,37 @@ impl<O> BinaryCodec<u8, O> {
     }
 }
 
+unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
+    type DecodeError = Infallible;
+    type EncodeError = Infallible;
+
+    #[inline(always)]
+    fn min_units_per_value(&self) -> usize {
+        Self::REQUIRED_MIN_BUFFER_LEN
+    }
+
+    #[inline(always)]
+    fn max_units_per_value(&self) -> usize {
+        Self::REQUIRED_MIN_BUFFER_LEN
+    }
+
+    #[inline(always)]
+    unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(u8, usize), Self::DecodeError> {
+        // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+        let value = unsafe { Self::read_unchecked(input, index) };
+        Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+    }
+
+    #[inline(always)]
+    unsafe fn encode_unchecked(&self, value: u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+        // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+        unsafe {
+            Self::write_unchecked(output, index, value);
+        }
+        Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+    }
+}
+
 impl<O> BinaryCodec<i8, O> {
     /// Minimum number of bytes required to encode or decode this type.
     pub const REQUIRED_MIN_BUFFER_LEN: usize = 1;
@@ -119,6 +153,37 @@ impl<O> BinaryCodec<i8, O> {
         unsafe {
             *output.as_mut_ptr().add(index) = value as u8;
         }
+    }
+}
+
+unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
+    type DecodeError = Infallible;
+    type EncodeError = Infallible;
+
+    #[inline(always)]
+    fn min_units_per_value(&self) -> usize {
+        Self::REQUIRED_MIN_BUFFER_LEN
+    }
+
+    #[inline(always)]
+    fn max_units_per_value(&self) -> usize {
+        Self::REQUIRED_MIN_BUFFER_LEN
+    }
+
+    #[inline(always)]
+    unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(i8, usize), Self::DecodeError> {
+        // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+        let value = unsafe { Self::read_unchecked(input, index) };
+        Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+    }
+
+    #[inline(always)]
+    unsafe fn encode_unchecked(&self, value: i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+        // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+        unsafe {
+            Self::write_unchecked(output, index, value);
+        }
+        Ok(Self::REQUIRED_MIN_BUFFER_LEN)
     }
 }
 
@@ -204,6 +269,42 @@ macro_rules! impl_integer_binary_codec {
             }
         }
 
+        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, BigEndian> {
+            type DecodeError = Infallible;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                let value = unsafe { Self::read_unchecked(input, index) };
+                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                unsafe {
+                    Self::write_unchecked(output, index, value);
+                }
+                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+            }
+        }
+
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
             pub const REQUIRED_MIN_BUFFER_LEN: usize = $len;
@@ -281,6 +382,42 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+            }
+        }
+
+        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, LittleEndian> {
+            type DecodeError = Infallible;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                let value = unsafe { Self::read_unchecked(input, index) };
+                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                unsafe {
+                    Self::write_unchecked(output, index, value);
+                }
+                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
             }
         }
     };
@@ -368,6 +505,42 @@ macro_rules! impl_float_binary_codec {
             }
         }
 
+        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, BigEndian> {
+            type DecodeError = Infallible;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                let value = unsafe { Self::read_unchecked(input, index) };
+                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                unsafe {
+                    Self::write_unchecked(output, index, value);
+                }
+                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+            }
+        }
+
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
             pub const REQUIRED_MIN_BUFFER_LEN: usize = $len;
@@ -445,6 +618,42 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+            }
+        }
+
+        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, LittleEndian> {
+            type DecodeError = Infallible;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                let value = unsafe { Self::read_unchecked(input, index) };
+                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                unsafe {
+                    Self::write_unchecked(output, index, value);
+                }
+                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
             }
         }
     };

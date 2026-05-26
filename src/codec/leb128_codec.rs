@@ -8,7 +8,12 @@
  *
  ******************************************************************************/
 
-use core::marker::PhantomData;
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+};
+
+use qubit_codec::Codec;
 
 use crate::{
     DecodePolicy,
@@ -32,7 +37,7 @@ macro_rules! impl_unsigned_leb128_codec {
         where
             P: DecodePolicy,
         {
-            /// Minimum number of bytes required to encode or decode this type.
+            /// Maximum number of bytes required to encode or decode this type.
             pub const REQUIRED_MIN_BUFFER_LEN: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
@@ -132,6 +137,41 @@ macro_rules! impl_unsigned_leb128_codec {
                 unsafe { write_uleb_unchecked(output, index, value as u128) }
             }
         }
+
+        unsafe impl<P> Codec<$ty, u8> for Leb128Codec<$ty, P>
+        where
+            P: DecodePolicy,
+        {
+            type DecodeError = Leb128DecodeError;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                1
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                unsafe { Self::read_unchecked(input, index) }
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                Ok(unsafe { Self::write_unchecked(output, index, value) })
+            }
+        }
     };
 }
 
@@ -141,7 +181,7 @@ macro_rules! impl_signed_leb128_codec {
         where
             P: DecodePolicy,
         {
-            /// Minimum number of bytes required to encode or decode this type.
+            /// Maximum number of bytes required to encode or decode this type.
             pub const REQUIRED_MIN_BUFFER_LEN: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
@@ -239,6 +279,41 @@ macro_rules! impl_signed_leb128_codec {
             pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $ty) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for this type.
                 unsafe { write_sleb_unchecked(output, index, value as i128) }
+            }
+        }
+
+        unsafe impl<P> Codec<$ty, u8> for Leb128Codec<$ty, P>
+        where
+            P: DecodePolicy,
+        {
+            type DecodeError = Leb128DecodeError;
+            type EncodeError = Infallible;
+
+            #[inline(always)]
+            fn min_units_per_value(&self) -> usize {
+                1
+            }
+
+            #[inline(always)]
+            fn max_units_per_value(&self) -> usize {
+                Self::REQUIRED_MIN_BUFFER_LEN
+            }
+
+            #[inline(always)]
+            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                unsafe { Self::read_unchecked(input, index) }
+            }
+
+            #[inline(always)]
+            unsafe fn encode_unchecked(
+                &self,
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> Result<usize, Self::EncodeError> {
+                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                Ok(unsafe { Self::write_unchecked(output, index, value) })
             }
         }
     };

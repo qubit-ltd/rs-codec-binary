@@ -21,13 +21,14 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - 用于 ZigZag signed integer mapping 的 `ZigZagCodec`。
 - `Strict` 和 `NonStrict` 解码策略。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
-- 从 `qubit-codec` 重导出的 `ByteOrder`、`BigEndian`、`LittleEndian` 和
-  `Coder` core primitive。
+- 从 `qubit-codec` 重导出的 `Codec`、`ByteOrder`、`BigEndian`、
+  `LittleEndian` 和 `Coder` core primitive。
 
 ## 设计目标
 
 - **缓冲区优先**：直接操作调用方持有的 byte slice，不要求 `Read` 或 `Write`。
-- **热路径效率**：为已经验证过边界的调用方提供 unchecked 静态 codec 方法。
+- **热路径效率**：为已经验证过边界的调用方提供 unchecked 静态 codec 方法，并
+  实现 `Codec<Value, u8>` 以接入通用 codec pipeline。
 - **分层清晰**：只依赖 `qubit-codec`，stream adapter 交给 `qubit-io-binary`。
 - **规范编码**：始终写出 canonical LEB128，同时允许配置 decode strictness。
 - **强类型字节序**：同时支持运行时和类型级 endian 选择。
@@ -57,6 +58,8 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 ### 聚焦的公开 API
 
 - **`prelude` 模块**：导入 binary codec 类型和核心字节序标记。
+- **核心 codec trait**：`BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec`
+  实现 `qubit_codec::Codec<Value, u8>`。
 - **不包含 `std::io` adapter**：stream helper 位于 `qubit-io-binary`。
 
 ## 文档
@@ -101,6 +104,7 @@ assert_eq!(2, written);
 
 | 条目 | 描述 |
 |------|------|
+| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 fixed-width scalar |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前标量类型所需的最少字节数 |
 | `read_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
 | `write_unchecked(output, index, value)` | 无边界检查编码一个 fixed-width scalar |
@@ -109,6 +113,7 @@ assert_eq!(2, written);
 
 | 条目 | 描述 |
 |------|------|
+| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 LEB128 值 |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前整数类型最多需要的字节数 |
 | `read_unchecked(input, index)` | 解码一个完整 LEB128 值 |
 | `read_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
@@ -118,6 +123,7 @@ assert_eq!(2, written);
 
 | 条目 | 描述 |
 |------|------|
+| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前 signed integer 类型最多需要的字节数 |
 | `read_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
 | `read_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
@@ -138,9 +144,9 @@ reader/writer 使用 `qubit-io-binary`。
 
 ## 性能考虑
 
-`BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec` 都是类型级命名空间，不产生运行时分配。
-它们的 unchecked 方法面向已经验证缓冲区容量的热路径，或被 buffered stream adapter
-在内部使用。
+`BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec` 都是零大小 codec 类型，不产生运行时分配。
+它们的 unchecked 方法和 `Codec<Value, u8>` 实现面向已经验证缓冲区容量的热路径，或被
+buffered stream adapter 在内部使用。
 
 ## 测试与代码覆盖率
 

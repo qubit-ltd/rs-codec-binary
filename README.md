@@ -22,15 +22,16 @@ This crate provides:
 - `ZigZagCodec` for ZigZag signed integer mapping over unsigned LEB128.
 - `Strict` and `NonStrict` decode policies.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Re-exports of `ByteOrder`, `BigEndian`, `LittleEndian`, and `Coder` core
-  primitives from `qubit-codec`.
+- Re-exports of `Codec`, `ByteOrder`, `BigEndian`, `LittleEndian`, and `Coder`
+  core primitives from `qubit-codec`.
 
 ## Design Goals
 
 - **Buffer First**: operate on caller-owned byte slices without requiring
   `Read` or `Write`.
 - **Hot-Path Efficiency**: provide unchecked static codec methods for callers
-  that already validated buffer bounds.
+  that already validated buffer bounds, plus `Codec<Value, u8>` implementations
+  for generic codec pipelines.
 - **Precise Layering**: depend only on `qubit-codec`, leaving stream adapters to
   `qubit-io-binary`.
 - **Canonical Encoding**: always emit canonical LEB128 bytes while allowing
@@ -66,6 +67,8 @@ This crate provides:
 ### Focused Public API
 
 - **`prelude` module**: imports binary codec types and core byte-order markers.
+- **Core codec trait**: `BinaryCodec`, `Leb128Codec`, and `ZigZagCodec`
+  implement `qubit_codec::Codec<Value, u8>`.
 - **No `std::io` adapters**: stream helpers live in `qubit-io-binary`.
 
 ## Documentation
@@ -110,6 +113,7 @@ assert_eq!(2, written);
 
 | Item | Description |
 |------|-------------|
+| `Codec<Value, u8>` | Decode and encode one fixed-width scalar through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Minimum bytes required for the scalar type |
 | `read_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
 | `write_unchecked(output, index, value)` | Encode one fixed-width scalar without bounds checks |
@@ -118,6 +122,7 @@ assert_eq!(2, written);
 
 | Item | Description |
 |------|-------------|
+| `Codec<Value, u8>` | Decode and encode one LEB128 value through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the integer type |
 | `read_unchecked(input, index)` | Decode one complete LEB128 value |
 | `read_available_unchecked(input, index, available)` | Decode from a partial available buffer |
@@ -127,6 +132,7 @@ assert_eq!(2, written);
 
 | Item | Description |
 |------|-------------|
+| `Codec<Value, u8>` | Decode and encode one ZigZag LEB128 value through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the signed integer type |
 | `read_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
 | `read_available_unchecked(input, index, available)` | Decode from a partial available buffer |
@@ -147,10 +153,10 @@ and `qubit-io-binary` for stream-oriented binary readers and writers.
 
 ## Performance Considerations
 
-`BinaryCodec`, `Leb128Codec`, and `ZigZagCodec` are type-level namespaces with no
-runtime allocation. Their unchecked methods are intended for validated hot paths
-where a caller has already checked buffer capacity or is operating inside a
-buffered stream adapter.
+`BinaryCodec`, `Leb128Codec`, and `ZigZagCodec` are zero-sized codec types with
+no runtime allocation. Their unchecked methods and `Codec<Value, u8>`
+implementations are intended for validated hot paths where a caller has already
+checked buffer capacity or is operating inside a buffered stream adapter.
 
 ## Testing & Code Coverage
 
