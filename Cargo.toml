@@ -1,0 +1,38 @@
+[package]
+name = "qubit-codec-binary"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+authors = ["Haixing Hu <starfish.hu@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/qubit-ltd/rs-codec-binary"
+description = "Buffer-oriented binary codecs for Rust"
+homepage = "https://github.com/qubit-ltd/rs-codec-binary"
+documentation = "https://docs.rs/qubit-codec-binary"
+readme = "README.md"
+keywords = ["codec", "binary", "leb128", "zigzag", "qubit"]
+categories = ["encoding", "parser-implementations"]
+include = [
+    "/Cargo.toml",
+    "/LICENSE",
+    "/README.md",
+    "/README.zh_CN.md",
+    "/RUST_CODING_STYLE.md",
+    "/RUST_CODING_STYLE.zh_CN.md",
+    "/doc/**/user_guide*.md",
+    "/examples/**",
+    "/resources/**",
+    "/src/**",
+    "/tests/**",
+]
+
+[lib]
+name = "qubit_codec_binary"
+doctest = true
+
+[dependencies]
+qubit-codec = { version = "0.1", path = "../rs-codec" }
+thiserror = "2.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
