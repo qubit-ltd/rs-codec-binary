@@ -94,6 +94,8 @@ unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
 
     #[inline(always)]
     unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(u8, usize), Self::DecodeError> {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
         // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
         let value = unsafe { Self::read_unchecked(input, index) };
         Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -101,6 +103,8 @@ unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
 
     #[inline(always)]
     unsafe fn encode_unchecked(&self, value: u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
         unsafe {
             Self::write_unchecked(output, index, value);
@@ -172,6 +176,8 @@ unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
 
     #[inline(always)]
     unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(i8, usize), Self::DecodeError> {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
         // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
         let value = unsafe { Self::read_unchecked(input, index) };
         Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -179,6 +185,8 @@ unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
 
     #[inline(always)]
     unsafe fn encode_unchecked(&self, value: i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
         unsafe {
             Self::write_unchecked(output, index, value);
@@ -285,6 +293,8 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 let value = unsafe { Self::read_unchecked(input, index) };
                 Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -297,6 +307,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
                 unsafe {
                     Self::write_unchecked(output, index, value);
@@ -401,6 +413,8 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 let value = unsafe { Self::read_unchecked(input, index) };
                 Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -413,6 +427,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
                 unsafe {
                     Self::write_unchecked(output, index, value);
@@ -521,6 +537,8 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 let value = unsafe { Self::read_unchecked(input, index) };
                 Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -533,6 +551,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
                 unsafe {
                     Self::write_unchecked(output, index, value);
@@ -637,6 +657,8 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 let value = unsafe { Self::read_unchecked(input, index) };
                 Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
@@ -649,6 +671,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
                 unsafe {
                     Self::write_unchecked(output, index, value);

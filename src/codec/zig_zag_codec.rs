@@ -154,6 +154,8 @@ macro_rules! impl_zig_zag_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($signed, usize), Self::DecodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 unsafe { Self::read_unchecked(input, index) }
             }
@@ -165,6 +167,8 @@ macro_rules! impl_zig_zag_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
+                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
                 Ok(unsafe { Self::write_unchecked(output, index, value) })
             }
