@@ -11,7 +11,7 @@
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
 
 本库从 `qubit-codec` 重导出 `ByteOrder`、`BigEndian`、`LittleEndian` 和
-`Coder`。
+`Transcoder`。
 
 ## Fixed-Width 值
 
@@ -23,7 +23,7 @@ use qubit_codec_binary::{
 
 let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::write_unchecked(&mut output, 0, 0x0102_0304);
+    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut output, 0);
 }
 assert_eq!([1, 2, 3, 4], output);
 ```
@@ -40,11 +40,11 @@ use qubit_codec_binary::{
 };
 
 let mut unsigned = [0_u8; Leb128Codec::<u64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::write_unchecked(&mut unsigned, 0, 300) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut unsigned, 0) };
 assert_eq!(2, written);
 
 let mut signed = [0_u8; ZigZagCodec::<i64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
-let written = unsafe { ZigZagCodec::<i64, NonStrict>::write_unchecked(&mut signed, 0, -42) };
+let written = unsafe { ZigZagCodec::<i64, NonStrict>::encode_unchecked(-42, &mut signed, 0) };
 assert_eq!(1, written);
 ```
 

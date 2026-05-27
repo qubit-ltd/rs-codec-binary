@@ -22,7 +22,7 @@ This crate provides:
 - `ZigZagCodec` for ZigZag signed integer mapping over unsigned LEB128.
 - `Strict` and `NonStrict` decode policies.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Re-exports of `Codec`, `ByteOrder`, `BigEndian`, `LittleEndian`, and `Coder`
+- Re-exports of `Codec`, `ByteOrder`, `BigEndian`, `LittleEndian`, and `Transcoder`
   core primitives from `qubit-codec`.
 
 ## Design Goals
@@ -47,7 +47,7 @@ This crate provides:
 - **Integer Coverage**: encodes and decodes primitive signed and unsigned
   integer types.
 - **Byte Order Support**: supports `BigEndian` and `LittleEndian` type markers.
-- **Unchecked Hot Path**: `read_unchecked` and `write_unchecked` avoid repeated
+- **Unchecked Hot Path**: `decode_unchecked` and `encode_unchecked` avoid repeated
   bounds checks after the caller validates capacity.
 
 ### LEB128 Values
@@ -98,12 +98,12 @@ use qubit_codec_binary::{
 
 let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::write_unchecked(&mut fixed, 0, 0x0102_0304);
+    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
 let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::write_unchecked(&mut compact, 0, 300) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
 
@@ -115,8 +115,8 @@ assert_eq!(2, written);
 |------|-------------|
 | `Codec<Value, u8>` | Decode and encode one fixed-width scalar through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Minimum bytes required for the scalar type |
-| `read_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
-| `write_unchecked(output, index, value)` | Encode one fixed-width scalar without bounds checks |
+| `decode_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
+| `encode_unchecked(value, output, index)` | Encode one fixed-width scalar without bounds checks |
 
 ### `Leb128Codec` Operations
 
@@ -124,9 +124,9 @@ assert_eq!(2, written);
 |------|-------------|
 | `Codec<Value, u8>` | Decode and encode one LEB128 value through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the integer type |
-| `read_unchecked(input, index)` | Decode one complete LEB128 value |
-| `read_available_unchecked(input, index, available)` | Decode from a partial available buffer |
-| `write_unchecked(output, index, value)` | Encode one canonical LEB128 value |
+| `decode_unchecked(input, index)` | Decode one complete LEB128 value |
+| `decode_available_unchecked(input, index, available)` | Decode from a partial available buffer |
+| `encode_unchecked(value, output, index)` | Encode one canonical LEB128 value |
 
 ### `ZigZagCodec` Operations
 
@@ -134,9 +134,9 @@ assert_eq!(2, written);
 |------|-------------|
 | `Codec<Value, u8>` | Decode and encode one ZigZag LEB128 value through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the signed integer type |
-| `read_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
-| `read_available_unchecked(input, index, available)` | Decode from a partial available buffer |
-| `write_unchecked(output, index, value)` | Encode signed integer as ZigZag plus unsigned LEB128 |
+| `decode_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
+| `decode_available_unchecked(input, index, available)` | Decode from a partial available buffer |
+| `encode_unchecked(value, output, index)` | Encode signed integer as ZigZag plus unsigned LEB128 |
 
 ### Decode Policies
 
@@ -186,7 +186,7 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 
 Runtime dependencies are intentionally small:
 
-- `qubit-codec` provides shared byte-order and coder primitives.
+- `qubit-codec` provides shared byte-order and transcoder primitives.
 - `thiserror` provides the public LEB128 error type implementation.
 
 ## License

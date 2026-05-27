@@ -22,7 +22,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - `Strict` 和 `NonStrict` 解码策略。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
 - 从 `qubit-codec` 重导出的 `Codec`、`ByteOrder`、`BigEndian`、
-  `LittleEndian` 和 `Coder` core primitive。
+  `LittleEndian` 和 `Transcoder` core primitive。
 
 ## 设计目标
 
@@ -40,8 +40,8 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 - **整数覆盖**：支持基础 signed / unsigned integer 类型的编码和解码。
 - **字节序支持**：支持 `BigEndian` 与 `LittleEndian` 类型标记。
-- **Unchecked 热路径**：调用方验证容量后，可用 `read_unchecked` 和
-  `write_unchecked` 避免重复边界检查。
+- **Unchecked 热路径**：调用方验证容量后，可用 `decode_unchecked` 和
+  `encode_unchecked` 避免重复边界检查。
 
 ### LEB128 值
 
@@ -89,12 +89,12 @@ use qubit_codec_binary::{
 
 let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::write_unchecked(&mut fixed, 0, 0x0102_0304);
+    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
 let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::write_unchecked(&mut compact, 0, 300) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
 
@@ -106,8 +106,8 @@ assert_eq!(2, written);
 |------|------|
 | `Codec<Value, u8>` | 通过 core trait 解码和编码一个 fixed-width scalar |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前标量类型所需的最少字节数 |
-| `read_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
-| `write_unchecked(output, index, value)` | 无边界检查编码一个 fixed-width scalar |
+| `decode_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
+| `encode_unchecked(value, output, index)` | 无边界检查编码一个 fixed-width scalar |
 
 ### `Leb128Codec` 操作
 
@@ -115,9 +115,9 @@ assert_eq!(2, written);
 |------|------|
 | `Codec<Value, u8>` | 通过 core trait 解码和编码一个 LEB128 值 |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前整数类型最多需要的字节数 |
-| `read_unchecked(input, index)` | 解码一个完整 LEB128 值 |
-| `read_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
-| `write_unchecked(output, index, value)` | 编码一个 canonical LEB128 值 |
+| `decode_unchecked(input, index)` | 解码一个完整 LEB128 值 |
+| `decode_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
+| `encode_unchecked(value, output, index)` | 编码一个 canonical LEB128 值 |
 
 ### `ZigZagCodec` 操作
 
@@ -125,9 +125,9 @@ assert_eq!(2, written);
 |------|------|
 | `Codec<Value, u8>` | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前 signed integer 类型最多需要的字节数 |
-| `read_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
-| `read_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
-| `write_unchecked(output, index, value)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
+| `decode_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
+| `decode_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
+| `encode_unchecked(value, output, index)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
 
 ### Decode Policy
 
@@ -175,7 +175,7 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 
 运行时依赖保持很少：
 
-- `qubit-codec` 提供共享字节序和 coder 原语。
+- `qubit-codec` 提供共享字节序和 transcoder 原语。
 - `thiserror` 提供公共 LEB128 错误类型实现。
 
 ## 许可证
