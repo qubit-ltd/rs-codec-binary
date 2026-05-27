@@ -26,6 +26,13 @@ use crate::{
 /// `BinaryCodec` is intentionally a zero-sized codec type. It keeps the legacy
 /// static unchecked helpers and also implements [`Codec`] for generic codec
 /// pipelines. Callers must validate buffer lengths before entering the hot path.
+///
+/// # Type Parameters
+///
+/// - `T`: Scalar value type to decode from bytes and encode into bytes.
+/// - `O`: Type-level byte order marker. Multi-byte scalar implementations use
+///   [`BigEndian`] or [`LittleEndian`]. Single-byte scalar implementations
+///   accept any marker because byte order does not affect one-byte values.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BinaryCodec<T, O> {
     marker: PhantomData<fn() -> (T, O)>,
@@ -44,7 +51,7 @@ impl<O> BinaryCodec<u8, O> {
     ///
     /// # Returns
     ///
-    /// Returns the decoded value.
+    /// Returns the decoded value and the number of consumed bytes.
     ///
     /// # Safety
     ///
@@ -52,29 +59,34 @@ impl<O> BinaryCodec<u8, O> {
     /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn read_unchecked(input: &[u8], index: usize) -> u8 {
+    pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> (u8, usize) {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
         // SAFETY: The caller guarantees that the indexed byte is readable.
-        unsafe { *input.as_ptr().add(index) }
+        (unsafe { *input.as_ptr().add(index) }, Self::REQUIRED_MIN_BUFFER_LEN)
     }
 
     /// Encodes `value` into `output` starting at `index` without bounds checks.
     ///
     /// # Parameters
     ///
+    /// - `value`: Value to encode.
     /// - `output`: Destination byte buffer.
     /// - `index`: Start index in `output`.
-    /// - `value`: Value to encode.
     ///
     /// # Safety
     ///
     /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
     /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
     #[inline(always)]
-    pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: u8) {
+    pub unsafe fn encode_unchecked(value: u8, output: &mut [u8], index: usize) -> usize {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
             *output.as_mut_ptr().add(index) = value;
         }
+        Self::REQUIRED_MIN_BUFFER_LEN
     }
 }
 
@@ -94,22 +106,14 @@ unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
 
     #[inline(always)]
     unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(u8, usize), Self::DecodeError> {
-        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
         // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-        let value = unsafe { Self::read_unchecked(input, index) };
-        Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+        Ok(unsafe { Self::decode_unchecked(input, index) })
     }
 
     #[inline(always)]
     unsafe fn encode_unchecked(&self, value: u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
-        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-        unsafe {
-            Self::write_unchecked(output, index, value);
-        }
-        Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+        Ok(unsafe { Self::encode_unchecked(value, output, index) })
     }
 }
 
@@ -126,7 +130,7 @@ impl<O> BinaryCodec<i8, O> {
     ///
     /// # Returns
     ///
-    /// Returns the decoded value.
+    /// Returns the decoded value and the number of consumed bytes.
     ///
     /// # Safety
     ///
@@ -134,29 +138,37 @@ impl<O> BinaryCodec<i8, O> {
     /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn read_unchecked(input: &[u8], index: usize) -> i8 {
+    pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> (i8, usize) {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+
         // SAFETY: The caller guarantees that the indexed byte is readable.
-        unsafe { *input.as_ptr().add(index) as i8 }
+        (
+            unsafe { *input.as_ptr().add(index) as i8 },
+            Self::REQUIRED_MIN_BUFFER_LEN,
+        )
     }
 
     /// Encodes `value` into `output` starting at `index` without bounds checks.
     ///
     /// # Parameters
     ///
+    /// - `value`: Value to encode.
     /// - `output`: Destination byte buffer.
     /// - `index`: Start index in `output`.
-    /// - `value`: Value to encode.
     ///
     /// # Safety
     ///
     /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
     /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
     #[inline(always)]
-    pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: i8) {
+    pub unsafe fn encode_unchecked(value: i8, output: &mut [u8], index: usize) -> usize {
+        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
             *output.as_mut_ptr().add(index) = value as u8;
         }
+        Self::REQUIRED_MIN_BUFFER_LEN
     }
 }
 
@@ -176,22 +188,14 @@ unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
 
     #[inline(always)]
     unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<(i8, usize), Self::DecodeError> {
-        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
         // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-        let value = unsafe { Self::read_unchecked(input, index) };
-        Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+        Ok(unsafe { Self::decode_unchecked(input, index) })
     }
 
     #[inline(always)]
     unsafe fn encode_unchecked(&self, value: i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
-        debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-        unsafe {
-            Self::write_unchecked(output, index, value);
-        }
-        Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+        Ok(unsafe { Self::encode_unchecked(value, output, index) })
     }
 }
 
@@ -213,7 +217,7 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value.
+            /// Returns the decoded value and the number of consumed bytes.
             ///
             /// # Safety
             ///
@@ -224,7 +228,7 @@ macro_rules! impl_integer_binary_codec {
             ///   is valid for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn read_unchecked(input: &[u8], index: usize) -> $ty {
+            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, usize) {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
 
                 // SAFETY:
@@ -236,7 +240,7 @@ macro_rules! impl_integer_binary_codec {
                 // The pointer is valid for an unaligned integer load.
                 let raw = unsafe { ptr::read_unaligned(pointer) };
 
-                <$ty>::from_be(raw)
+                (<$ty>::from_be(raw), Self::REQUIRED_MIN_BUFFER_LEN)
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -247,9 +251,9 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Parameters
             ///
+            /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
             /// - `index`: Start byte index in `output`.
-            /// - `value`: Value to encode.
             ///
             /// # Safety
             ///
@@ -259,7 +263,7 @@ macro_rules! impl_integer_binary_codec {
             /// - `output[index..index + Self::REQUIRED_MIN_BUFFER_LEN]`
             ///   is valid for writing.
             #[inline(always)]
-            pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $ty) {
+            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
 
                 let raw = value.to_be();
@@ -274,6 +278,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+                Self::REQUIRED_MIN_BUFFER_LEN
             }
         }
 
@@ -293,11 +298,8 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-                let value = unsafe { Self::read_unchecked(input, index) };
-                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+                Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
             #[inline(always)]
@@ -307,13 +309,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                unsafe {
-                    Self::write_unchecked(output, index, value);
-                }
-                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+                Ok(unsafe { Self::encode_unchecked(value, output, index) })
             }
         }
 
@@ -333,7 +330,7 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value.
+            /// Returns the decoded value and the number of consumed bytes.
             ///
             /// # Safety
             ///
@@ -344,7 +341,7 @@ macro_rules! impl_integer_binary_codec {
             ///   is valid for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn read_unchecked(input: &[u8], index: usize) -> $ty {
+            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, usize) {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
 
                 // SAFETY:
@@ -356,7 +353,7 @@ macro_rules! impl_integer_binary_codec {
                 // The pointer is valid for an unaligned integer load.
                 let raw = unsafe { ptr::read_unaligned(pointer) };
 
-                <$ty>::from_le(raw)
+                (<$ty>::from_le(raw), Self::REQUIRED_MIN_BUFFER_LEN)
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -367,9 +364,9 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Parameters
             ///
+            /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
             /// - `index`: Start byte index in `output`.
-            /// - `value`: Value to encode.
             ///
             /// # Safety
             ///
@@ -379,7 +376,7 @@ macro_rules! impl_integer_binary_codec {
             /// - `output[index..index + Self::REQUIRED_MIN_BUFFER_LEN]`
             ///   is valid for writing.
             #[inline(always)]
-            pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $ty) {
+            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
 
                 let raw = value.to_le();
@@ -394,6 +391,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+                Self::REQUIRED_MIN_BUFFER_LEN
             }
         }
 
@@ -413,11 +411,8 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-                let value = unsafe { Self::read_unchecked(input, index) };
-                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+                Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
             #[inline(always)]
@@ -427,13 +422,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                unsafe {
-                    Self::write_unchecked(output, index, value);
-                }
-                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+                Ok(unsafe { Self::encode_unchecked(value, output, index) })
             }
         }
     };
@@ -457,7 +447,7 @@ macro_rules! impl_float_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded floating-point value.
+            /// Returns the decoded floating-point value and the number of consumed bytes.
             ///
             /// # Safety
             ///
@@ -468,7 +458,7 @@ macro_rules! impl_float_binary_codec {
             ///   is valid for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn read_unchecked(input: &[u8], index: usize) -> $ty {
+            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, usize) {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
 
                 // SAFETY:
@@ -480,7 +470,10 @@ macro_rules! impl_float_binary_codec {
                 // The pointer is valid for an unaligned integer load.
                 let raw = unsafe { ptr::read_unaligned(pointer) };
 
-                <$ty>::from_bits(<$bits>::from_be(raw))
+                (
+                    <$ty>::from_bits(<$bits>::from_be(raw)),
+                    Self::REQUIRED_MIN_BUFFER_LEN,
+                )
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -491,9 +484,9 @@ macro_rules! impl_float_binary_codec {
             ///
             /// # Parameters
             ///
+            /// - `value`: Floating-point value to encode.
             /// - `output`: Destination byte buffer.
             /// - `index`: Start byte index in `output`.
-            /// - `value`: Floating-point value to encode.
             ///
             /// # Safety
             ///
@@ -503,7 +496,7 @@ macro_rules! impl_float_binary_codec {
             /// - `output[index..index + Self::REQUIRED_MIN_BUFFER_LEN]`
             ///   is valid for writing.
             #[inline(always)]
-            pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $ty) {
+            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
 
                 let raw = value.to_bits().to_be();
@@ -518,6 +511,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+                Self::REQUIRED_MIN_BUFFER_LEN
             }
         }
 
@@ -537,11 +531,8 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-                let value = unsafe { Self::read_unchecked(input, index) };
-                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+                Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
             #[inline(always)]
@@ -551,13 +542,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                unsafe {
-                    Self::write_unchecked(output, index, value);
-                }
-                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+                Ok(unsafe { Self::encode_unchecked(value, output, index) })
             }
         }
 
@@ -577,7 +563,7 @@ macro_rules! impl_float_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded floating-point value.
+            /// Returns the decoded floating-point value and the number of consumed bytes.
             ///
             /// # Safety
             ///
@@ -588,7 +574,7 @@ macro_rules! impl_float_binary_codec {
             ///   is valid for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn read_unchecked(input: &[u8], index: usize) -> $ty {
+            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, usize) {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
 
                 // SAFETY:
@@ -600,7 +586,10 @@ macro_rules! impl_float_binary_codec {
                 // The pointer is valid for an unaligned integer load.
                 let raw = unsafe { ptr::read_unaligned(pointer) };
 
-                <$ty>::from_bits(<$bits>::from_le(raw))
+                (
+                    <$ty>::from_bits(<$bits>::from_le(raw)),
+                    Self::REQUIRED_MIN_BUFFER_LEN,
+                )
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -611,9 +600,9 @@ macro_rules! impl_float_binary_codec {
             ///
             /// # Parameters
             ///
+            /// - `value`: Floating-point value to encode.
             /// - `output`: Destination byte buffer.
             /// - `index`: Start byte index in `output`.
-            /// - `value`: Floating-point value to encode.
             ///
             /// # Safety
             ///
@@ -623,7 +612,7 @@ macro_rules! impl_float_binary_codec {
             /// - `output[index..index + Self::REQUIRED_MIN_BUFFER_LEN]`
             ///   is valid for writing.
             #[inline(always)]
-            pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $ty) {
+            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
 
                 let raw = value.to_bits().to_le();
@@ -638,6 +627,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     ptr::write_unaligned(pointer, raw);
                 }
+                Self::REQUIRED_MIN_BUFFER_LEN
             }
         }
 
@@ -657,11 +647,8 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
-
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-                let value = unsafe { Self::read_unchecked(input, index) };
-                Ok((value, Self::REQUIRED_MIN_BUFFER_LEN))
+                Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
             #[inline(always)]
@@ -671,13 +658,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
-
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                unsafe {
-                    Self::write_unchecked(output, index, value);
-                }
-                Ok(Self::REQUIRED_MIN_BUFFER_LEN)
+                Ok(unsafe { Self::encode_unchecked(value, output, index) })
             }
         }
     };

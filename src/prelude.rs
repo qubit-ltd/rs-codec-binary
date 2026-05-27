@@ -19,9 +19,6 @@ pub use crate::{
     ByteOrder,
     ByteOrderSpec,
     Codec,
-    Coder,
-    CoderProgress,
-    CoderStatus,
     DecodePolicy,
     Leb128Codec,
     Leb128DecodeError,
@@ -29,5 +26,8 @@ pub use crate::{
     LittleEndian,
     NonStrict,
     Strict,
+    TranscodeProgress,
+    TranscodeStatus,
+    Transcoder,
     ZigZagCodec,
 };

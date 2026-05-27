@@ -24,8 +24,13 @@ use crate::{
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
 ///
-/// `T` selects the signed integer type and `P` selects the LEB128 decoding
-/// policy used after ZigZag conversion.
+/// # Type Parameters
+///
+/// - `T`: Signed integer value type to decode from ZigZag-encoded LEB128 bytes
+///   and encode into ZigZag-encoded LEB128 bytes.
+/// - `P`: Type-level decoding policy implementing [`DecodePolicy`] for the
+///   underlying unsigned LEB128 payload. Use [`crate::Strict`] to reject
+///   non-canonical inputs, or [`NonStrict`] to accept non-canonical inputs.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ZigZagCodec<T, P = NonStrict> {
     marker: PhantomData<fn() -> (T, P)>,
@@ -61,9 +66,9 @@ macro_rules! impl_zig_zag_codec {
             /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes, or that a valid terminating byte
             /// appears before that limit.
             #[inline(always)]
-            pub unsafe fn read_unchecked(input: &[u8], index: usize) -> Result<($signed, usize), Leb128DecodeError> {
+            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($signed, usize), Leb128DecodeError> {
                 // SAFETY: The caller guarantees enough readable bytes for this type.
-                let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::read_unchecked(input, index)? };
+                let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
                 let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
             }
@@ -93,14 +98,15 @@ macro_rules! impl_zig_zag_codec {
             /// to read `available` bytes and that `available` is no greater than
             /// [`Self::REQUIRED_MIN_BUFFER_LEN`].
             #[inline(always)]
-            pub unsafe fn read_available_unchecked(
+            pub unsafe fn decode_available_unchecked(
                 input: &[u8],
                 index: usize,
                 available: usize,
             ) -> Result<Option<($signed, usize)>, (Leb128DecodeError, usize)> {
                 // SAFETY: The caller guarantees that exactly `available` bytes
                 // are readable from `index`.
-                let result = unsafe { Leb128Codec::<$unsigned, P>::read_available_unchecked(input, index, available)? };
+                let result =
+                    unsafe { Leb128Codec::<$unsigned, P>::decode_available_unchecked(input, index, available)? };
                 Ok(result.map(|(encoded, consumed)| {
                     let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                     (value, consumed)
@@ -111,9 +117,9 @@ macro_rules! impl_zig_zag_codec {
             ///
             /// # Parameters
             ///
+            /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
             /// - `index`: Start index in `output`.
-            /// - `value`: Value to encode.
             ///
             /// # Returns
             ///
@@ -124,10 +130,10 @@ macro_rules! impl_zig_zag_codec {
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
             /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
             #[inline(always)]
-            pub unsafe fn write_unchecked(output: &mut [u8], index: usize, value: $signed) -> usize {
+            pub unsafe fn encode_unchecked(value: $signed, output: &mut [u8], index: usize) -> usize {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for this type.
-                unsafe { Leb128Codec::<$unsigned, NonStrict>::write_unchecked(output, index, encoded) }
+                unsafe { Leb128Codec::<$unsigned, NonStrict>::encode_unchecked(encoded, output, index) }
             }
         }
 
@@ -157,7 +163,7 @@ macro_rules! impl_zig_zag_codec {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
-                unsafe { Self::read_unchecked(input, index) }
+                unsafe { Self::decode_unchecked(input, index) }
             }
 
             #[inline(always)]
@@ -170,7 +176,7 @@ macro_rules! impl_zig_zag_codec {
                 debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
 
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::write_unchecked(output, index, value) })
+                Ok(unsafe { Self::encode_unchecked(value, output, index) })
             }
         }
     };
