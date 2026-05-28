@@ -18,7 +18,6 @@ use qubit_codec::Codec;
 use crate::{
     DecodePolicy,
     Leb128DecodeError,
-    Leb128DecodeErrorKind,
     NonStrict,
 };
 
@@ -44,8 +43,11 @@ macro_rules! impl_unsigned_leb128_codec {
         where
             P: DecodePolicy,
         {
+            /// Minimum number of bytes that can represent a complete value.
+            pub const MIN_UNITS_PER_VALUE: usize = 1;
+
             /// Maximum number of bytes required to encode or decode this type.
-            pub const REQUIRED_MIN_BUFFER_LEN: usize = (<$ty>::BITS as usize).div_ceil(7);
+            pub const MAX_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
             ///
@@ -60,66 +62,23 @@ macro_rules! impl_unsigned_leb128_codec {
             ///
             /// # Errors
             ///
-            /// Returns [`Leb128DecodeError`] if the bytes are malformed or strict
-            /// decoding rejects a non-canonical representation.
+            /// Returns [`Leb128DecodeError`] if the bytes are incomplete,
+            /// malformed, or strict decoding rejects a non-canonical
+            /// representation.
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid to
-            /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes, or that a valid terminating byte
-            /// appears before that limit.
+            /// The caller must guarantee that `index` is a valid boundary and
+            /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
+            /// `index`.
             #[inline(always)]
             pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($ty, usize), Leb128DecodeError> {
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
+
                 // SAFETY: The caller guarantees enough readable bytes for this type.
                 let (value, consumed) =
-                    unsafe { read_uleb_unchecked::<P>(input, index, <$ty>::BITS, Self::REQUIRED_MIN_BUFFER_LEN)? };
+                    unsafe { read_uleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)? };
                 Ok((value as $ty, consumed))
-            }
-
-            /// Tries to decode from the currently available bytes without bounds checks.
-            ///
-            /// This internal entry point is used by buffered readers that may have
-            /// only part of a variable-length payload in their input buffer. It
-            /// decodes while scanning for the terminating byte, so callers do not
-            /// need a separate terminator pre-scan before calling the codec.
-            ///
-            /// # Parameters
-            ///
-            /// - `input`: Source byte buffer.
-            /// - `index`: Start index in `input`.
-            /// - `available`: Number of readable bytes currently available from
-            ///   `index`.
-            ///
-            /// # Returns
-            ///
-            /// Returns `Ok(Some((value, consumed)))` when a complete value is
-            /// decoded. Returns `Ok(None)` when more bytes are needed. Returns
-            /// `Err((error, consumed))` when the payload is invalid and should be
-            /// consumed before the error is reported.
-            ///
-            /// # Safety
-            ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid
-            /// to read `available` bytes and that `available` is no greater than
-            /// [`Self::REQUIRED_MIN_BUFFER_LEN`].
-            #[inline(always)]
-            pub unsafe fn decode_available_unchecked(
-                input: &[u8],
-                index: usize,
-                available: usize,
-            ) -> Result<Option<($ty, usize)>, (Leb128DecodeError, usize)> {
-                // SAFETY: The caller guarantees that exactly `available` bytes
-                // are readable from `index`.
-                unsafe {
-                    read_uleb_available_unchecked::<P>(
-                        input,
-                        index,
-                        <$ty>::BITS,
-                        Self::REQUIRED_MIN_BUFFER_LEN,
-                        available,
-                    )
-                }
-                .map(|result| result.map(|(value, consumed)| (value as $ty, consumed)))
             }
 
             /// Encodes `value` into `output` starting at `index` without bounds checks.
@@ -137,7 +96,7 @@ macro_rules! impl_unsigned_leb128_codec {
             /// # Safety
             ///
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
-            /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
+            /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
             pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for this type.
@@ -154,17 +113,17 @@ macro_rules! impl_unsigned_leb128_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> usize {
-                1
+                Self::MIN_UNITS_PER_VALUE
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> usize {
-                Self::REQUIRED_MIN_BUFFER_LEN
+                Self::MAX_UNITS_PER_VALUE
             }
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 unsafe { Self::decode_unchecked(input, index) }
@@ -173,14 +132,14 @@ macro_rules! impl_unsigned_leb128_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+                debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
     };
@@ -192,8 +151,11 @@ macro_rules! impl_signed_leb128_codec {
         where
             P: DecodePolicy,
         {
+            /// Minimum number of bytes that can represent a complete value.
+            pub const MIN_UNITS_PER_VALUE: usize = 1;
+
             /// Maximum number of bytes required to encode or decode this type.
-            pub const REQUIRED_MIN_BUFFER_LEN: usize = (<$ty>::BITS as usize).div_ceil(7);
+            pub const MAX_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
             ///
@@ -208,66 +170,23 @@ macro_rules! impl_signed_leb128_codec {
             ///
             /// # Errors
             ///
-            /// Returns [`Leb128DecodeError`] if the bytes are malformed or strict
-            /// decoding rejects a non-canonical representation.
+            /// Returns [`Leb128DecodeError`] if the bytes are incomplete,
+            /// malformed, or strict decoding rejects a non-canonical
+            /// representation.
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid to
-            /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes, or that a valid terminating byte
-            /// appears before that limit.
+            /// The caller must guarantee that `index` is a valid boundary and
+            /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
+            /// `index`.
             #[inline(always)]
             pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($ty, usize), Leb128DecodeError> {
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
+
                 // SAFETY: The caller guarantees enough readable bytes for this type.
                 let (value, consumed) =
-                    unsafe { read_sleb_unchecked::<P>(input, index, <$ty>::BITS, Self::REQUIRED_MIN_BUFFER_LEN)? };
+                    unsafe { read_sleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)? };
                 Ok((value as $ty, consumed))
-            }
-
-            /// Tries to decode from the currently available bytes without bounds checks.
-            ///
-            /// This internal entry point is used by buffered readers that may have
-            /// only part of a variable-length payload in their input buffer. It
-            /// decodes while scanning for the terminating byte, so callers do not
-            /// need a separate terminator pre-scan before calling the codec.
-            ///
-            /// # Parameters
-            ///
-            /// - `input`: Source byte buffer.
-            /// - `index`: Start index in `input`.
-            /// - `available`: Number of readable bytes currently available from
-            ///   `index`.
-            ///
-            /// # Returns
-            ///
-            /// Returns `Ok(Some((value, consumed)))` when a complete value is
-            /// decoded. Returns `Ok(None)` when more bytes are needed. Returns
-            /// `Err((error, consumed))` when the payload is invalid and should be
-            /// consumed before the error is reported.
-            ///
-            /// # Safety
-            ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid
-            /// to read `available` bytes and that `available` is no greater than
-            /// [`Self::REQUIRED_MIN_BUFFER_LEN`].
-            #[inline(always)]
-            pub unsafe fn decode_available_unchecked(
-                input: &[u8],
-                index: usize,
-                available: usize,
-            ) -> Result<Option<($ty, usize)>, (Leb128DecodeError, usize)> {
-                // SAFETY: The caller guarantees that exactly `available` bytes
-                // are readable from `index`.
-                unsafe {
-                    read_sleb_available_unchecked::<P>(
-                        input,
-                        index,
-                        <$ty>::BITS,
-                        Self::REQUIRED_MIN_BUFFER_LEN,
-                        available,
-                    )
-                }
-                .map(|result| result.map(|(value, consumed)| (value as $ty, consumed)))
             }
 
             /// Encodes `value` into `output` starting at `index` without bounds checks.
@@ -285,7 +204,7 @@ macro_rules! impl_signed_leb128_codec {
             /// # Safety
             ///
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
-            /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
+            /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
             pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for this type.
@@ -302,17 +221,17 @@ macro_rules! impl_signed_leb128_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> usize {
-                1
+                Self::MIN_UNITS_PER_VALUE
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> usize {
-                Self::REQUIRED_MIN_BUFFER_LEN
+                Self::MAX_UNITS_PER_VALUE
             }
 
             #[inline(always)]
             unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 unsafe { Self::decode_unchecked(input, index) }
@@ -321,14 +240,14 @@ macro_rules! impl_signed_leb128_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+                debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
     };
@@ -348,7 +267,7 @@ impl_signed_leb128_codec!(i64);
 impl_signed_leb128_codec!(i128);
 impl_signed_leb128_codec!(isize);
 
-/// Decodes a complete unsigned LEB128 value without bounds checks.
+/// Decodes an unsigned LEB128 value without bounds checks.
 ///
 /// # Type Parameters
 ///
@@ -368,14 +287,12 @@ impl_signed_leb128_codec!(isize);
 ///
 /// # Errors
 ///
-/// Returns [`Leb128DecodeError`] when the byte sequence is malformed or when
-/// `P` rejects a non-canonical encoding.
+/// Returns [`Leb128DecodeError`] when the byte sequence is incomplete,
+/// malformed, or when `P` rejects a non-canonical encoding.
 ///
 /// # Safety
 ///
-/// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
-/// `max_bytes` bytes, or that a complete terminating byte appears before that
-/// limit.
+/// The caller must guarantee that at least one byte is readable from `index`.
 #[inline(always)]
 unsafe fn read_uleb_unchecked<P>(
     input: &[u8],
@@ -386,12 +303,15 @@ unsafe fn read_uleb_unchecked<P>(
 where
     P: DecodePolicy,
 {
-    // SAFETY: The caller guarantees enough readable bytes for the full maximum
-    // payload width, which is exactly the `available` value passed here.
-    match unsafe { read_uleb_available_unchecked::<P>(input, index, bits, max_bytes, max_bytes) } {
+    debug_assert!(input.len().saturating_sub(index) >= 1);
+
+    let available = input.len().saturating_sub(index).min(max_bytes);
+    // SAFETY: The caller guarantees that the currently available bytes are
+    // readable from `index`.
+    match unsafe { read_uleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
         Ok(Some(value)) => Ok(value),
-        Ok(None) => unreachable!("maximum-width LEB128 input must complete or fail"),
-        Err((error, _consumed)) => Err(error),
+        Ok(None) => Err(Leb128DecodeError::incomplete(index, available + 1, available)),
+        Err(error) => Err(error),
     }
 }
 
@@ -412,23 +332,22 @@ where
 ///
 /// # Returns
 ///
-/// Returns `Ok(Some((value, consumed)))` when a complete value is decoded.
-/// Returns `Ok(None)` when more bytes are needed. Returns `Err((error,
-/// consumed))` when the payload is invalid and `consumed` bytes should be
-/// discarded before reporting the error.
+/// Returns `Ok(Some((value, consumed)))` when a complete value is decoded,
+/// `Ok(None)` when more bytes are needed, or `Err(error)` when the payload is
+/// invalid. Invalid errors carry the consumable byte count.
 ///
 /// # Safety
 ///
 /// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
 /// `available` bytes and that `available <= max_bytes`.
 #[inline(always)]
-unsafe fn read_uleb_available_unchecked<P>(
+unsafe fn read_uleb_prefix_unchecked<P>(
     input: &[u8],
     index: usize,
     bits: u32,
     max_bytes: usize,
     available: usize,
-) -> Result<Option<(u128, usize)>, (Leb128DecodeError, usize)>
+) -> Result<Option<(u128, usize)>, Leb128DecodeError>
 where
     P: DecodePolicy,
 {
@@ -461,7 +380,7 @@ where
     Err(malformed_decode_error(index + max_bytes - 1, max_bytes))
 }
 
-/// Decodes a complete signed LEB128 value without bounds checks.
+/// Decodes a signed LEB128 value without bounds checks.
 ///
 /// # Type Parameters
 ///
@@ -481,14 +400,12 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`Leb128DecodeError`] when the byte sequence is malformed or when
-/// `P` rejects a non-canonical encoding.
+/// Returns [`Leb128DecodeError`] when the byte sequence is incomplete,
+/// malformed, or when `P` rejects a non-canonical encoding.
 ///
 /// # Safety
 ///
-/// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
-/// `max_bytes` bytes, or that a complete terminating byte appears before that
-/// limit.
+/// The caller must guarantee that at least one byte is readable from `index`.
 #[inline(always)]
 unsafe fn read_sleb_unchecked<P>(
     input: &[u8],
@@ -499,12 +416,15 @@ unsafe fn read_sleb_unchecked<P>(
 where
     P: DecodePolicy,
 {
-    // SAFETY: The caller guarantees enough readable bytes for the full maximum
-    // payload width, which is exactly the `available` value passed here.
-    match unsafe { read_sleb_available_unchecked::<P>(input, index, bits, max_bytes, max_bytes) } {
+    debug_assert!(input.len().saturating_sub(index) >= 1);
+
+    let available = input.len().saturating_sub(index).min(max_bytes);
+    // SAFETY: The caller guarantees that the currently available bytes are
+    // readable from `index`.
+    match unsafe { read_sleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
         Ok(Some(value)) => Ok(value),
-        Ok(None) => unreachable!("maximum-width LEB128 input must complete or fail"),
-        Err((error, _consumed)) => Err(error),
+        Ok(None) => Err(Leb128DecodeError::incomplete(index, available + 1, available)),
+        Err(error) => Err(error),
     }
 }
 
@@ -525,23 +445,22 @@ where
 ///
 /// # Returns
 ///
-/// Returns `Ok(Some((value, consumed)))` when a complete value is decoded.
-/// Returns `Ok(None)` when more bytes are needed. Returns `Err((error,
-/// consumed))` when the payload is invalid and `consumed` bytes should be
-/// discarded before reporting the error.
+/// Returns `Ok(Some((value, consumed)))` when a complete value is decoded,
+/// `Ok(None)` when more bytes are needed, or `Err(error)` when the payload is
+/// invalid. Invalid errors carry the consumable byte count.
 ///
 /// # Safety
 ///
 /// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
 /// `available` bytes and that `available <= max_bytes`.
 #[inline(always)]
-unsafe fn read_sleb_available_unchecked<P>(
+unsafe fn read_sleb_prefix_unchecked<P>(
     input: &[u8],
     index: usize,
     bits: u32,
     max_bytes: usize,
     available: usize,
-) -> Result<Option<(i128, usize)>, (Leb128DecodeError, usize)>
+) -> Result<Option<(i128, usize)>, Leb128DecodeError>
 where
     P: DecodePolicy,
 {
@@ -587,14 +506,11 @@ where
 ///
 /// # Returns
 ///
-/// Returns the error and the byte count to consume.
+/// Returns the error carrying the byte count to consume.
 #[cold]
 #[inline(never)]
-fn malformed_decode_error(index: usize, consumed: usize) -> (Leb128DecodeError, usize) {
-    (
-        Leb128DecodeError::new(Leb128DecodeErrorKind::Malformed, index),
-        consumed,
-    )
+fn malformed_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
+    Leb128DecodeError::malformed(index, consumed)
 }
 
 /// Builds a non-canonical LEB128 error on the cold error path.
@@ -607,14 +523,11 @@ fn malformed_decode_error(index: usize, consumed: usize) -> (Leb128DecodeError, 
 ///
 /// # Returns
 ///
-/// Returns the error and the byte count to consume.
+/// Returns the error carrying the byte count to consume.
 #[cold]
 #[inline(never)]
-fn noncanonical_decode_error(index: usize, consumed: usize) -> (Leb128DecodeError, usize) {
-    (
-        Leb128DecodeError::new(Leb128DecodeErrorKind::NonCanonical, index),
-        consumed,
-    )
+fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
+    Leb128DecodeError::noncanonical(index, consumed)
 }
 
 /// Checks whether the final unsigned LEB128 payload byte fits the target width.

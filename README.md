@@ -22,8 +22,10 @@ This crate provides:
 - `ZigZagCodec` for ZigZag signed integer mapping over unsigned LEB128.
 - `Strict` and `NonStrict` decode policies.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Re-exports of `Codec`, `ByteOrder`, `BigEndian`, `LittleEndian`, and `Transcoder`
-  core primitives from `qubit-codec`.
+- Re-exports of `Codec`, `CodecValueEncoder`, `CodecBufferedEncoder`,
+  `ValueEncoder`, `ValueDecoder`, `BufferedEncoder`, `BufferedDecoder`,
+  `BufferedConverter`, `ByteOrder`, `BigEndian`, `LittleEndian`, and
+  `Transcoder` core primitives from `qubit-codec`.
 
 ## Design Goals
 
@@ -102,10 +104,32 @@ unsafe {
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
-let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
+let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
 let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
+
+## Unchecked API Contracts
+
+The low-level codec methods are intentionally unsafe. Callers must validate
+buffer bounds before using them:
+
+- `BinaryCodec::decode_unchecked` and `BinaryCodec::encode_unchecked` require
+  exactly `REQUIRED_MIN_BUFFER_LEN` readable or writable bytes from `index`.
+- `Leb128Codec` and `ZigZagCodec` expose `MIN_UNITS_PER_VALUE` and
+  `MAX_UNITS_PER_VALUE`. Their `encode_unchecked` methods require
+  `MAX_UNITS_PER_VALUE` writable bytes from `index`, even when the encoded value
+  is shorter.
+- `Leb128Codec::decode_unchecked` and `ZigZagCodec::decode_unchecked` require
+  at least `MIN_UNITS_PER_VALUE` readable byte from `index`. Callers should
+  normally provide up to `MAX_UNITS_PER_VALUE` readable bytes unless EOF makes
+  that impossible. Incomplete, malformed, and non-canonical input is reported
+  through `Leb128DecodeError`.
+
+Higher-level code should wrap these unsafe calls behind safe `ValueEncoder`,
+`ValueDecoder`, `Transcoder`, `CodecValueEncoder`, or `CodecBufferedEncoder`
+implementations after checking the appropriate bounds. See the
+[User Guide](doc/user_guide.md) for wrapper examples.
 
 ## API Reference
 
@@ -123,9 +147,9 @@ assert_eq!(2, written);
 | Item | Description |
 |------|-------------|
 | `Codec<Value, u8>` | Decode and encode one LEB128 value through the core trait |
-| `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the integer type |
+| `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
+| `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the integer type |
 | `decode_unchecked(input, index)` | Decode one complete LEB128 value |
-| `decode_available_unchecked(input, index, available)` | Decode from a partial available buffer |
 | `encode_unchecked(value, output, index)` | Encode one canonical LEB128 value |
 
 ### `ZigZagCodec` Operations
@@ -133,9 +157,9 @@ assert_eq!(2, written);
 | Item | Description |
 |------|-------------|
 | `Codec<Value, u8>` | Decode and encode one ZigZag LEB128 value through the core trait |
-| `REQUIRED_MIN_BUFFER_LEN` | Maximum bytes needed for the signed integer type |
+| `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
+| `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the signed integer type |
 | `decode_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
-| `decode_available_unchecked(input, index, available)` | Decode from a partial available buffer |
 | `encode_unchecked(value, output, index)` | Encode signed integer as ZigZag plus unsigned LEB128 |
 
 ### Decode Policies

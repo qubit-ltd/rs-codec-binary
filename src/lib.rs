@@ -31,11 +31,20 @@ pub use codec::{
 };
 pub use qubit_codec::{
     BigEndian,
+    BufferedConverter,
+    BufferedDecoder,
+    BufferedEncoder,
     ByteOrder,
     ByteOrderSpec,
     Codec,
+    CodecBufferedEncoder,
+    CodecValueEncoder,
+    DecodeErrorInfo,
+    DecodeFailure,
     LittleEndian,
     TranscodeProgress,
     TranscodeStatus,
     Transcoder,
+    ValueDecoder,
+    ValueEncoder,
 };

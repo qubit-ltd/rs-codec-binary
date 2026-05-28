@@ -21,7 +21,9 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - 用于 ZigZag signed integer mapping 的 `ZigZagCodec`。
 - `Strict` 和 `NonStrict` 解码策略。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
-- 从 `qubit-codec` 重导出的 `Codec`、`ByteOrder`、`BigEndian`、
+- 从 `qubit-codec` 重导出的 `Codec`、`CodecValueEncoder`、
+  `CodecBufferedEncoder`、`ValueEncoder`、`ValueDecoder`、`BufferedEncoder`、
+  `BufferedDecoder`、`BufferedConverter`、`ByteOrder`、`BigEndian`、
   `LittleEndian` 和 `Transcoder` core primitive。
 
 ## 设计目标
@@ -93,10 +95,28 @@ unsafe {
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
-let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::REQUIRED_MIN_BUFFER_LEN];
+let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
 let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
+
+## Unchecked API 契约
+
+底层 codec 方法刻意设计为 unsafe。调用方必须先验证 buffer 边界：
+
+- `BinaryCodec::decode_unchecked` 和 `BinaryCodec::encode_unchecked` 要求从
+  `index` 开始分别有 `REQUIRED_MIN_BUFFER_LEN` 个可读或可写字节。
+- `Leb128Codec` 和 `ZigZagCodec` 暴露 `MIN_UNITS_PER_VALUE` 和
+  `MAX_UNITS_PER_VALUE`。它们的 `encode_unchecked` 要求从 `index` 开始至少有
+  `MAX_UNITS_PER_VALUE` 个可写字节，即使实际编码结果可能更短。
+- `Leb128Codec::decode_unchecked` 和 `ZigZagCodec::decode_unchecked` 要求从
+  `index` 开始至少有 `MIN_UNITS_PER_VALUE` 个可读字节。调用方通常应尽量提供到
+  `MAX_UNITS_PER_VALUE`，除非 EOF 已经无法继续读取。不完整、畸形和非 canonical
+  输入都通过 `Leb128DecodeError` 表达。
+
+上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全的 `ValueEncoder`、
+`ValueDecoder`、`Transcoder`、`CodecValueEncoder` 或 `CodecBufferedEncoder`
+实现中。包装示例见[用户指南](doc/user_guide.zh_CN.md)。
 
 ## API 参考
 
@@ -114,9 +134,9 @@ assert_eq!(2, written);
 | 条目 | 描述 |
 |------|------|
 | `Codec<Value, u8>` | 通过 core trait 解码和编码一个 LEB128 值 |
-| `REQUIRED_MIN_BUFFER_LEN` | 当前整数类型最多需要的字节数 |
+| `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
+| `MAX_UNITS_PER_VALUE` | 当前整数类型最多需要的字节数 |
 | `decode_unchecked(input, index)` | 解码一个完整 LEB128 值 |
-| `decode_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
 | `encode_unchecked(value, output, index)` | 编码一个 canonical LEB128 值 |
 
 ### `ZigZagCodec` 操作
@@ -124,9 +144,9 @@ assert_eq!(2, written);
 | 条目 | 描述 |
 |------|------|
 | `Codec<Value, u8>` | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
-| `REQUIRED_MIN_BUFFER_LEN` | 当前 signed integer 类型最多需要的字节数 |
+| `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
+| `MAX_UNITS_PER_VALUE` | 当前 signed integer 类型最多需要的字节数 |
 | `decode_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
-| `decode_available_unchecked(input, index, available)` | 从当前可用的部分缓冲区尝试解码 |
 | `encode_unchecked(value, output, index)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
 
 ### Decode Policy

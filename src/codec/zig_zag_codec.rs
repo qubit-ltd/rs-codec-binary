@@ -42,8 +42,11 @@ macro_rules! impl_zig_zag_codec {
         where
             P: DecodePolicy,
         {
+            /// Minimum number of bytes that can represent a complete value.
+            pub const MIN_UNITS_PER_VALUE: usize = 1;
+
             /// Maximum number of bytes required to encode or decode this type.
-            pub const REQUIRED_MIN_BUFFER_LEN: usize = Leb128Codec::<$unsigned, NonStrict>::REQUIRED_MIN_BUFFER_LEN;
+            pub const MAX_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
             ///
@@ -58,59 +61,22 @@ macro_rules! impl_zig_zag_codec {
             ///
             /// # Errors
             ///
-            /// Returns [`Leb128DecodeError`] if the underlying LEB128 bytes are invalid.
+            /// Returns [`Leb128DecodeError`] if the underlying LEB128 bytes are
+            /// incomplete, malformed, or non-canonical under strict policy.
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid to
-            /// read [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes, or that a valid terminating byte
-            /// appears before that limit.
+            /// The caller must guarantee that `index` is a valid boundary and
+            /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
+            /// `index`.
             #[inline(always)]
             pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($signed, usize), Leb128DecodeError> {
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
+
                 // SAFETY: The caller guarantees enough readable bytes for this type.
                 let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
                 let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
-            }
-
-            /// Tries to decode from the currently available bytes without bounds checks.
-            ///
-            /// This internal entry point lets buffered readers decode the underlying
-            /// unsigned LEB128 payload while scanning for its terminating byte.
-            ///
-            /// # Parameters
-            ///
-            /// - `input`: Source byte buffer.
-            /// - `index`: Start index in `input`.
-            /// - `available`: Number of readable bytes currently available from
-            ///   `index`.
-            ///
-            /// # Returns
-            ///
-            /// Returns `Ok(Some((value, consumed)))` when a complete value is
-            /// decoded. Returns `Ok(None)` when more bytes are needed. Returns
-            /// `Err((error, consumed))` when the underlying LEB128 payload is
-            /// invalid and should be consumed before the error is reported.
-            ///
-            /// # Safety
-            ///
-            /// The caller must guarantee that `input.as_ptr().add(index)` is valid
-            /// to read `available` bytes and that `available` is no greater than
-            /// [`Self::REQUIRED_MIN_BUFFER_LEN`].
-            #[inline(always)]
-            pub unsafe fn decode_available_unchecked(
-                input: &[u8],
-                index: usize,
-                available: usize,
-            ) -> Result<Option<($signed, usize)>, (Leb128DecodeError, usize)> {
-                // SAFETY: The caller guarantees that exactly `available` bytes
-                // are readable from `index`.
-                let result =
-                    unsafe { Leb128Codec::<$unsigned, P>::decode_available_unchecked(input, index, available)? };
-                Ok(result.map(|(encoded, consumed)| {
-                    let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
-                    (value, consumed)
-                }))
             }
 
             /// Encodes `value` into `output` starting at `index` without bounds checks.
@@ -128,7 +94,7 @@ macro_rules! impl_zig_zag_codec {
             /// # Safety
             ///
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
-            /// to write [`Self::REQUIRED_MIN_BUFFER_LEN`] bytes.
+            /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
             pub unsafe fn encode_unchecked(value: $signed, output: &mut [u8], index: usize) -> usize {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
@@ -146,12 +112,12 @@ macro_rules! impl_zig_zag_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> usize {
-                1
+                Self::MIN_UNITS_PER_VALUE
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> usize {
-                Self::REQUIRED_MIN_BUFFER_LEN
+                Self::MAX_UNITS_PER_VALUE
             }
 
             #[inline(always)]
@@ -160,7 +126,7 @@ macro_rules! impl_zig_zag_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($signed, usize), Self::DecodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= input.len());
+                debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
                 unsafe { Self::decode_unchecked(input, index) }
@@ -169,14 +135,14 @@ macro_rules! impl_zig_zag_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $signed,
+                value: &$signed,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                debug_assert!(index + Self::REQUIRED_MIN_BUFFER_LEN <= output.len());
+                debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
     };

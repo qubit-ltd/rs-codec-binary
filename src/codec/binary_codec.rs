@@ -111,9 +111,9 @@ unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
     }
 
     #[inline(always)]
-    unsafe fn encode_unchecked(&self, value: u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+    unsafe fn encode_unchecked(&self, value: &u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-        Ok(unsafe { Self::encode_unchecked(value, output, index) })
+        Ok(unsafe { Self::encode_unchecked(*value, output, index) })
     }
 }
 
@@ -193,9 +193,9 @@ unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
     }
 
     #[inline(always)]
-    unsafe fn encode_unchecked(&self, value: i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+    unsafe fn encode_unchecked(&self, value: &i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-        Ok(unsafe { Self::encode_unchecked(value, output, index) })
+        Ok(unsafe { Self::encode_unchecked(*value, output, index) })
     }
 }
 
@@ -305,12 +305,12 @@ macro_rules! impl_integer_binary_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
 
@@ -418,12 +418,12 @@ macro_rules! impl_integer_binary_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
     };
@@ -538,12 +538,12 @@ macro_rules! impl_float_binary_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
 
@@ -654,12 +654,12 @@ macro_rules! impl_float_binary_codec {
             #[inline(always)]
             unsafe fn encode_unchecked(
                 &self,
-                value: $ty,
+                value: &$ty,
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
-                Ok(unsafe { Self::encode_unchecked(value, output, index) })
+                Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
     };

@@ -9,6 +9,11 @@
 ******************************************************************************/
 use thiserror::Error;
 
+use qubit_codec::{
+    DecodeErrorInfo,
+    DecodeFailure,
+};
+
 use crate::Leb128DecodeErrorKind;
 
 /// Error reported while decoding a LEB128 integer from a byte buffer.
@@ -17,6 +22,9 @@ use crate::Leb128DecodeErrorKind;
 pub struct Leb128DecodeError {
     kind: Leb128DecodeErrorKind,
     index: usize,
+    consumed: usize,
+    required: Option<usize>,
+    available: Option<usize>,
 }
 
 impl Leb128DecodeError {
@@ -32,7 +40,77 @@ impl Leb128DecodeError {
     /// Returns a decoding error carrying the supplied context.
     #[inline]
     pub const fn new(kind: Leb128DecodeErrorKind, index: usize) -> Self {
-        Self { kind, index }
+        Self {
+            kind,
+            index,
+            consumed: 1,
+            required: None,
+            available: None,
+        }
+    }
+
+    /// Creates an incomplete-input decoding error.
+    ///
+    /// # Parameters
+    ///
+    /// - `index`: Byte index where the incomplete value starts.
+    /// - `required`: Total bytes required from `index`.
+    /// - `available`: Bytes currently available from `index`.
+    ///
+    /// # Returns
+    ///
+    /// Returns an error carrying incomplete-input context.
+    #[inline]
+    pub const fn incomplete(index: usize, required: usize, available: usize) -> Self {
+        Self {
+            kind: Leb128DecodeErrorKind::Incomplete,
+            index,
+            consumed: 0,
+            required: Some(required),
+            available: Some(available),
+        }
+    }
+
+    /// Creates a malformed-input decoding error.
+    ///
+    /// # Parameters
+    ///
+    /// - `index`: Byte index at which the malformed input was detected.
+    /// - `consumed`: Bytes the caller may consume to make progress.
+    ///
+    /// # Returns
+    ///
+    /// Returns an error carrying malformed-input context.
+    #[inline]
+    pub const fn malformed(index: usize, consumed: usize) -> Self {
+        Self {
+            kind: Leb128DecodeErrorKind::Malformed,
+            index,
+            consumed,
+            required: None,
+            available: None,
+        }
+    }
+
+    /// Creates a non-canonical-input decoding error.
+    ///
+    /// # Parameters
+    ///
+    /// - `index`: Byte index where the non-canonical value starts.
+    /// - `consumed`: Bytes the caller may consume to make progress.
+    ///
+    /// # Returns
+    ///
+    /// Returns an error carrying non-canonical-input context.
+    #[inline]
+    pub const fn noncanonical(index: usize, consumed: usize) -> Self {
+        Self {
+            kind: Leb128DecodeErrorKind::NonCanonical,
+            index,
+            consumed,
+            required: None,
+            available: None,
+        }
     }
 
     /// Returns the decoding error kind.
@@ -47,5 +125,57 @@ impl Leb128DecodeError {
     #[inline]
     pub const fn index(self) -> usize {
         self.index
+    }
+
+    /// Returns bytes that may be consumed after an invalid-input error.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(consumed)` for invalid input, or `None` for incomplete
+    /// input.
+    #[must_use]
+    #[inline]
+    pub const fn consumed(self) -> Option<usize> {
+        match self.kind {
+            Leb128DecodeErrorKind::Incomplete => None,
+            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => Some(self.consumed),
+        }
+    }
+
+    /// Returns total bytes required to finish an incomplete value.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(required)` for incomplete input, or `None` otherwise.
+    #[must_use]
+    #[inline]
+    pub const fn required(self) -> Option<usize> {
+        self.required
+    }
+
+    /// Returns bytes available for an incomplete value.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(available)` for incomplete input, or `None` otherwise.
+    #[must_use]
+    #[inline]
+    pub const fn available(self) -> Option<usize> {
+        self.available
+    }
+}
+
+impl DecodeErrorInfo for Leb128DecodeError {
+    /// Returns buffered-decode metadata for this LEB128 error.
+    fn failure(&self) -> DecodeFailure {
+        match self.kind {
+            Leb128DecodeErrorKind::Incomplete => DecodeFailure::Incomplete {
+                required: self.required.unwrap_or(0),
+                available: self.available.unwrap_or(0),
+            },
+            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => DecodeFailure::Invalid {
+                consumed: self.consumed.max(1),
+            },
+        }
     }
 }

@@ -12,6 +12,10 @@ use thiserror::Error;
 /// Classifies failures detected while decoding LEB128 integers.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum Leb128DecodeErrorKind {
+    /// The input ended before a terminating LEB128 byte was available.
+    #[error("incomplete LEB128 integer")]
+    Incomplete,
+
     /// The input bytes cannot represent a value of the requested width.
     #[error("malformed LEB128 integer")]
     Malformed,

@@ -57,7 +57,7 @@ fn test_binary_codec_encodes_and_decodes_through_codec_trait() {
     assert_eq!(4, codec.min_units_per_value());
     assert_eq!(4, codec.max_units_per_value());
 
-    let written = unsafe { Codec::encode_unchecked(&codec, 0x1234_5678, &mut output, 1) }
+    let written = unsafe { Codec::encode_unchecked(&codec, &0x1234_5678, &mut output, 1) }
         .expect("fixed-width encoding should be infallible");
     assert_eq!(4, written);
     assert_eq!([0xaa, 0x12, 0x34, 0x56, 0x78, 0xbb], output);
@@ -89,26 +89,27 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
 
     assert_eq!(
         1,
-        unsafe { Codec::encode_unchecked(&unsigned_byte, 0x7f, &mut output, 0) }
+        unsafe { Codec::encode_unchecked(&unsigned_byte, &0x7f, &mut output, 0) }
             .expect("u8 encoding should be infallible")
     );
     assert_eq!(
         1,
-        unsafe { Codec::encode_unchecked(&signed_byte, -1, &mut output, 1) }.expect("i8 encoding should be infallible")
+        unsafe { Codec::encode_unchecked(&signed_byte, &-1, &mut output, 1) }
+            .expect("i8 encoding should be infallible")
     );
     assert_eq!(
         2,
-        unsafe { Codec::encode_unchecked(&little_integer, 0x1234, &mut output, 2) }
+        unsafe { Codec::encode_unchecked(&little_integer, &0x1234, &mut output, 2) }
             .expect("little-endian integer encoding should be infallible")
     );
     assert_eq!(
         4,
-        unsafe { Codec::encode_unchecked(&big_float, 12.5, &mut output, 4) }
+        unsafe { Codec::encode_unchecked(&big_float, &12.5, &mut output, 4) }
             .expect("big-endian float encoding should be infallible")
     );
     assert_eq!(
         8,
-        unsafe { Codec::encode_unchecked(&little_float, -25.25, &mut output, 8) }
+        unsafe { Codec::encode_unchecked(&little_float, &-25.25, &mut output, 8) }
             .expect("little-endian float encoding should be infallible")
     );
 
