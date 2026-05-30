@@ -11,8 +11,11 @@
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
 
 本库从 `qubit-codec` 重导出 `Codec`、`CodecValueEncoder`、
-`CodecBufferedEncoder`、`ValueEncoder`、`ValueDecoder`、`ByteOrder`、
-`BigEndian`、`LittleEndian` 和 `Transcoder`。
+`CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine`、
+`BufferedDecodeEngine`、`BufferedEncodeHooks`、`BufferedDecodeHooks`、
+`EncodePlan`、`CodecEncodeError`、`CodecDecodeError`、`DecodeErrorFactory`、
+`ValueEncoder`、`ValueDecoder`、`ByteOrder`、`BigEndian`、`LittleEndian` 和
+`Transcoder`。
 
 ## Fixed-Width 值
 
@@ -62,10 +65,10 @@ assert_eq!(1, written);
 - LEB128 和 ZigZag 的 encode 调用要求从给定 index 开始有
   `MAX_UNITS_PER_VALUE` 个可写字节。
 - LEB128 和 ZigZag 的 decode 调用要求从给定 index 开始至少有
-  `MIN_UNITS_PER_VALUE` 个可读字节。调用方还必须确保在不可读内存之前存在终止字节，
-  或者直接提供 `MAX_UNITS_PER_VALUE` 个可读字节。
+  `MIN_UNITS_PER_VALUE` 个可读字节。调用方通常应尽量提供到
+  `MAX_UNITS_PER_VALUE`，除非 EOF 已经无法继续读取。
 - 如果 EOF 导致调用方无法提供足够字节来完成一个变长值，上层应把该值作为
-  malformed input 处理。
+  `Leb128DecodeError` 中的不完整值处理。
 
 对外暴露安全 API 时，应先验证这些条件，再跨过 unsafe 边界。
 
@@ -131,6 +134,13 @@ impl ValueDecoder<[u8]> for U64Leb128Decoder {
 
 这个 wrapper 直接调用 `decode_unchecked`，因为 `Leb128DecodeError` 自己会表达
 不完整、畸形和非 canonical 输入。
+
+## 用 CodecBufferedDecoder 包装
+
+当安全 API 需要把多段二进制输入解码进调用方提供的输出缓冲区，并把不完整尾部留在
+调用方输入缓冲区中时，使用 `CodecBufferedDecoder<C, u8>`。自定义 binary decoder
+可使用 `BufferedDecodeEngine` 搭配 `BufferedDecodeHooks` 共享 decode-loop 逻辑，
+同时提供自己的领域错误策略。
 
 ## 用 Transcoder 包装
 

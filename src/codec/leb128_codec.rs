@@ -58,7 +58,7 @@ macro_rules! impl_unsigned_leb128_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value and the number of consumed bytes.
+            /// Returns the decoded value and the non-zero number of consumed bytes.
             ///
             /// # Errors
             ///
@@ -72,7 +72,10 @@ macro_rules! impl_unsigned_leb128_codec {
             /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
             /// `index`.
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($ty, usize), Leb128DecodeError> {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
@@ -112,17 +115,22 @@ macro_rules! impl_unsigned_leb128_codec {
             type EncodeError = Infallible;
 
             #[inline(always)]
-            fn min_units_per_value(&self) -> usize {
-                Self::MIN_UNITS_PER_VALUE
+            fn min_units_per_value(&self) -> core::num::NonZeroUsize {
+                core::num::NonZeroUsize::MIN
             }
 
             #[inline(always)]
-            fn max_units_per_value(&self) -> usize {
-                Self::MAX_UNITS_PER_VALUE
+            fn max_units_per_value(&self) -> core::num::NonZeroUsize {
+                // SAFETY: LEB128 has a non-zero maximum encoded width.
+                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
             }
 
             #[inline(always)]
-            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+            unsafe fn decode_unchecked(
+                &self,
+                input: &[u8],
+                index: usize,
+            ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
@@ -166,7 +174,7 @@ macro_rules! impl_signed_leb128_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value and the number of consumed bytes.
+            /// Returns the decoded value and the non-zero number of consumed bytes.
             ///
             /// # Errors
             ///
@@ -180,7 +188,10 @@ macro_rules! impl_signed_leb128_codec {
             /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
             /// `index`.
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($ty, usize), Leb128DecodeError> {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
@@ -220,17 +231,22 @@ macro_rules! impl_signed_leb128_codec {
             type EncodeError = Infallible;
 
             #[inline(always)]
-            fn min_units_per_value(&self) -> usize {
-                Self::MIN_UNITS_PER_VALUE
+            fn min_units_per_value(&self) -> core::num::NonZeroUsize {
+                core::num::NonZeroUsize::MIN
             }
 
             #[inline(always)]
-            fn max_units_per_value(&self) -> usize {
-                Self::MAX_UNITS_PER_VALUE
+            fn max_units_per_value(&self) -> core::num::NonZeroUsize {
+                // SAFETY: LEB128 has a non-zero maximum encoded width.
+                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
             }
 
             #[inline(always)]
-            unsafe fn decode_unchecked(&self, input: &[u8], index: usize) -> Result<($ty, usize), Self::DecodeError> {
+            unsafe fn decode_unchecked(
+                &self,
+                input: &[u8],
+                index: usize,
+            ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
@@ -283,7 +299,7 @@ impl_signed_leb128_codec!(isize);
 ///
 /// # Returns
 ///
-/// Returns the decoded value and the number of consumed bytes.
+/// Returns the decoded value and the non-zero number of consumed bytes.
 ///
 /// # Errors
 ///
@@ -299,7 +315,7 @@ unsafe fn read_uleb_unchecked<P>(
     index: usize,
     bits: u32,
     max_bytes: usize,
-) -> Result<(u128, usize), Leb128DecodeError>
+) -> Result<(u128, core::num::NonZeroUsize), Leb128DecodeError>
 where
     P: DecodePolicy,
 {
@@ -309,7 +325,13 @@ where
     // SAFETY: The caller guarantees that the currently available bytes are
     // readable from `index`.
     match unsafe { read_uleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
-        Ok(Some(value)) => Ok(value),
+        Ok(Some((value, consumed))) => {
+            debug_assert!(consumed > 0);
+            // SAFETY: Prefix readers only return `Some` after consuming at least
+            // one terminating byte.
+            let consumed = unsafe { core::num::NonZeroUsize::new_unchecked(consumed) };
+            Ok((value, consumed))
+        }
         Ok(None) => Err(Leb128DecodeError::incomplete(index, available + 1, available)),
         Err(error) => Err(error),
     }
@@ -396,7 +418,7 @@ where
 ///
 /// # Returns
 ///
-/// Returns the decoded value and the number of consumed bytes.
+/// Returns the decoded value and the non-zero number of consumed bytes.
 ///
 /// # Errors
 ///
@@ -412,7 +434,7 @@ unsafe fn read_sleb_unchecked<P>(
     index: usize,
     bits: u32,
     max_bytes: usize,
-) -> Result<(i128, usize), Leb128DecodeError>
+) -> Result<(i128, core::num::NonZeroUsize), Leb128DecodeError>
 where
     P: DecodePolicy,
 {
@@ -422,7 +444,13 @@ where
     // SAFETY: The caller guarantees that the currently available bytes are
     // readable from `index`.
     match unsafe { read_sleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
-        Ok(Some(value)) => Ok(value),
+        Ok(Some((value, consumed))) => {
+            debug_assert!(consumed > 0);
+            // SAFETY: Prefix readers only return `Some` after consuming at least
+            // one terminating byte.
+            let consumed = unsafe { core::num::NonZeroUsize::new_unchecked(consumed) };
+            Ok((value, consumed))
+        }
         Ok(None) => Err(Leb128DecodeError::incomplete(index, available + 1, available)),
         Err(error) => Err(error),
     }

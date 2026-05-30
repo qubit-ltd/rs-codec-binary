@@ -23,6 +23,9 @@ This crate provides:
 - `Strict` and `NonStrict` decode policies.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
 - Re-exports of `Codec`, `CodecValueEncoder`, `CodecBufferedEncoder`,
+  `CodecBufferedDecoder`, `BufferedEncodeEngine`, `BufferedDecodeEngine`,
+  `BufferedEncodeHooks`, `BufferedDecodeHooks`, `EncodePlan`,
+  `CodecEncodeError`, `CodecDecodeError`, `DecodeErrorFactory`,
   `ValueEncoder`, `ValueDecoder`, `BufferedEncoder`, `BufferedDecoder`,
   `BufferedConverter`, `ByteOrder`, `BigEndian`, `LittleEndian`, and
   `Transcoder` core primitives from `qubit-codec`.
@@ -127,9 +130,12 @@ buffer bounds before using them:
   through `Leb128DecodeError`.
 
 Higher-level code should wrap these unsafe calls behind safe `ValueEncoder`,
-`ValueDecoder`, `Transcoder`, `CodecValueEncoder`, or `CodecBufferedEncoder`
-implementations after checking the appropriate bounds. See the
-[User Guide](doc/user_guide.md) for wrapper examples.
+`ValueDecoder`, `Transcoder`, `CodecValueEncoder`, `CodecBufferedEncoder`, or
+`CodecBufferedDecoder` implementations after checking the appropriate bounds.
+Use `BufferedEncodeEngine` / `BufferedEncodeHooks` or
+`BufferedDecodeEngine` / `BufferedDecodeHooks` when a custom buffered adapter
+needs policy while sharing the common input/output capacity checks and decode
+loops. See the [User Guide](doc/user_guide.md) for wrapper examples.
 
 ## API Reference
 

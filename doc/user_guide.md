@@ -13,8 +13,11 @@ want explicit byte indexes.
   permissive decoding.
 
 The crate re-exports `Codec`, `CodecValueEncoder`, `CodecBufferedEncoder`,
-`ValueEncoder`, `ValueDecoder`, `ByteOrder`, `BigEndian`, `LittleEndian`, and
-`Transcoder` from `qubit-codec`.
+`CodecBufferedDecoder`, `BufferedEncodeEngine`, `BufferedDecodeEngine`,
+`BufferedEncodeHooks`, `BufferedDecodeHooks`, `EncodePlan`, `CodecEncodeError`,
+`CodecDecodeError`, `DecodeErrorFactory`, `ValueEncoder`, `ValueDecoder`,
+`ByteOrder`, `BigEndian`, `LittleEndian`, and `Transcoder` from
+`qubit-codec`.
 
 ## Fixed-Width Values
 
@@ -66,12 +69,11 @@ the responsibility of discovering whether a buffer has enough space:
 - LEB128 and ZigZag encode calls require `MAX_UNITS_PER_VALUE` writable bytes
   from the supplied index.
 - LEB128 and ZigZag decode calls require at least `MIN_UNITS_PER_VALUE`
-  readable byte from the supplied index. The caller must also ensure that a
-  terminating byte appears before unreadable memory, or simply provide
-  `MAX_UNITS_PER_VALUE` readable bytes.
+  readable byte from the supplied index. Callers should normally provide up to
+  `MAX_UNITS_PER_VALUE` readable bytes unless EOF prevents that.
 - If EOF prevents the caller from providing enough readable bytes to complete a
-  variable-length value, the higher layer should treat the value as malformed
-  input.
+  variable-length value, `decode_unchecked` reports the incomplete value through
+  `Leb128DecodeError`.
 
 When exposing a safe API, validate these conditions before crossing the unsafe
 boundary.
@@ -140,6 +142,14 @@ impl ValueDecoder<[u8]> for U64Leb128Decoder {
 
 The wrapper calls `decode_unchecked` directly because `Leb128DecodeError`
 reports incomplete, malformed, and non-canonical input itself.
+
+## Wrapping With CodecBufferedDecoder
+
+Use `CodecBufferedDecoder<C, u8>` when a safe API should decode many binary
+values into a caller-provided output buffer while leaving incomplete tails in
+the caller-owned input buffer. For custom binary decoders, use
+`BufferedDecodeEngine` with `BufferedDecodeHooks` to share the same decode-loop
+logic while supplying domain-specific error policy.
 
 ## Wrapping With Transcoder
 

@@ -57,7 +57,7 @@ macro_rules! impl_zig_zag_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value and the number of consumed bytes.
+            /// Returns the decoded value and the non-zero number of consumed bytes.
             ///
             /// # Errors
             ///
@@ -70,7 +70,10 @@ macro_rules! impl_zig_zag_codec {
             /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
             /// `index`.
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> Result<($signed, usize), Leb128DecodeError> {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> Result<($signed, core::num::NonZeroUsize), Leb128DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
@@ -111,13 +114,14 @@ macro_rules! impl_zig_zag_codec {
             type EncodeError = Infallible;
 
             #[inline(always)]
-            fn min_units_per_value(&self) -> usize {
-                Self::MIN_UNITS_PER_VALUE
+            fn min_units_per_value(&self) -> core::num::NonZeroUsize {
+                core::num::NonZeroUsize::MIN
             }
 
             #[inline(always)]
-            fn max_units_per_value(&self) -> usize {
-                Self::MAX_UNITS_PER_VALUE
+            fn max_units_per_value(&self) -> core::num::NonZeroUsize {
+                // SAFETY: ZigZag LEB128 has a non-zero maximum encoded width.
+                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
             }
 
             #[inline(always)]
@@ -125,7 +129,7 @@ macro_rules! impl_zig_zag_codec {
                 &self,
                 input: &[u8],
                 index: usize,
-            ) -> Result<($signed, usize), Self::DecodeError> {
+            ) -> Result<($signed, core::num::NonZeroUsize), Self::DecodeError> {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.

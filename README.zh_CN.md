@@ -22,9 +22,12 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - `Strict` 和 `NonStrict` 解码策略。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
 - 从 `qubit-codec` 重导出的 `Codec`、`CodecValueEncoder`、
-  `CodecBufferedEncoder`、`ValueEncoder`、`ValueDecoder`、`BufferedEncoder`、
-  `BufferedDecoder`、`BufferedConverter`、`ByteOrder`、`BigEndian`、
-  `LittleEndian` 和 `Transcoder` core primitive。
+  `CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine`、
+  `BufferedDecodeEngine`、`BufferedEncodeHooks`、`BufferedDecodeHooks`、
+  `EncodePlan`、`CodecEncodeError`、`CodecDecodeError`、`DecodeErrorFactory`、
+  `ValueEncoder`、`ValueDecoder`、`BufferedEncoder`、`BufferedDecoder`、
+  `BufferedConverter`、`ByteOrder`、`BigEndian`、`LittleEndian` 和
+  `Transcoder` core primitive。
 
 ## 设计目标
 
@@ -115,8 +118,11 @@ assert_eq!(2, written);
   输入都通过 `Leb128DecodeError` 表达。
 
 上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全的 `ValueEncoder`、
-`ValueDecoder`、`Transcoder`、`CodecValueEncoder` 或 `CodecBufferedEncoder`
-实现中。包装示例见[用户指南](doc/user_guide.zh_CN.md)。
+`ValueDecoder`、`Transcoder`、`CodecValueEncoder`、`CodecBufferedEncoder` 或
+`CodecBufferedDecoder` 实现中。如果自定义 buffered adapter 需要策略，同时想复用
+公共输入/输出容量检查和 decode 循环，可使用 `BufferedEncodeEngine` /
+`BufferedEncodeHooks` 或 `BufferedDecodeEngine` / `BufferedDecodeHooks`。
+包装示例见[用户指南](doc/user_guide.zh_CN.md)。
 
 ## API 参考
 
