@@ -22,13 +22,9 @@ This crate provides:
 - `ZigZagCodec` for ZigZag signed integer mapping over unsigned LEB128.
 - `Strict` and `NonStrict` decode policies.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Re-exports of `Codec`, `CodecValueEncoder`, `CodecBufferedEncoder`,
-  `CodecBufferedDecoder`, `BufferedEncodeEngine`, `BufferedDecodeEngine`,
-  `BufferedEncodeHooks`, `BufferedDecodeHooks`, `EncodePlan`,
-  `CodecEncodeError`, `CodecDecodeError`, `DecodeErrorFactory`,
-  `ValueEncoder`, `ValueDecoder`, `BufferedEncoder`, `BufferedDecoder`,
-  `BufferedConverter`, `ByteOrder`, `BigEndian`, `LittleEndian`, and
-  `Transcoder` core primitives from `qubit-codec`.
+- Essential `qubit-codec` primitives re-exported for callers: `Codec`,
+  `ByteOrder`, `ByteOrderSpec`, `BigEndian`, `LittleEndian`, `Transcoder`,
+  `TranscodeProgress`, and `TranscodeStatus`.
 
 ## Design Goals
 
@@ -129,13 +125,11 @@ buffer bounds before using them:
   that impossible. Incomplete, malformed, and non-canonical input is reported
   through `Leb128DecodeError`.
 
-Higher-level code should wrap these unsafe calls behind safe `ValueEncoder`,
-`ValueDecoder`, `Transcoder`, `CodecValueEncoder`, `CodecBufferedEncoder`, or
-`CodecBufferedDecoder` implementations after checking the appropriate bounds.
-Use `BufferedEncodeEngine` / `BufferedEncodeHooks` or
-`BufferedDecodeEngine` / `BufferedDecodeHooks` when a custom buffered adapter
-needs policy while sharing the common input/output capacity checks and decode
-loops. See the [User Guide](doc/user_guide.md) for wrapper examples.
+Higher-level code should wrap these unsafe calls behind safe APIs after checking
+the appropriate bounds. Import `CodecValueEncoder`, `CodecBufferedEncoder`,
+`CodecBufferedDecoder`, `BufferedEncodeEngine`, and the hook traits directly
+from `qubit-codec` when building generic adapters. See the
+[User Guide](doc/user_guide.md) for wrapper examples.
 
 ## API Reference
 

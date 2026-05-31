@@ -10,12 +10,10 @@
 - 当有符号值通常接近零、包括负数也要保持紧凑时，使用 `ZigZagCodec<T, P>`。
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
 
-本库从 `qubit-codec` 重导出 `Codec`、`CodecValueEncoder`、
-`CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine`、
-`BufferedDecodeEngine`、`BufferedEncodeHooks`、`BufferedDecodeHooks`、
-`EncodePlan`、`CodecEncodeError`、`CodecDecodeError`、`DecodeErrorFactory`、
-`ValueEncoder`、`ValueDecoder`、`ByteOrder`、`BigEndian`、`LittleEndian` 和
-`Transcoder`。
+本库只重导出属于 binary codec 表面的必要 `qubit-codec` 原语：`Codec`、
+`ByteOrder`、`ByteOrderSpec`、`BigEndian`、`LittleEndian`、`Transcoder`、
+`TranscodeProgress` 和 `TranscodeStatus`。通用 adapter、engine、hook 和 value
+trait 请直接从 `qubit-codec` 引入。
 
 ## Fixed-Width 值
 
@@ -79,10 +77,10 @@ assert_eq!(1, written);
 ```rust
 use core::convert::Infallible;
 
+use qubit_codec::ValueEncoder;
 use qubit_codec_binary::{
     Leb128Codec,
     NonStrict,
-    ValueEncoder,
 };
 
 struct U64Leb128Encoder;
@@ -110,11 +108,11 @@ impl ValueEncoder<u64> for U64Leb128Encoder {
 当安全 API 需要把一个借用输入对象解码为 owned 值时，使用 `ValueDecoder`。
 
 ```rust
+use qubit_codec::ValueDecoder;
 use qubit_codec_binary::{
     Leb128Codec,
     Leb128DecodeError,
     NonStrict,
-    ValueDecoder,
 };
 
 struct U64Leb128Decoder;

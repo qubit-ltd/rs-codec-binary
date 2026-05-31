@@ -12,11 +12,10 @@ want explicit byte indexes.
 - Use `Strict` to reject non-canonical LEB128 payloads and `NonStrict` to allow
   permissive decoding.
 
-The crate re-exports `Codec`, `CodecValueEncoder`, `CodecBufferedEncoder`,
-`CodecBufferedDecoder`, `BufferedEncodeEngine`, `BufferedDecodeEngine`,
-`BufferedEncodeHooks`, `BufferedDecodeHooks`, `EncodePlan`, `CodecEncodeError`,
-`CodecDecodeError`, `DecodeErrorFactory`, `ValueEncoder`, `ValueDecoder`,
-`ByteOrder`, `BigEndian`, `LittleEndian`, and `Transcoder` from
+The crate re-exports only the `qubit-codec` primitives that are part of the
+binary codec surface: `Codec`, `ByteOrder`, `ByteOrderSpec`, `BigEndian`,
+`LittleEndian`, `Transcoder`, `TranscodeProgress`, and `TranscodeStatus`.
+Import generic adapters, engines, hooks, and value traits directly from
 `qubit-codec`.
 
 ## Fixed-Width Values
@@ -86,10 +85,10 @@ owned output object.
 ```rust
 use core::convert::Infallible;
 
+use qubit_codec::ValueEncoder;
 use qubit_codec_binary::{
     Leb128Codec,
     NonStrict,
-    ValueEncoder,
 };
 
 struct U64Leb128Encoder;
@@ -118,11 +117,11 @@ Use `ValueDecoder` when a safe API should decode one borrowed input object into
 an owned value.
 
 ```rust
+use qubit_codec::ValueDecoder;
 use qubit_codec_binary::{
     Leb128Codec,
     Leb128DecodeError,
     NonStrict,
-    ValueDecoder,
 };
 
 struct U64Leb128Decoder;

@@ -23,9 +23,10 @@ use crate::{
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
-/// `BinaryCodec` is intentionally a zero-sized codec type. It keeps the legacy
-/// static unchecked helpers and also implements [`Codec`] for generic codec
-/// pipelines. Callers must validate buffer lengths before entering the hot path.
+/// `BinaryCodec` is intentionally a zero-sized codec type. It exposes type-level
+/// unchecked helpers for direct hot-path use and also implements [`Codec`] for
+/// generic codec pipelines. Callers must validate buffer lengths before entering
+/// the hot path.
 ///
 /// # Type Parameters
 ///

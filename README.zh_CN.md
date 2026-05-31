@@ -21,13 +21,9 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - 用于 ZigZag signed integer mapping 的 `ZigZagCodec`。
 - `Strict` 和 `NonStrict` 解码策略。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
-- 从 `qubit-codec` 重导出的 `Codec`、`CodecValueEncoder`、
-  `CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine`、
-  `BufferedDecodeEngine`、`BufferedEncodeHooks`、`BufferedDecodeHooks`、
-  `EncodePlan`、`CodecEncodeError`、`CodecDecodeError`、`DecodeErrorFactory`、
-  `ValueEncoder`、`ValueDecoder`、`BufferedEncoder`、`BufferedDecoder`、
-  `BufferedConverter`、`ByteOrder`、`BigEndian`、`LittleEndian` 和
-  `Transcoder` core primitive。
+- 面向调用方重导出的必要 `qubit-codec` 原语：`Codec`、`ByteOrder`、
+  `ByteOrderSpec`、`BigEndian`、`LittleEndian`、`Transcoder`、
+  `TranscodeProgress` 和 `TranscodeStatus`。
 
 ## 设计目标
 
@@ -117,11 +113,10 @@ assert_eq!(2, written);
   `MAX_UNITS_PER_VALUE`，除非 EOF 已经无法继续读取。不完整、畸形和非 canonical
   输入都通过 `Leb128DecodeError` 表达。
 
-上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全的 `ValueEncoder`、
-`ValueDecoder`、`Transcoder`、`CodecValueEncoder`、`CodecBufferedEncoder` 或
-`CodecBufferedDecoder` 实现中。如果自定义 buffered adapter 需要策略，同时想复用
-公共输入/输出容量检查和 decode 循环，可使用 `BufferedEncodeEngine` /
-`BufferedEncodeHooks` 或 `BufferedDecodeEngine` / `BufferedDecodeHooks`。
+上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全 API 中。构建泛型
+adapter 时，请直接从 `qubit-codec` 引入 `CodecValueEncoder`、
+`CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine` 和 hook
+trait。
 包装示例见[用户指南](doc/user_guide.zh_CN.md)。
 
 ## API 参考
