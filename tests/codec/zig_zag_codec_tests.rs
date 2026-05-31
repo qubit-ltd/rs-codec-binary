@@ -10,7 +10,7 @@ use qubit_codec_binary::{
     ZigZagCodec,
 };
 
-use super::assert_decoded_eq;
+use super::assertions_tests::assert_decoded_eq;
 
 #[test]
 fn test_zig_zag_codec_exposes_unit_bounds() {

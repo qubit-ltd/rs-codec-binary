@@ -309,7 +309,7 @@ impl_signed_leb128_codec!(isize);
 /// # Safety
 ///
 /// The caller must guarantee that at least one byte is readable from `index`.
-#[inline(always)]
+#[inline]
 unsafe fn read_uleb_unchecked<P>(
     input: &[u8],
     index: usize,
@@ -362,7 +362,7 @@ where
 ///
 /// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
 /// `available` bytes and that `available <= max_bytes`.
-#[inline(always)]
+#[inline]
 unsafe fn read_uleb_prefix_unchecked<P>(
     input: &[u8],
     index: usize,
@@ -428,7 +428,7 @@ where
 /// # Safety
 ///
 /// The caller must guarantee that at least one byte is readable from `index`.
-#[inline(always)]
+#[inline]
 unsafe fn read_sleb_unchecked<P>(
     input: &[u8],
     index: usize,
@@ -481,7 +481,7 @@ where
 ///
 /// The caller must guarantee that `input.as_ptr().add(index)` is valid to read
 /// `available` bytes and that `available <= max_bytes`.
-#[inline(always)]
+#[inline]
 unsafe fn read_sleb_prefix_unchecked<P>(
     input: &[u8],
     index: usize,
@@ -536,7 +536,6 @@ where
 ///
 /// Returns the error carrying the byte count to consume.
 #[cold]
-#[inline(never)]
 fn malformed_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
     Leb128DecodeError::malformed(index, consumed)
 }
@@ -553,7 +552,6 @@ fn malformed_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
 ///
 /// Returns the error carrying the byte count to consume.
 #[cold]
-#[inline(never)]
 fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
     Leb128DecodeError::noncanonical(index, consumed)
 }
@@ -644,7 +642,7 @@ fn has_canonical_sleb_len(value: i128, actual_len: usize) -> bool {
 ///
 /// Returns the number of bytes used by the canonical unsigned LEB128 encoding.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn canonical_uleb_len(mut value: u128) -> usize {
     let mut len = 1;
     while value >= 0x80 {
@@ -664,7 +662,7 @@ fn canonical_uleb_len(mut value: u128) -> usize {
 ///
 /// Returns the number of bytes used by the canonical signed LEB128 encoding.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn canonical_sleb_len(mut value: i128) -> usize {
     let mut len = 0;
     loop {

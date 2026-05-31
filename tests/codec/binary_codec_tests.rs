@@ -5,7 +5,7 @@ use qubit_codec_binary::{
     LittleEndian,
 };
 
-use super::assert_decoded_eq;
+use super::assertions_tests::assert_decoded_eq;
 
 #[test]
 fn test_binary_codec_exposes_required_min_buffer_len() {
