@@ -34,8 +34,6 @@ pub use qubit_codec::{
     ByteOrder,
     ByteOrderSpec,
     Codec,
-    DecodeErrorInfo,
-    DecodeFailure,
     LittleEndian,
     TranscodeProgress,
     TranscodeStatus,

@@ -1,4 +1,3 @@
-use qubit_codec::DecodeErrorInfo;
 use qubit_codec_binary::{
     Leb128DecodeError,
     Leb128DecodeErrorKind,
@@ -25,7 +24,6 @@ fn test_incomplete_stores_required_and_available_units() {
     assert_eq!(None, error.consumed());
     assert_eq!(Some(3), error.required());
     assert_eq!(Some(2), error.available());
-    assert_eq!(Some((3, 2)), error.failure().incomplete());
 }
 
 #[test]
@@ -34,7 +32,5 @@ fn test_invalid_errors_store_consumed_units() {
     let noncanonical = Leb128DecodeError::noncanonical(9, 2);
 
     assert_eq!(Some(4), malformed.consumed());
-    assert_eq!(Some(4), malformed.failure().invalid_consumed());
     assert_eq!(Some(2), noncanonical.consumed());
-    assert_eq!(Some(2), noncanonical.failure().invalid_consumed());
 }

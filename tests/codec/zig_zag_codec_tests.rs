@@ -1,8 +1,4 @@
-use qubit_codec::{
-    Codec,
-    DecodeErrorInfo,
-    DecodeFailure,
-};
+use qubit_codec::Codec;
 use qubit_codec_binary::{
     Leb128DecodeErrorKind,
     NonStrict,
@@ -92,13 +88,6 @@ fn test_zig_zag_codec_reports_incomplete_values_unchecked() {
     assert_eq!(Leb128DecodeErrorKind::Incomplete, pending.kind());
     assert_eq!(Some(2), pending.required());
     assert_eq!(Some(1), pending.available());
-    assert_eq!(
-        DecodeFailure::Incomplete {
-            required_total: 2,
-            available: 1,
-        },
-        pending.failure(),
-    );
 
     let decoded = unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&input, 1) }
         .expect("complete ZigZag value should decode");
@@ -108,7 +97,6 @@ fn test_zig_zag_codec_reports_incomplete_values_unchecked() {
         .expect_err("non-canonical ZigZag value should fail");
     assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
     assert_eq!(Some(2), error.consumed());
-    assert_eq!(DecodeFailure::Invalid { consumed: 2 }, error.failure());
 }
 
 #[test]

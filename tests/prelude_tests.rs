@@ -13,8 +13,6 @@ use qubit_codec_binary::prelude::{
     BinaryCodec,
     ByteOrder,
     ByteOrderSpec,
-    DecodeErrorInfo,
-    DecodeFailure,
     Leb128Codec,
     Leb128DecodeError,
     NonStrict,
@@ -39,10 +37,6 @@ fn test_prelude_imports_binary_codec_types_and_core_markers() {
         .expect("LEB128 value should decode");
     assert_eq!(300, decoded);
     assert_eq!(2, consumed.get());
-
-    fn _accept_decode_error_info<T: DecodeErrorInfo>() {}
-    _accept_decode_error_info::<Leb128DecodeError>();
-    assert_eq!(Some(1), DecodeFailure::Invalid { consumed: 1 }.invalid_consumed());
 
     let mut zigzag = [0_u8; ZigZagCodec::<i64, NonStrict>::MAX_UNITS_PER_VALUE];
     let written = unsafe { ZigZagCodec::<i64, NonStrict>::encode_unchecked(-42, &mut zigzag, 0) };

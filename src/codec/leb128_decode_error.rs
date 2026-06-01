@@ -9,11 +9,6 @@
 ******************************************************************************/
 use thiserror::Error;
 
-use qubit_codec::{
-    DecodeErrorInfo,
-    DecodeFailure,
-};
-
 use crate::Leb128DecodeErrorKind;
 
 /// Error reported while decoding a LEB128 integer from a byte buffer.
@@ -153,20 +148,5 @@ impl Leb128DecodeError {
     #[must_use]
     pub const fn available(self) -> Option<usize> {
         self.available
-    }
-}
-
-impl DecodeErrorInfo for Leb128DecodeError {
-    /// Returns buffered-decode metadata for this LEB128 error.
-    fn failure(&self) -> DecodeFailure {
-        match self.kind {
-            Leb128DecodeErrorKind::Incomplete => DecodeFailure::Incomplete {
-                required_total: self.required.unwrap_or(0),
-                available: self.available.unwrap_or(0),
-            },
-            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => DecodeFailure::Invalid {
-                consumed: self.consumed.max(1),
-            },
-        }
     }
 }

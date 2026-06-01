@@ -19,8 +19,6 @@ pub use crate::{
     ByteOrder,
     ByteOrderSpec,
     Codec,
-    DecodeErrorInfo,
-    DecodeFailure,
     DecodePolicy,
     Leb128Codec,
     Leb128DecodeError,
