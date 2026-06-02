@@ -144,7 +144,7 @@ reports incomplete, malformed, and non-canonical input itself.
 
 ## Wrapping With CodecBufferedDecoder
 
-Use `CodecBufferedDecoder<C, u8>` when a safe API should decode many binary
+Use `CodecBufferedDecoder<C>` when a safe API should decode many binary
 values into a caller-provided output buffer while leaving incomplete tails in
 the caller-owned input buffer. For custom binary decoders, use
 `BufferedDecodeEngine` with `BufferedDecodeHooks` to share the same decode-loop

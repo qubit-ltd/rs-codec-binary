@@ -95,7 +95,9 @@ impl<O> BinaryCodec<u8, O> {
     }
 }
 
-unsafe impl<O> Codec<u8, u8> for BinaryCodec<u8, O> {
+unsafe impl<O> Codec for BinaryCodec<u8, O> {
+    type Value = u8;
+    type Unit = u8;
     type DecodeError = Infallible;
     type EncodeError = Infallible;
 
@@ -184,7 +186,9 @@ impl<O> BinaryCodec<i8, O> {
     }
 }
 
-unsafe impl<O> Codec<i8, u8> for BinaryCodec<i8, O> {
+unsafe impl<O> Codec for BinaryCodec<i8, O> {
+    type Value = i8;
+    type Unit = u8;
     type DecodeError = Infallible;
     type EncodeError = Infallible;
 
@@ -304,7 +308,9 @@ macro_rules! impl_integer_binary_codec {
             }
         }
 
-        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, BigEndian> {
+        unsafe impl Codec for BinaryCodec<$ty, BigEndian> {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
@@ -427,7 +433,9 @@ macro_rules! impl_integer_binary_codec {
             }
         }
 
-        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, LittleEndian> {
+        unsafe impl Codec for BinaryCodec<$ty, LittleEndian> {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
@@ -555,7 +563,9 @@ macro_rules! impl_float_binary_codec {
             }
         }
 
-        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, BigEndian> {
+        unsafe impl Codec for BinaryCodec<$ty, BigEndian> {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
@@ -679,7 +689,9 @@ macro_rules! impl_float_binary_codec {
             }
         }
 
-        unsafe impl Codec<$ty, u8> for BinaryCodec<$ty, LittleEndian> {
+        unsafe impl Codec for BinaryCodec<$ty, LittleEndian> {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 

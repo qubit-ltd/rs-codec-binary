@@ -136,7 +136,7 @@ impl ValueDecoder<[u8]> for U64Leb128Decoder {
 ## 用 CodecBufferedDecoder 包装
 
 当安全 API 需要把多段二进制输入解码进调用方提供的输出缓冲区，并把不完整尾部留在
-调用方输入缓冲区中时，使用 `CodecBufferedDecoder<C, u8>`。自定义 binary decoder
+调用方输入缓冲区中时，使用 `CodecBufferedDecoder<C>`。自定义 binary decoder
 可使用 `BufferedDecodeEngine` 搭配 `BufferedDecodeHooks` 共享 decode-loop 逻辑，
 同时提供自己的领域错误策略。
 

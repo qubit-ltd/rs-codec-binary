@@ -31,7 +31,7 @@ This crate provides:
 - **Buffer First**: operate on caller-owned byte slices without requiring
   `Read` or `Write`.
 - **Hot-Path Efficiency**: provide unchecked static codec methods for callers
-  that already validated buffer bounds, plus `Codec<Value, u8>` implementations
+  that already validated buffer bounds, plus `Codec` implementations with `Unit = u8`
   for generic codec pipelines.
 - **Precise Layering**: depend only on `qubit-codec`, leaving stream adapters to
   `qubit-io-binary`.
@@ -69,7 +69,7 @@ This crate provides:
 
 - **`prelude` module**: imports binary codec types and core byte-order markers.
 - **Core codec trait**: `BinaryCodec`, `Leb128Codec`, and `ZigZagCodec`
-  implement `qubit_codec::Codec<Value, u8>`.
+  implement `qubit_codec::Codec` with `Unit = u8` and a codec-specific `Value`.
 - **No `std::io` adapters**: stream helpers live in `qubit-io-binary`.
 
 ## Documentation
@@ -137,7 +137,7 @@ from `qubit-codec` when building generic adapters. See the
 
 | Item | Description |
 |------|-------------|
-| `Codec<Value, u8>` | Decode and encode one fixed-width scalar through the core trait |
+| `Codec` (`Unit = u8`) | Decode and encode one fixed-width scalar through the core trait |
 | `REQUIRED_MIN_BUFFER_LEN` | Minimum bytes required for the scalar type |
 | `decode_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
 | `encode_unchecked(value, output, index)` | Encode one fixed-width scalar without bounds checks |
@@ -146,7 +146,7 @@ from `qubit-codec` when building generic adapters. See the
 
 | Item | Description |
 |------|-------------|
-| `Codec<Value, u8>` | Decode and encode one LEB128 value through the core trait |
+| `Codec` (`Unit = u8`) | Decode and encode one LEB128 value through the core trait |
 | `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
 | `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the integer type |
 | `decode_unchecked(input, index)` | Decode one complete LEB128 value |
@@ -156,7 +156,7 @@ from `qubit-codec` when building generic adapters. See the
 
 | Item | Description |
 |------|-------------|
-| `Codec<Value, u8>` | Decode and encode one ZigZag LEB128 value through the core trait |
+| `Codec` (`Unit = u8`) | Decode and encode one ZigZag LEB128 value through the core trait |
 | `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
 | `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the signed integer type |
 | `decode_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
@@ -178,7 +178,7 @@ and `qubit-io-binary` for stream-oriented binary readers and writers.
 ## Performance Considerations
 
 `BinaryCodec`, `Leb128Codec`, and `ZigZagCodec` are zero-sized codec types with
-no runtime allocation. Their unchecked methods and `Codec<Value, u8>`
+no runtime allocation. Their unchecked methods and `Codec` implementations with `Unit = u8`
 implementations are intended for validated hot paths where a caller has already
 checked buffer capacity or is operating inside a buffered stream adapter.
 

@@ -29,7 +29,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 - **缓冲区优先**：直接操作调用方持有的 byte slice，不要求 `Read` 或 `Write`。
 - **热路径效率**：为已经验证过边界的调用方提供 unchecked 静态 codec 方法，并
-  实现 `Codec<Value, u8>` 以接入通用 codec pipeline。
+  实现 `Unit = u8` 的 `Codec` 以接入通用 codec pipeline。
 - **分层清晰**：只依赖 `qubit-codec`，stream adapter 交给 `qubit-io-binary`。
 - **规范编码**：始终写出 canonical LEB128，同时允许配置 decode strictness。
 - **强类型字节序**：同时支持运行时和类型级 endian 选择。
@@ -60,7 +60,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 - **`prelude` 模块**：导入 binary codec 类型和核心字节序标记。
 - **核心 codec trait**：`BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec`
-  实现 `qubit_codec::Codec<Value, u8>`。
+  实现 `qubit_codec::Codec`，其中 `Unit = u8`，`Value` 由具体 codec 决定。
 - **不包含 `std::io` adapter**：stream helper 位于 `qubit-io-binary`。
 
 ## 文档
@@ -125,7 +125,7 @@ trait。
 
 | 条目 | 描述 |
 |------|------|
-| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 fixed-width scalar |
+| `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 fixed-width scalar |
 | `REQUIRED_MIN_BUFFER_LEN` | 当前标量类型所需的最少字节数 |
 | `decode_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
 | `encode_unchecked(value, output, index)` | 无边界检查编码一个 fixed-width scalar |
@@ -134,7 +134,7 @@ trait。
 
 | 条目 | 描述 |
 |------|------|
-| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 LEB128 值 |
+| `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 LEB128 值 |
 | `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
 | `MAX_UNITS_PER_VALUE` | 当前整数类型最多需要的字节数 |
 | `decode_unchecked(input, index)` | 解码一个完整 LEB128 值 |
@@ -144,7 +144,7 @@ trait。
 
 | 条目 | 描述 |
 |------|------|
-| `Codec<Value, u8>` | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
+| `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
 | `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
 | `MAX_UNITS_PER_VALUE` | 当前 signed integer 类型最多需要的字节数 |
 | `decode_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
@@ -166,7 +166,7 @@ reader/writer 使用 `qubit-io-binary`。
 ## 性能考虑
 
 `BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec` 都是零大小 codec 类型，不产生运行时分配。
-它们的 unchecked 方法和 `Codec<Value, u8>` 实现面向已经验证缓冲区容量的热路径，或被
+它们的 unchecked 方法和 `Codec` 实现（`Unit = u8`）面向已经验证缓冲区容量的热路径，或被
 buffered stream adapter 在内部使用。
 
 ## 测试与代码覆盖率

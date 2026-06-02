@@ -106,10 +106,12 @@ macro_rules! impl_zig_zag_codec {
             }
         }
 
-        unsafe impl<P> Codec<$signed, u8> for ZigZagCodec<$signed, P>
+        unsafe impl<P> Codec for ZigZagCodec<$signed, P>
         where
             P: DecodePolicy,
         {
+            type Value = $signed;
+            type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 

@@ -107,10 +107,12 @@ macro_rules! impl_unsigned_leb128_codec {
             }
         }
 
-        unsafe impl<P> Codec<$ty, u8> for Leb128Codec<$ty, P>
+        unsafe impl<P> Codec for Leb128Codec<$ty, P>
         where
             P: DecodePolicy,
         {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
@@ -223,10 +225,12 @@ macro_rules! impl_signed_leb128_codec {
             }
         }
 
-        unsafe impl<P> Codec<$ty, u8> for Leb128Codec<$ty, P>
+        unsafe impl<P> Codec for Leb128Codec<$ty, P>
         where
             P: DecodePolicy,
         {
+            type Value = $ty;
+            type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
