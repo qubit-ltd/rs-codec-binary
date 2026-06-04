@@ -7,15 +7,19 @@
  *    Licensed under the Apache License, Version 2.0.
  *
 ******************************************************************************/
-use core::num::NonZeroUsize;
-
-use thiserror::Error;
+use core::{
+    fmt::{
+        self,
+        Display,
+        Formatter,
+    },
+    num::NonZeroUsize,
+};
 
 use crate::Leb128DecodeErrorKind;
 
 /// Error reported while decoding a LEB128 integer from a byte buffer.
-#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-#[error("{kind}")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Leb128DecodeError {
     kind: Leb128DecodeErrorKind,
     start_index: usize,
@@ -207,6 +211,39 @@ impl Leb128DecodeError {
     }
 }
 
+impl Display for Leb128DecodeError {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            Leb128DecodeErrorKind::Incomplete => match (self.required, self.available) {
+                (Some(required), Some(available)) => write!(
+                    formatter,
+                    "{} at byte {}: need at least {} bytes, only {} available (next byte boundary {})",
+                    self.kind, self.start_index, required, available, self.error_index,
+                ),
+                _ => write!(
+                    formatter,
+                    "{} at byte {}: detected at byte {}",
+                    self.kind, self.start_index, self.error_index,
+                ),
+            },
+            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => match self.consumed {
+                Some(consumed) => write!(
+                    formatter,
+                    "{} at byte {}: detected at byte {} after consuming {} bytes",
+                    self.kind, self.start_index, self.error_index, consumed,
+                ),
+                None => write!(
+                    formatter,
+                    "{} at byte {}: detected at byte {}",
+                    self.kind, self.start_index, self.error_index,
+                ),
+            },
+        }
+    }
+}
+
+impl std::error::Error for Leb128DecodeError {}
+
 /// Adds an absolute byte offset to an index.
 ///
 /// # Parameters
@@ -258,11 +295,7 @@ const fn last_consumed_index(start_index: usize, consumed: NonZeroUsize) -> usiz
 ///
 /// Panics when `error_index` is before `start_index` or after the last consumed
 /// byte.
-const fn assert_error_index_in_consumed_span(
-    start_index: usize,
-    error_index: usize,
-    consumed: NonZeroUsize,
-) {
+const fn assert_error_index_in_consumed_span(start_index: usize, error_index: usize, consumed: NonZeroUsize) {
     let last_index = last_consumed_index(start_index, consumed);
     assert!(
         error_index >= start_index,

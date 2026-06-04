@@ -1,6 +1,9 @@
 use core::num::NonZeroUsize;
 
-use qubit_codec_binary::{Leb128DecodeError, Leb128DecodeErrorKind};
+use qubit_codec_binary::{
+    Leb128DecodeError,
+    Leb128DecodeErrorKind,
+};
 
 #[test]
 fn test_incomplete_stores_start_error_required_available_and_additional_units() {
@@ -15,7 +18,10 @@ fn test_incomplete_stores_start_error_required_available_and_additional_units() 
     assert_eq!(Some(required), error.required());
     assert_eq!(Some(2), error.available());
     assert_eq!(NonZeroUsize::new(1), error.additional());
-    assert_eq!("incomplete LEB128 integer", error.to_string());
+    assert_eq!(
+        "incomplete LEB128 integer at byte 5: need at least 3 bytes, only 2 available (next byte boundary 7)",
+        error.to_string(),
+    );
 }
 
 #[test]
@@ -30,8 +36,7 @@ fn test_incomplete_rejects_satisfied_required_bound() {
 #[test]
 fn test_invalid_errors_store_start_error_and_consumed_units() {
     let malformed_consumed = NonZeroUsize::new(4).expect("malformed consumed count is non-zero");
-    let noncanonical_consumed =
-        NonZeroUsize::new(2).expect("non-canonical consumed count is non-zero");
+    let noncanonical_consumed = NonZeroUsize::new(2).expect("non-canonical consumed count is non-zero");
     let malformed = Leb128DecodeError::malformed(5, 7, malformed_consumed);
     let noncanonical = Leb128DecodeError::noncanonical(9, noncanonical_consumed);
 
@@ -46,6 +51,14 @@ fn test_invalid_errors_store_start_error_and_consumed_units() {
     assert_eq!(None, malformed.required());
     assert_eq!(None, malformed.additional());
     assert_eq!(None, noncanonical.available());
+    assert_eq!(
+        "malformed LEB128 integer at byte 5: detected at byte 7 after consuming 4 bytes",
+        malformed.to_string(),
+    );
+    assert_eq!(
+        "non-canonical LEB128 integer at byte 9: detected at byte 10 after consuming 2 bytes",
+        noncanonical.to_string(),
+    );
 }
 
 #[test]
