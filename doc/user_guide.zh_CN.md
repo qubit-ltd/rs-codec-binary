@@ -11,9 +11,9 @@
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
 
 本库只重导出属于 binary codec 表面的必要 `qubit-codec` 原语：`Codec`、
-`ByteOrder`、`ByteOrderSpec`、`BigEndian`、`LittleEndian`、`Transcoder`、
-`TranscodeProgress` 和 `TranscodeStatus`。通用 adapter、engine、hook 和 value
-trait 请直接从 `qubit-codec` 引入。
+`ByteOrder`、`ByteOrderSpec`、`BigEndian` 和 `LittleEndian`。同时暴露 sealed
+`Leb128DecodePolicy` trait，用于内置 LEB128 policy marker。通用 adapter、
+engine、hook 和 value trait 请直接从 `qubit-codec` 引入。
 
 ## Fixed-Width 值
 
@@ -54,6 +54,17 @@ assert_eq!(1, written);
 `MAX_UNITS_PER_VALUE` 是容量上界，适合用于分配输出 buffer，或者在调用方无法
 证明终止字节位置时保证最大可读范围。
 
+## LEB128 解码错误
+
+`Leb128DecodeError` 区分当前值的起点和错误被发现的位置：
+
+- `start_index()` 返回当前尝试解码的值从哪个字节开始。
+- `error_index()` 返回解码发现错误的位置。对于 incomplete input，它是当前可用
+  输入之后、下一字节应出现的边界。
+- `required()`、`available()` 和 `additional()` 描述 incomplete input。
+- `consumed()` 描述 malformed 或 non-canonical input 后调用方可以消费多少
+  无效字节。
+
 ## Unsafe 边界
 
 这些 codec 是低层构件。unchecked 方法不负责发现 buffer 空间是否足够：
@@ -70,141 +81,15 @@ assert_eq!(1, written);
 
 对外暴露安全 API 时，应先验证这些条件，再跨过 unsafe 边界。
 
-## 用 ValueEncoder 包装
+## 安全 Adapter 与 Stream
 
-当安全 API 需要把一个借用值编码为 owned 输出对象时，使用 `ValueEncoder`。
+本 crate 刻意停留在 buffer-level binary codec 层。owned single-value adapter、
+通用 buffered engine 或 conversion trait 请直接从 `qubit-codec` 引入，并把这些
+binary codec 作为低层 codec 实现使用。
 
-```rust
-use core::convert::Infallible;
-
-use qubit_codec::ValueEncoder;
-use qubit_codec_binary::{
-    Leb128Codec,
-    NonStrict,
-};
-
-struct U64Leb128Encoder;
-
-impl ValueEncoder<u64> for U64Leb128Encoder {
-    type Output = Vec<u8>;
-    type Error = Infallible;
-
-    fn encode(&self, input: &u64) -> Result<Self::Output, Self::Error> {
-        let mut output = vec![0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-        let written = unsafe {
-            Leb128Codec::<u64, NonStrict>::encode_unchecked(*input, &mut output, 0)
-        };
-        output.truncate(written);
-        Ok(output)
-    }
-}
-```
-
-这个 wrapper 在调用 `encode_unchecked` 前分配最大可能输出长度，然后把结果截断到
-实际写入长度。
-
-## 用 ValueDecoder 包装
-
-当安全 API 需要把一个借用输入对象解码为 owned 值时，使用 `ValueDecoder`。
-
-```rust
-use qubit_codec::ValueDecoder;
-use qubit_codec_binary::{
-    Leb128Codec,
-    Leb128DecodeError,
-    NonStrict,
-};
-
-struct U64Leb128Decoder;
-
-impl ValueDecoder<[u8]> for U64Leb128Decoder {
-    type Output = u64;
-    type Error = Leb128DecodeError;
-
-    fn decode(&self, input: &[u8]) -> Result<Self::Output, Self::Error> {
-        let (value, _consumed) = unsafe {
-            Leb128Codec::<u64, NonStrict>::decode_unchecked(input, 0)?
-        };
-        Ok(value)
-    }
-}
-```
-
-这个 wrapper 直接调用 `decode_unchecked`，因为 `Leb128DecodeError` 自己会表达
-不完整、畸形和非 canonical 输入。
-
-## 用 CodecBufferedDecoder 包装
-
-当安全 API 需要把多段二进制输入解码进调用方提供的输出缓冲区，并把不完整尾部留在
-调用方输入缓冲区中时，使用 `CodecBufferedDecoder<C>`。自定义 binary decoder
-可使用 `BufferedDecodeEngine` 搭配 `BufferedDecodeHooks` 共享 decode-loop 逻辑，
-同时提供自己的领域错误策略。
-
-## 用 Transcoder 包装
-
-当安全 API 需要在调用方提供的 buffer 上批量处理一系列值，并在输出空间不足时返回
-progress，使用 `Transcoder`。
-
-```rust
-use core::convert::Infallible;
-
-use qubit_codec_binary::{
-    Leb128Codec,
-    NonStrict,
-    TranscodeProgress,
-    TranscodeStatus,
-    Transcoder,
-};
-
-struct U64Leb128Transcoder;
-
-impl Transcoder<u64, u8> for U64Leb128Transcoder {
-    type Error = Infallible;
-
-    fn max_output_len(&self, input_len: usize) -> Option<usize> {
-        Some(input_len.saturating_mul(
-            Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE,
-        ))
-    }
-
-    fn transcode(
-        &mut self,
-        input: &[u64],
-        input_index: usize,
-        output: &mut [u8],
-        output_index: usize,
-    ) -> Result<TranscodeProgress, Self::Error> {
-        let mut read = 0;
-        let mut written = 0;
-        while input_index + read < input.len() {
-            let cursor = output_index + written;
-            let available = output.len().saturating_sub(cursor);
-            let required = Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE;
-            if available < required {
-                return Ok(TranscodeProgress::new(
-                    TranscodeStatus::NeedOutput {
-                        output_index: cursor,
-                        required,
-                        available,
-                    },
-                    read,
-                    written,
-                ));
-            }
-            let value = input[input_index + read];
-            let len = unsafe {
-                Leb128Codec::<u64, NonStrict>::encode_unchecked(value, output, cursor)
-            };
-            read += 1;
-            written += len;
-        }
-        Ok(TranscodeProgress::complete(read, written))
-    }
-}
-```
-
-这个 transcoder 在每次 unsafe encode 前检查输出容量；空间不足时返回
-`NeedOutput`，而不是写入短 buffer。
+如果自行封装 `decode_unchecked`，调用 unsafe 方法前要先检查起始 index 后至少有
+`MIN_UNITS_PER_VALUE` 个可读字节。对于 single-value decoder，还需要由你的格式决定
+返回的 `consumed` 之后是否允许 trailing bytes。
 
 如果需要围绕这些 codec 的 `std::io::Read` / `Write` adapter，请使用
 `qubit-io-binary`。

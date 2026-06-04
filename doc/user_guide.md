@@ -14,9 +14,9 @@ want explicit byte indexes.
 
 The crate re-exports only the `qubit-codec` primitives that are part of the
 binary codec surface: `Codec`, `ByteOrder`, `ByteOrderSpec`, `BigEndian`,
-`LittleEndian`, `Transcoder`, `TranscodeProgress`, and `TranscodeStatus`.
-Import generic adapters, engines, hooks, and value traits directly from
-`qubit-codec`.
+and `LittleEndian`. It also exposes the sealed `Leb128DecodePolicy` trait for
+the built-in LEB128 policy markers. Import generic adapters, engines, hooks,
+and value traits directly from `qubit-codec`.
 
 ## Fixed-Width Values
 
@@ -58,6 +58,19 @@ assert_eq!(1, written);
 `MAX_UNITS_PER_VALUE` is the capacity upper bound used when sizing output
 buffers or when a caller cannot otherwise prove where the terminating byte is.
 
+## LEB128 Decode Errors
+
+`Leb128DecodeError` separates the attempted value start from the point where an
+error became observable:
+
+- `start_index()` returns the byte index where the attempted value starts.
+- `error_index()` returns the byte index where decoding detected the error. For
+  incomplete input this is the one-past-available boundary where the next byte
+  would be required.
+- `required()`, `available()`, and `additional()` describe incomplete input.
+- `consumed()` describes how many invalid bytes a caller may consume after
+  malformed or non-canonical input.
+
 ## Unsafe Boundary
 
 These codecs are low-level building blocks. Their unchecked methods do not own
@@ -77,144 +90,17 @@ the responsibility of discovering whether a buffer has enough space:
 When exposing a safe API, validate these conditions before crossing the unsafe
 boundary.
 
-## Wrapping With ValueEncoder
+## Safe Adapters and Streams
 
-Use `ValueEncoder` when a safe API should encode one borrowed value into an
-owned output object.
+This crate intentionally stops at buffer-level binary codecs. If you need owned
+single-value adapters, generic buffered engines, or conversion traits, import
+them from `qubit-codec` and use these binary codecs as the low-level codec
+implementations.
 
-```rust
-use core::convert::Infallible;
-
-use qubit_codec::ValueEncoder;
-use qubit_codec_binary::{
-    Leb128Codec,
-    NonStrict,
-};
-
-struct U64Leb128Encoder;
-
-impl ValueEncoder<u64> for U64Leb128Encoder {
-    type Output = Vec<u8>;
-    type Error = Infallible;
-
-    fn encode(&self, input: &u64) -> Result<Self::Output, Self::Error> {
-        let mut output = vec![0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-        let written = unsafe {
-            Leb128Codec::<u64, NonStrict>::encode_unchecked(*input, &mut output, 0)
-        };
-        output.truncate(written);
-        Ok(output)
-    }
-}
-```
-
-The wrapper allocates the maximum possible output length before calling
-`encode_unchecked`, then truncates to the actual written length.
-
-## Wrapping With ValueDecoder
-
-Use `ValueDecoder` when a safe API should decode one borrowed input object into
-an owned value.
-
-```rust
-use qubit_codec::ValueDecoder;
-use qubit_codec_binary::{
-    Leb128Codec,
-    Leb128DecodeError,
-    NonStrict,
-};
-
-struct U64Leb128Decoder;
-
-impl ValueDecoder<[u8]> for U64Leb128Decoder {
-    type Output = u64;
-    type Error = Leb128DecodeError;
-
-    fn decode(&self, input: &[u8]) -> Result<Self::Output, Self::Error> {
-        let (value, _consumed) = unsafe {
-            Leb128Codec::<u64, NonStrict>::decode_unchecked(input, 0)?
-        };
-        Ok(value)
-    }
-}
-```
-
-The wrapper calls `decode_unchecked` directly because `Leb128DecodeError`
-reports incomplete, malformed, and non-canonical input itself.
-
-## Wrapping With CodecBufferedDecoder
-
-Use `CodecBufferedDecoder<C>` when a safe API should decode many binary
-values into a caller-provided output buffer while leaving incomplete tails in
-the caller-owned input buffer. For custom binary decoders, use
-`BufferedDecodeEngine` with `BufferedDecodeHooks` to share the same decode-loop
-logic while supplying domain-specific error policy.
-
-## Wrapping With Transcoder
-
-Use `Transcoder` when a safe API should process a sequence over caller-provided
-buffers and return progress when output capacity runs out.
-
-```rust
-use core::convert::Infallible;
-
-use qubit_codec_binary::{
-    Leb128Codec,
-    NonStrict,
-    TranscodeProgress,
-    TranscodeStatus,
-    Transcoder,
-};
-
-struct U64Leb128Transcoder;
-
-impl Transcoder<u64, u8> for U64Leb128Transcoder {
-    type Error = Infallible;
-
-    fn max_output_len(&self, input_len: usize) -> Option<usize> {
-        Some(input_len.saturating_mul(
-            Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE,
-        ))
-    }
-
-    fn transcode(
-        &mut self,
-        input: &[u64],
-        input_index: usize,
-        output: &mut [u8],
-        output_index: usize,
-    ) -> Result<TranscodeProgress, Self::Error> {
-        let mut read = 0;
-        let mut written = 0;
-        while input_index + read < input.len() {
-            let cursor = output_index + written;
-            let available = output.len().saturating_sub(cursor);
-            let required = Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE;
-            if available < required {
-                return Ok(TranscodeProgress::new(
-                    TranscodeStatus::NeedOutput {
-                        output_index: cursor,
-                        required,
-                        available,
-                    },
-                    read,
-                    written,
-                ));
-            }
-            let value = input[input_index + read];
-            let len = unsafe {
-                Leb128Codec::<u64, NonStrict>::encode_unchecked(value, output, cursor)
-            };
-            read += 1;
-            written += len;
-        }
-        Ok(TranscodeProgress::complete(read, written))
-    }
-}
-```
-
-The transcoder checks output capacity before every unsafe encode call and
-returns `NeedOutput` instead of writing into a short buffer.
+When writing your own safe wrapper around `decode_unchecked`, check that the
+start index has at least `MIN_UNITS_PER_VALUE` readable byte before calling the
+unsafe method. For single-value decoders, also decide whether trailing bytes
+after the returned `consumed` count are allowed by your format.
 
 Use `qubit-io-binary` when you need `std::io::Read` / `Write` adapters around
 these codecs.

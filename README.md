@@ -20,11 +20,11 @@ This crate provides:
 - `BinaryCodec` for fixed-width scalar encoding and decoding.
 - `Leb128Codec` for unsigned and signed LEB128 values.
 - `ZigZagCodec` for ZigZag signed integer mapping over unsigned LEB128.
-- `Strict` and `NonStrict` decode policies.
+- `Strict` and `NonStrict` sealed LEB128 decode policies.
+- `Leb128DecodePolicy` for the built-in LEB128 policy markers.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Essential `qubit-codec` primitives re-exported for callers: `Codec`,
-  `ByteOrder`, `ByteOrderSpec`, `BigEndian`, `LittleEndian`, `Transcoder`,
-  `TranscodeProgress`, and `TranscodeStatus`.
+- Essential `qubit-codec` primitives used by the binary surface: `Codec`,
+  `ByteOrder`, `ByteOrderSpec`, `BigEndian`, and `LittleEndian`.
 
 ## Design Goals
 
@@ -37,7 +37,7 @@ This crate provides:
   `qubit-io-binary`.
 - **Canonical Encoding**: always emit canonical LEB128 bytes while allowing
   configurable decode strictness.
-- **Typed Byte Order**: support both runtime and type-level endian selection.
+- **Typed Byte Order**: select endian behavior through type-level byte-order markers.
 - **Small Dependency Graph**: keep binary wire-format code usable by low-level
   crates without pulling in generic I/O utilities.
 
@@ -58,12 +58,14 @@ This crate provides:
 - **Strict Decode Policy**: `Strict` rejects non-canonical payloads.
 - **Non-Strict Decode Policy**: `NonStrict` accepts compatible payloads when
   canonical form is not required.
+- **Sealed Policy Trait**: `Leb128DecodePolicy` is intentionally sealed; use the
+  built-in `Strict` or `NonStrict` markers.
 
 ### ZigZag Values
 
 - **Signed Integer Mapping**: maps signed integers to unsigned LEB128 payloads.
-- **Buffered Decode Support**: exposes partial-buffer decode entry points used by
-  stream readers.
+- **Incomplete Input Reporting**: reports partial LEB128 payloads through
+  `Leb128DecodeError`.
 
 ### Focused Public API
 
@@ -124,12 +126,16 @@ buffer bounds before using them:
   normally provide up to `MAX_UNITS_PER_VALUE` readable bytes unless EOF makes
   that impossible. Incomplete, malformed, and non-canonical input is reported
   through `Leb128DecodeError`.
+- `Leb128DecodeError::start_index()` identifies where the attempted value
+  starts. `error_index()` identifies where the error became observable. For
+  incomplete input, `error_index()` is the one-past-available boundary and
+  `additional()` reports how many more bytes are needed before decoding can
+  make progress.
 
 Higher-level code should wrap these unsafe calls behind safe APIs after checking
-the appropriate bounds. Import `CodecValueEncoder`, `CodecBufferedEncoder`,
-`CodecBufferedDecoder`, `BufferedEncodeEngine`, and the hook traits directly
-from `qubit-codec` when building generic adapters. See the
-[User Guide](doc/user_guide.md) for wrapper examples.
+the appropriate bounds. Import owned-value adapters and buffered engines
+directly from `qubit-codec`; this crate does not re-export generic codec
+adapters. See the [User Guide](doc/user_guide.md) for binary codec examples.
 
 ## API Reference
 
@@ -162,12 +168,13 @@ from `qubit-codec` when building generic adapters. See the
 | `decode_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
 | `encode_unchecked(value, output, index)` | Encode signed integer as ZigZag plus unsigned LEB128 |
 
-### Decode Policies
+### LEB128 Decode Policies
 
 | Policy | Meaning |
 |--------|---------|
 | `Strict` | Reject non-canonical LEB128 encodings |
 | `NonStrict` | Accept compatible encodings when the decoded value fits |
+| `Leb128DecodePolicy` | Sealed policy trait implemented by the built-in policy markers |
 
 ## Crate Boundary
 
@@ -178,8 +185,8 @@ and `qubit-io-binary` for stream-oriented binary readers and writers.
 ## Performance Considerations
 
 `BinaryCodec`, `Leb128Codec`, and `ZigZagCodec` are zero-sized codec types with
-no runtime allocation. Their unchecked methods and `Codec` implementations with `Unit = u8`
-implementations are intended for validated hot paths where a caller has already
+no runtime allocation. Their unchecked methods and `Codec` implementations with
+`Unit = u8` are intended for validated hot paths where a caller has already
 checked buffer capacity or is operating inside a buffered stream adapter.
 
 ## Testing & Code Coverage
@@ -210,7 +217,7 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 
 Runtime dependencies are intentionally small:
 
-- `qubit-codec` provides shared byte-order and transcoder primitives.
+- `qubit-codec` provides shared codec and byte-order primitives.
 - `thiserror` provides the public LEB128 error type implementation.
 
 ## License

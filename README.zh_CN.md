@@ -19,11 +19,11 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - 用于 fixed-width 标量编码/解码的 `BinaryCodec`。
 - 用于 unsigned / signed LEB128 值的 `Leb128Codec`。
 - 用于 ZigZag signed integer mapping 的 `ZigZagCodec`。
-- `Strict` 和 `NonStrict` 解码策略。
+- `Strict` 和 `NonStrict` sealed LEB128 解码策略。
+- 内置 LEB128 policy marker 使用的 `Leb128DecodePolicy`。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
-- 面向调用方重导出的必要 `qubit-codec` 原语：`Codec`、`ByteOrder`、
-  `ByteOrderSpec`、`BigEndian`、`LittleEndian`、`Transcoder`、
-  `TranscodeProgress` 和 `TranscodeStatus`。
+- binary codec 表面使用的必要 `qubit-codec` 原语：`Codec`、`ByteOrder`、
+  `ByteOrderSpec`、`BigEndian` 和 `LittleEndian`。
 
 ## 设计目标
 
@@ -32,7 +32,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
   实现 `Unit = u8` 的 `Codec` 以接入通用 codec pipeline。
 - **分层清晰**：只依赖 `qubit-codec`，stream adapter 交给 `qubit-io-binary`。
 - **规范编码**：始终写出 canonical LEB128，同时允许配置 decode strictness。
-- **强类型字节序**：同时支持运行时和类型级 endian 选择。
+- **强类型字节序**：通过类型级 byte-order marker 选择 endian 行为。
 - **依赖图小**：让低层二进制线格式代码不必拉入通用 I/O 工具。
 
 ## 特性
@@ -50,11 +50,13 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - **有符号值**：支持 `i8`、`i16`、`i32`、`i64`、`i128` 和 `isize`。
 - **Strict Decode Policy**：`Strict` 拒绝非 canonical payload。
 - **Non-Strict Decode Policy**：`NonStrict` 在 decoded value 可表达时接受兼容 payload。
+- **Sealed Policy Trait**：`Leb128DecodePolicy` 刻意封闭，只使用内置
+  `Strict` 或 `NonStrict` marker。
 
 ### ZigZag 值
 
 - **有符号整数映射**：把 signed integer 映射到 unsigned LEB128 payload。
-- **Buffered Decode 支持**：提供 stream reader 使用的 partial-buffer decode 入口。
+- **不完整输入报告**：通过 `Leb128DecodeError` 表达 partial LEB128 payload。
 
 ### 聚焦的公开 API
 
@@ -112,12 +114,14 @@ assert_eq!(2, written);
   `index` 开始至少有 `MIN_UNITS_PER_VALUE` 个可读字节。调用方通常应尽量提供到
   `MAX_UNITS_PER_VALUE`，除非 EOF 已经无法继续读取。不完整、畸形和非 canonical
   输入都通过 `Leb128DecodeError` 表达。
+- `Leb128DecodeError::start_index()` 表示当前尝试解码的值从哪里开始；
+  `error_index()` 表示错误在哪里变得可观察。对于 incomplete input，
+  `error_index()` 是当前可用输入之后的边界，`additional()` 表示至少还需要多少
+  字节才能继续推进解码。
 
-上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全 API 中。构建泛型
-adapter 时，请直接从 `qubit-codec` 引入 `CodecValueEncoder`、
-`CodecBufferedEncoder`、`CodecBufferedDecoder`、`BufferedEncodeEngine` 和 hook
-trait。
-包装示例见[用户指南](doc/user_guide.zh_CN.md)。
+上层代码应先完成这些边界检查，再把 unsafe 调用封装到安全 API 中。owned-value
+adapter 和 buffered engine 请直接从 `qubit-codec` 引入；本 crate 不重导出通用
+codec adapter。binary codec 示例见[用户指南](doc/user_guide.zh_CN.md)。
 
 ## API 参考
 
@@ -150,12 +154,13 @@ trait。
 | `decode_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
 | `encode_unchecked(value, output, index)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
 
-### Decode Policy
+### LEB128 Decode Policy
 
 | Policy | 含义 |
 |--------|------|
 | `Strict` | 拒绝非 canonical LEB128 编码 |
 | `NonStrict` | 在 decoded value 可表达时接受兼容编码 |
+| `Leb128DecodePolicy` | sealed policy trait，由内置 policy marker 实现 |
 
 ## 库边界
 
@@ -196,7 +201,7 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 
 运行时依赖保持很少：
 
-- `qubit-codec` 提供共享字节序和 transcoder 原语。
+- `qubit-codec` 提供共享 codec 和字节序原语。
 - `thiserror` 提供公共 LEB128 错误类型实现。
 
 ## 许可证
