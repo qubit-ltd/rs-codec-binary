@@ -214,30 +214,29 @@ impl Leb128DecodeError {
 impl Display for Leb128DecodeError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self.kind {
-            Leb128DecodeErrorKind::Incomplete => match (self.required, self.available) {
-                (Some(required), Some(available)) => write!(
+            Leb128DecodeErrorKind::Incomplete => {
+                let required = self
+                    .required
+                    .expect("incomplete LEB128 errors always store a required byte bound");
+                let available = self
+                    .available
+                    .expect("incomplete LEB128 errors always store an available byte count");
+                write!(
                     formatter,
                     "{} at byte {}: need at least {} bytes, only {} available (next byte boundary {})",
                     self.kind, self.start_index, required, available, self.error_index,
-                ),
-                _ => write!(
-                    formatter,
-                    "{} at byte {}: detected at byte {}",
-                    self.kind, self.start_index, self.error_index,
-                ),
-            },
-            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => match self.consumed {
-                Some(consumed) => write!(
+                )
+            }
+            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => {
+                let consumed = self
+                    .consumed
+                    .expect("invalid LEB128 errors always store a consumed byte count");
+                write!(
                     formatter,
                     "{} at byte {}: detected at byte {} after consuming {} bytes",
                     self.kind, self.start_index, self.error_index, consumed,
-                ),
-                None => write!(
-                    formatter,
-                    "{} at byte {}: detected at byte {}",
-                    self.kind, self.start_index, self.error_index,
-                ),
-            },
+                )
+            }
         }
     }
 }

@@ -34,6 +34,15 @@ fn test_incomplete_rejects_satisfied_required_bound() {
 }
 
 #[test]
+fn test_incomplete_rejects_error_boundary_overflow() {
+    let required = NonZeroUsize::new(2).expect("required bound is non-zero");
+
+    let result = std::panic::catch_unwind(|| Leb128DecodeError::incomplete(usize::MAX, required, 1));
+
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_invalid_errors_store_start_error_and_consumed_units() {
     let malformed_consumed = NonZeroUsize::new(4).expect("malformed consumed count is non-zero");
     let noncanonical_consumed = NonZeroUsize::new(2).expect("non-canonical consumed count is non-zero");
