@@ -8,11 +8,19 @@
  *
  ******************************************************************************/
 
-use core::{convert::Infallible, marker::PhantomData};
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+};
 
 use qubit_codec::Codec;
 
-use crate::{Leb128Codec, Leb128DecodeError, Leb128DecodePolicy, NonStrict};
+use crate::{
+    Leb128Codec,
+    Leb128DecodeError,
+    Leb128DecodePolicy,
+    NonStrict,
+};
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
 ///
@@ -38,8 +46,7 @@ macro_rules! impl_zig_zag_codec {
             pub const MIN_UNITS_PER_VALUE: usize = 1;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize =
-                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
             ///
@@ -70,8 +77,7 @@ macro_rules! impl_zig_zag_codec {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
-                let (encoded, consumed) =
-                    unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
+                let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
                 let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
             }
@@ -93,16 +99,10 @@ macro_rules! impl_zig_zag_codec {
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
             /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(
-                value: $signed,
-                output: &mut [u8],
-                index: usize,
-            ) -> usize {
+            pub unsafe fn encode_unchecked(value: $signed, output: &mut [u8], index: usize) -> usize {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for this type.
-                unsafe {
-                    Leb128Codec::<$unsigned, NonStrict>::encode_unchecked(encoded, output, index)
-                }
+                unsafe { Leb128Codec::<$unsigned, NonStrict>::encode_unchecked(encoded, output, index) }
             }
         }
 

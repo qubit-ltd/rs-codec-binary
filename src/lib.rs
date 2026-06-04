@@ -20,7 +20,19 @@ mod codec;
 pub mod prelude;
 
 pub use codec::{
-    BinaryCodec, Leb128Codec, Leb128DecodeError, Leb128DecodeErrorKind, Leb128DecodePolicy,
-    NonStrict, Strict, ZigZagCodec,
+    BinaryCodec,
+    Leb128Codec,
+    Leb128DecodeError,
+    Leb128DecodeErrorKind,
+    Leb128DecodePolicy,
+    NonStrict,
+    Strict,
+    ZigZagCodec,
 };
-pub use qubit_codec::{BigEndian, ByteOrder, ByteOrderSpec, Codec, LittleEndian};
+pub use qubit_codec::{
+    BigEndian,
+    ByteOrder,
+    ByteOrderSpec,
+    Codec,
+    LittleEndian,
+};

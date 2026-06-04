@@ -8,11 +8,19 @@
  *
  ******************************************************************************/
 
-use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+    num::NonZeroUsize,
+};
 
 use qubit_codec::Codec;
 
-use crate::{Leb128DecodeError, Leb128DecodePolicy, NonStrict};
+use crate::{
+    Leb128DecodeError,
+    Leb128DecodePolicy,
+    NonStrict,
+};
 
 /// Type-level unchecked LEB128 codec.
 ///
@@ -72,9 +80,8 @@ macro_rules! impl_unsigned_leb128_codec {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
-                let (value, consumed) = unsafe {
-                    read_uleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)?
-                };
+                let (value, consumed) =
+                    unsafe { read_uleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)? };
                 Ok((value as $ty, consumed))
             }
 
@@ -191,9 +198,8 @@ macro_rules! impl_signed_leb128_codec {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
-                let (value, consumed) = unsafe {
-                    read_sleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)?
-                };
+                let (value, consumed) =
+                    unsafe { read_sleb_unchecked::<P>(input, index, <$ty>::BITS, Self::MAX_UNITS_PER_VALUE)? };
                 Ok((value as $ty, consumed))
             }
 
@@ -378,10 +384,7 @@ unsafe fn read_uleb_prefix_unchecked<P>(
 where
     P: Leb128DecodePolicy,
 {
-    debug_assert!(
-        available <= max_bytes,
-        "available bytes exceed LEB128 maximum width"
-    );
+    debug_assert!(available <= max_bytes, "available bytes exceed LEB128 maximum width");
     let mut value = 0u128;
     let mut shift = 0u32;
     // SAFETY: The caller guarantees that `available` bytes are readable from
@@ -407,11 +410,7 @@ where
     if available < max_bytes {
         return Ok(None);
     }
-    Err(malformed_decode_error(
-        index,
-        index + max_bytes - 1,
-        max_bytes,
-    ))
+    Err(malformed_decode_error(index, index + max_bytes - 1, max_bytes))
 }
 
 /// Decodes a signed LEB128 value without bounds checks.
@@ -510,10 +509,7 @@ unsafe fn read_sleb_prefix_unchecked<P>(
 where
     P: Leb128DecodePolicy,
 {
-    debug_assert!(
-        available <= max_bytes,
-        "available bytes exceed LEB128 maximum width"
-    );
+    debug_assert!(available <= max_bytes, "available bytes exceed LEB128 maximum width");
     let mut value = 0i128;
     let mut shift = 0u32;
     // SAFETY: The caller guarantees that `available` bytes are readable from
@@ -542,11 +538,7 @@ where
     if available < max_bytes {
         return Ok(None);
     }
-    Err(malformed_decode_error(
-        index,
-        index + max_bytes - 1,
-        max_bytes,
-    ))
+    Err(malformed_decode_error(index, index + max_bytes - 1, max_bytes))
 }
 
 /// Builds a malformed LEB128 error on the cold error path.
@@ -562,11 +554,7 @@ where
 ///
 /// Returns the error carrying the byte count to consume.
 #[cold]
-fn malformed_decode_error(
-    start_index: usize,
-    error_index: usize,
-    consumed: usize,
-) -> Leb128DecodeError {
+fn malformed_decode_error(start_index: usize, error_index: usize, consumed: usize) -> Leb128DecodeError {
     debug_assert!(consumed > 0, "malformed LEB128 errors must consume bytes");
     // SAFETY: All malformed call sites pass either `offset + 1` or `max_bytes`,
     // both of which are non-zero for supported LEB128 codecs.
@@ -587,10 +575,7 @@ fn malformed_decode_error(
 /// Returns the error carrying the byte count to consume.
 #[cold]
 fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
-    debug_assert!(
-        consumed > 0,
-        "non-canonical LEB128 errors must consume bytes"
-    );
+    debug_assert!(consumed > 0, "non-canonical LEB128 errors must consume bytes");
     // SAFETY: Non-canonical errors are detected only after reading at least one
     // terminating byte.
     let consumed = unsafe { NonZeroUsize::new_unchecked(consumed) };
