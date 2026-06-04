@@ -8,19 +8,11 @@
  *
  ******************************************************************************/
 
-use core::{
-    convert::Infallible,
-    marker::PhantomData,
-};
+use core::{convert::Infallible, marker::PhantomData};
 
 use qubit_codec::Codec;
 
-use crate::{
-    DecodePolicy,
-    Leb128Codec,
-    Leb128DecodeError,
-    NonStrict,
-};
+use crate::{Leb128Codec, Leb128DecodeError, Leb128DecodePolicy, NonStrict};
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
 ///
@@ -28,7 +20,7 @@ use crate::{
 ///
 /// - `T`: Signed integer value type to decode from ZigZag-encoded LEB128 bytes
 ///   and encode into ZigZag-encoded LEB128 bytes.
-/// - `P`: Type-level decoding policy implementing [`DecodePolicy`] for the
+/// - `P`: Type-level decoding policy implementing [`Leb128DecodePolicy`] for the
 ///   underlying unsigned LEB128 payload. Use [`crate::Strict`] to reject
 ///   non-canonical inputs, or [`NonStrict`] to accept non-canonical inputs.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -40,13 +32,14 @@ macro_rules! impl_zig_zag_codec {
     ($signed:ty, $unsigned:ty, $shift:expr) => {
         impl<P> ZigZagCodec<$signed, P>
         where
-            P: DecodePolicy,
+            P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
             pub const MIN_UNITS_PER_VALUE: usize = 1;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize =
+                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds checks.
             ///
@@ -77,7 +70,8 @@ macro_rules! impl_zig_zag_codec {
                 debug_assert!(input.len().saturating_sub(index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this type.
-                let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
+                let (encoded, consumed) =
+                    unsafe { Leb128Codec::<$unsigned, P>::decode_unchecked(input, index)? };
                 let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
             }
@@ -99,16 +93,22 @@ macro_rules! impl_zig_zag_codec {
             /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
             /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(value: $signed, output: &mut [u8], index: usize) -> usize {
+            pub unsafe fn encode_unchecked(
+                value: $signed,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for this type.
-                unsafe { Leb128Codec::<$unsigned, NonStrict>::encode_unchecked(encoded, output, index) }
+                unsafe {
+                    Leb128Codec::<$unsigned, NonStrict>::encode_unchecked(encoded, output, index)
+                }
             }
         }
 
         unsafe impl<P> Codec for ZigZagCodec<$signed, P>
         where
-            P: DecodePolicy,
+            P: Leb128DecodePolicy,
         {
             type Value = $signed;
             type Unit = u8;

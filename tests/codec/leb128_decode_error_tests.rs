@@ -1,36 +1,60 @@
-use qubit_codec_binary::{
-    Leb128DecodeError,
-    Leb128DecodeErrorKind,
-};
+use core::num::NonZeroUsize;
+
+use qubit_codec_binary::{Leb128DecodeError, Leb128DecodeErrorKind};
 
 #[test]
-fn test_new_stores_kind_and_index() {
-    let error = Leb128DecodeError::new(Leb128DecodeErrorKind::Malformed, 3);
-
-    assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
-    assert_eq!(3, error.index());
-    assert_eq!(Some(1), error.consumed());
-    assert_eq!(None, error.required());
-    assert_eq!(None, error.available());
-    assert_eq!("malformed LEB128 integer", error.to_string());
-}
-
-#[test]
-fn test_incomplete_stores_required_and_available_units() {
-    let error = Leb128DecodeError::incomplete(5, 3, 2);
+fn test_incomplete_stores_start_error_required_available_and_additional_units() {
+    let required = NonZeroUsize::new(3).expect("required bound is non-zero");
+    let error = Leb128DecodeError::incomplete(5, required, 2);
 
     assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
-    assert_eq!(5, error.index());
+    assert!(error.is_incomplete());
+    assert_eq!(5, error.start_index());
+    assert_eq!(7, error.error_index());
     assert_eq!(None, error.consumed());
-    assert_eq!(Some(3), error.required());
+    assert_eq!(Some(required), error.required());
     assert_eq!(Some(2), error.available());
+    assert_eq!(NonZeroUsize::new(1), error.additional());
+    assert_eq!("incomplete LEB128 integer", error.to_string());
 }
 
 #[test]
-fn test_invalid_errors_store_consumed_units() {
-    let malformed = Leb128DecodeError::malformed(7, 4);
-    let noncanonical = Leb128DecodeError::noncanonical(9, 2);
+fn test_incomplete_rejects_satisfied_required_bound() {
+    let required = NonZeroUsize::new(2).expect("required bound is non-zero");
 
-    assert_eq!(Some(4), malformed.consumed());
-    assert_eq!(Some(2), noncanonical.consumed());
+    let result = std::panic::catch_unwind(|| Leb128DecodeError::incomplete(5, required, 2));
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_invalid_errors_store_start_error_and_consumed_units() {
+    let malformed_consumed = NonZeroUsize::new(4).expect("malformed consumed count is non-zero");
+    let noncanonical_consumed =
+        NonZeroUsize::new(2).expect("non-canonical consumed count is non-zero");
+    let malformed = Leb128DecodeError::malformed(5, 7, malformed_consumed);
+    let noncanonical = Leb128DecodeError::noncanonical(9, noncanonical_consumed);
+
+    assert!(malformed.is_malformed());
+    assert!(noncanonical.is_noncanonical());
+    assert_eq!(5, malformed.start_index());
+    assert_eq!(7, malformed.error_index());
+    assert_eq!(9, noncanonical.start_index());
+    assert_eq!(10, noncanonical.error_index());
+    assert_eq!(Some(malformed_consumed), malformed.consumed());
+    assert_eq!(Some(noncanonical_consumed), noncanonical.consumed());
+    assert_eq!(None, malformed.required());
+    assert_eq!(None, malformed.additional());
+    assert_eq!(None, noncanonical.available());
+}
+
+#[test]
+fn test_malformed_rejects_error_index_outside_consumed_span() {
+    let consumed = NonZeroUsize::new(2).expect("consumed count is non-zero");
+
+    let before_start = std::panic::catch_unwind(|| Leb128DecodeError::malformed(5, 4, consumed));
+    let after_consumed = std::panic::catch_unwind(|| Leb128DecodeError::malformed(5, 7, consumed));
+
+    assert!(before_start.is_err());
+    assert!(after_consumed.is_err());
 }

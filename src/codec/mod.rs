@@ -18,7 +18,7 @@ mod strict;
 mod zig_zag_codec;
 
 pub use binary_codec::BinaryCodec;
-pub use decode_policy::DecodePolicy;
+pub use decode_policy::Leb128DecodePolicy;
 pub use leb128_codec::Leb128Codec;
 pub use leb128_decode_error::Leb128DecodeError;
 pub use leb128_decode_error_kind::Leb128DecodeErrorKind;

@@ -8,13 +8,15 @@
  *
  ******************************************************************************/
 
-use super::DecodePolicy;
+use super::Leb128DecodePolicy;
 
 /// Marker type selecting strict decoding.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Strict;
 
-impl DecodePolicy for Strict {
+impl super::decode_policy::sealed::Sealed for Strict {}
+
+impl Leb128DecodePolicy for Strict {
     /// Whether this policy rejects non-canonical encodings.
     const STRICT: bool = true;
 }

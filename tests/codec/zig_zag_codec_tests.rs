@@ -1,12 +1,13 @@
+use core::num::NonZeroUsize;
+
 use qubit_codec::Codec;
-use qubit_codec_binary::{
-    Leb128DecodeErrorKind,
-    NonStrict,
-    Strict,
-    ZigZagCodec,
-};
+use qubit_codec_binary::{Leb128DecodeErrorKind, NonStrict, Strict, ZigZagCodec};
 
 use super::assertions_tests::assert_decoded_eq;
+
+fn nonzero(value: usize) -> NonZeroUsize {
+    NonZeroUsize::new(value).expect("test count must be non-zero")
+}
 
 #[test]
 fn test_zig_zag_codec_exposes_unit_bounds() {
@@ -30,8 +31,8 @@ fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
     assert_eq!(2, len);
     assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
 
-    let decoded =
-        unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&output, 1) }.expect("valid i16 should decode");
+    let decoded = unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&output, 1) }
+        .expect("valid i16 should decode");
     assert_decoded_eq((-300, 2), decoded);
 }
 
@@ -54,7 +55,8 @@ fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
     assert_eq!(2, written);
     assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
 
-    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }.expect("valid ZigZag value should decode");
+    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }
+        .expect("valid ZigZag value should decode");
     assert_decoded_eq((-300, 2), decoded);
 }
 
@@ -63,8 +65,8 @@ fn test_zig_zag_codec_trait_decodes_single_byte_value() {
     let codec = ZigZagCodec::<i64, NonStrict>::default();
     let input = [0x01u8];
 
-    let decoded =
-        unsafe { Codec::decode_unchecked(&codec, &input, 0) }.expect("single-byte ZigZag value should decode");
+    let decoded = unsafe { Codec::decode_unchecked(&codec, &input, 0) }
+        .expect("single-byte ZigZag value should decode");
 
     assert_decoded_eq((-1, 1), decoded);
 }
@@ -72,10 +74,11 @@ fn test_zig_zag_codec_trait_decodes_single_byte_value() {
 #[test]
 fn test_zig_zag_codec_handles_signed_extremes() {
     let mut output = [0u8; ZigZagCodec::<i128, NonStrict>::MAX_UNITS_PER_VALUE];
-    let len = unsafe { ZigZagCodec::<i128, NonStrict>::encode_unchecked(i128::MIN, &mut output, 0) };
+    let len =
+        unsafe { ZigZagCodec::<i128, NonStrict>::encode_unchecked(i128::MIN, &mut output, 0) };
 
-    let decoded =
-        unsafe { ZigZagCodec::<i128, NonStrict>::decode_unchecked(&output, 0) }.expect("valid i128 should decode");
+    let decoded = unsafe { ZigZagCodec::<i128, NonStrict>::decode_unchecked(&output, 0) }
+        .expect("valid i128 should decode");
     assert_decoded_eq((i128::MIN, len), decoded);
 }
 
@@ -86,8 +89,11 @@ fn test_zig_zag_codec_reports_incomplete_values_unchecked() {
     let pending = unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&input[..2], 1) }
         .expect_err("partial ZigZag value should report incomplete input");
     assert_eq!(Leb128DecodeErrorKind::Incomplete, pending.kind());
-    assert_eq!(Some(2), pending.required());
+    assert_eq!(1, pending.start_index());
+    assert_eq!(2, pending.error_index());
+    assert_eq!(Some(nonzero(2)), pending.required());
     assert_eq!(Some(1), pending.available());
+    assert_eq!(Some(nonzero(1)), pending.additional());
 
     let decoded = unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&input, 1) }
         .expect("complete ZigZag value should decode");
@@ -96,7 +102,9 @@ fn test_zig_zag_codec_reports_incomplete_values_unchecked() {
     let error = unsafe { ZigZagCodec::<i16, Strict>::decode_unchecked(&[0x80, 0x00], 0) }
         .expect_err("non-canonical ZigZag value should fail");
     assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
-    assert_eq!(Some(2), error.consumed());
+    assert_eq!(0, error.start_index());
+    assert_eq!(1, error.error_index());
+    assert_eq!(Some(nonzero(2)), error.consumed());
 }
 
 #[test]
@@ -105,5 +113,6 @@ fn test_zig_zag_codec_rejects_noncanonical_strict_values() {
         .expect_err("non-canonical value should fail");
 
     assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
-    assert_eq!(0, error.index());
+    assert_eq!(0, error.start_index());
+    assert_eq!(1, error.error_index());
 }

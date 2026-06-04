@@ -11,23 +11,9 @@
 //! Common binary codec types and essential core primitives.
 //!
 //! Importing this module brings fixed-width, LEB128, ZigZag, byte-order, and
-//! transcoder traits/status types into scope.
+//! core codec types into scope.
 
 pub use crate::{
-    BigEndian,
-    BinaryCodec,
-    ByteOrder,
-    ByteOrderSpec,
-    Codec,
-    DecodePolicy,
-    Leb128Codec,
-    Leb128DecodeError,
-    Leb128DecodeErrorKind,
-    LittleEndian,
-    NonStrict,
-    Strict,
-    TranscodeProgress,
-    TranscodeStatus,
-    Transcoder,
-    ZigZagCodec,
+    BigEndian, BinaryCodec, ByteOrder, ByteOrderSpec, Codec, Leb128Codec, Leb128DecodeError,
+    Leb128DecodeErrorKind, Leb128DecodePolicy, LittleEndian, NonStrict, Strict, ZigZagCodec,
 };
