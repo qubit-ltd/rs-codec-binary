@@ -90,7 +90,7 @@ use qubit_codec_binary::{
     NonStrict,
 };
 
-let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
+let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
     BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
 }
@@ -106,7 +106,8 @@ assert_eq!(2, written);
 底层 codec 方法刻意设计为 unsafe。调用方必须先验证 buffer 边界：
 
 - `BinaryCodec::decode_unchecked` 和 `BinaryCodec::encode_unchecked` 要求从
-  `index` 开始分别有 `REQUIRED_MIN_BUFFER_LEN` 个可读或可写字节。
+  `index` 开始分别有 `MIN_UNITS_PER_VALUE` 个可读字节或
+  `MAX_UNITS_PER_VALUE` 个可写字节。对于 fixed-width 值，这两个边界相等。
 - `Leb128Codec` 和 `ZigZagCodec` 暴露 `MIN_UNITS_PER_VALUE` 和
   `MAX_UNITS_PER_VALUE`。它们的 `encode_unchecked` 要求从 `index` 开始至少有
   `MAX_UNITS_PER_VALUE` 个可写字节，即使实际编码结果可能更短。
@@ -130,7 +131,8 @@ codec adapter。binary codec 示例见[用户指南](doc/user_guide.zh_CN.md)。
 | 条目 | 描述 |
 |------|------|
 | `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 fixed-width scalar |
-| `REQUIRED_MIN_BUFFER_LEN` | 当前标量类型所需的最少字节数 |
+| `MIN_UNITS_PER_VALUE` | 当前标量类型所需的最少字节数 |
+| `MAX_UNITS_PER_VALUE` | 当前标量类型所需的最多字节数 |
 | `decode_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
 | `encode_unchecked(value, output, index)` | 无边界检查编码一个 fixed-width scalar |
 

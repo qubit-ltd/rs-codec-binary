@@ -26,7 +26,7 @@ use qubit_codec_binary::{
     BinaryCodec,
 };
 
-let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
+let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
     BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut output, 0);
 }
@@ -77,7 +77,8 @@ These codecs are low-level building blocks. Their unchecked methods do not own
 the responsibility of discovering whether a buffer has enough space:
 
 - Fixed-width `BinaryCodec` decode and encode calls require
-  `REQUIRED_MIN_BUFFER_LEN` readable or writable bytes from the supplied index.
+  `MIN_UNITS_PER_VALUE` readable bytes or `MAX_UNITS_PER_VALUE` writable bytes
+  from the supplied index. For fixed-width values these bounds are equal.
 - LEB128 and ZigZag encode calls require `MAX_UNITS_PER_VALUE` writable bytes
   from the supplied index.
 - LEB128 and ZigZag decode calls require at least `MIN_UNITS_PER_VALUE`

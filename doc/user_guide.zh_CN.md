@@ -23,7 +23,7 @@ use qubit_codec_binary::{
     BinaryCodec,
 };
 
-let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
+let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
     BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut output, 0);
 }
@@ -70,7 +70,8 @@ assert_eq!(1, written);
 这些 codec 是低层构件。unchecked 方法不负责发现 buffer 空间是否足够：
 
 - Fixed-width `BinaryCodec` 的 decode 和 encode 调用要求从给定 index 开始有
-  `REQUIRED_MIN_BUFFER_LEN` 个可读或可写字节。
+  `MIN_UNITS_PER_VALUE` 个可读字节或 `MAX_UNITS_PER_VALUE` 个可写字节。
+  对于 fixed-width 值，这两个边界相等。
 - LEB128 和 ZigZag 的 encode 调用要求从给定 index 开始有
   `MAX_UNITS_PER_VALUE` 个可写字节。
 - LEB128 和 ZigZag 的 decode 调用要求从给定 index 开始至少有

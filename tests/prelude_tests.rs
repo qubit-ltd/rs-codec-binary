@@ -30,7 +30,7 @@ fn test_prelude_imports_binary_codec_types_and_core_markers() {
     assert!(!leb128_policy_is_strict::<NonStrict>());
     let _decoder_error: Option<Leb128DecodeError> = None;
 
-    let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
+    let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
     unsafe {
         BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
     }

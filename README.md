@@ -99,7 +99,7 @@ use qubit_codec_binary::{
     NonStrict,
 };
 
-let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::REQUIRED_MIN_BUFFER_LEN];
+let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
     BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
 }
@@ -116,7 +116,8 @@ The low-level codec methods are intentionally unsafe. Callers must validate
 buffer bounds before using them:
 
 - `BinaryCodec::decode_unchecked` and `BinaryCodec::encode_unchecked` require
-  exactly `REQUIRED_MIN_BUFFER_LEN` readable or writable bytes from `index`.
+  exactly `MIN_UNITS_PER_VALUE` readable bytes or `MAX_UNITS_PER_VALUE`
+  writable bytes from `index`. For fixed-width values these bounds are equal.
 - `Leb128Codec` and `ZigZagCodec` expose `MIN_UNITS_PER_VALUE` and
   `MAX_UNITS_PER_VALUE`. Their `encode_unchecked` methods require
   `MAX_UNITS_PER_VALUE` writable bytes from `index`, even when the encoded value
@@ -144,7 +145,8 @@ adapters. See the [User Guide](doc/user_guide.md) for binary codec examples.
 | Item | Description |
 |------|-------------|
 | `Codec` (`Unit = u8`) | Decode and encode one fixed-width scalar through the core trait |
-| `REQUIRED_MIN_BUFFER_LEN` | Minimum bytes required for the scalar type |
+| `MIN_UNITS_PER_VALUE` | Minimum bytes required for the scalar type |
+| `MAX_UNITS_PER_VALUE` | Maximum bytes required for the scalar type |
 | `decode_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
 | `encode_unchecked(value, output, index)` | Encode one fixed-width scalar without bounds checks |
 
