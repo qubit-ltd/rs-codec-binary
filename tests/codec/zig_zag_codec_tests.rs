@@ -1,12 +1,30 @@
 use core::num::NonZeroUsize;
 
 use qubit_codec::Codec;
-use qubit_codec_binary::{Leb128DecodeErrorKind, NonStrict, Strict, ZigZagCodec};
+use qubit_codec_binary::{
+    Leb128DecodeErrorKind,
+    NonStrict,
+    Strict,
+    ZigZagCodec,
+};
 
 use super::assertions_tests::assert_decoded_eq;
 
 fn nonzero(value: usize) -> NonZeroUsize {
     NonZeroUsize::new(value).expect("test count must be non-zero")
+}
+
+/// Checks the exact ZigZag LEB128 bytes for an `i16` value.
+fn assert_i16_zig_zag_bytes(value: i16, expected: &[u8]) {
+    let mut output = [0u8; ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE];
+
+    let len = unsafe { ZigZagCodec::<i16, NonStrict>::encode_unchecked(value, &mut output, 0) };
+    assert_eq!(expected.len(), len);
+    assert_eq!(expected, &output[..len]);
+
+    let decoded = unsafe { ZigZagCodec::<i16, Strict>::decode_unchecked(&output, 0) }
+        .expect("canonical ZigZag boundary value should decode");
+    assert_decoded_eq((value, len), decoded);
 }
 
 #[test]
@@ -24,6 +42,25 @@ fn test_zig_zag_codec_exposes_unit_bounds() {
 }
 
 #[test]
+fn test_zig_zag_codec_encodes_7_bit_boundaries() {
+    let cases: &[(i16, &[u8])] = &[
+        (0, &[0x00]),
+        (-1, &[0x01]),
+        (1, &[0x02]),
+        (63, &[0x7e]),
+        (-64, &[0x7f]),
+        (64, &[0x80, 0x01]),
+        (-65, &[0x81, 0x01]),
+        (i16::MAX, &[0xfe, 0xff, 0x03]),
+        (i16::MIN, &[0xff, 0xff, 0x03]),
+    ];
+
+    for &(value, expected) in cases {
+        assert_i16_zig_zag_bytes(value, expected);
+    }
+}
+
+#[test]
 fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
     let mut output = [0u8; ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
     let len = unsafe { ZigZagCodec::<i16, NonStrict>::encode_unchecked(-300, &mut output, 1) };
@@ -31,8 +68,8 @@ fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
     assert_eq!(2, len);
     assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
 
-    let decoded = unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&output, 1) }
-        .expect("valid i16 should decode");
+    let decoded =
+        unsafe { ZigZagCodec::<i16, NonStrict>::decode_unchecked(&output, 1) }.expect("valid i16 should decode");
     assert_decoded_eq((-300, 2), decoded);
 }
 
@@ -55,8 +92,7 @@ fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
     assert_eq!(2, written);
     assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
 
-    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }
-        .expect("valid ZigZag value should decode");
+    let decoded = unsafe { Codec::decode_unchecked(&codec, &output, 1) }.expect("valid ZigZag value should decode");
     assert_decoded_eq((-300, 2), decoded);
 }
 
@@ -65,8 +101,8 @@ fn test_zig_zag_codec_trait_decodes_single_byte_value() {
     let codec = ZigZagCodec::<i64, NonStrict>::default();
     let input = [0x01u8];
 
-    let decoded = unsafe { Codec::decode_unchecked(&codec, &input, 0) }
-        .expect("single-byte ZigZag value should decode");
+    let decoded =
+        unsafe { Codec::decode_unchecked(&codec, &input, 0) }.expect("single-byte ZigZag value should decode");
 
     assert_decoded_eq((-1, 1), decoded);
 }
@@ -74,11 +110,10 @@ fn test_zig_zag_codec_trait_decodes_single_byte_value() {
 #[test]
 fn test_zig_zag_codec_handles_signed_extremes() {
     let mut output = [0u8; ZigZagCodec::<i128, NonStrict>::MAX_UNITS_PER_VALUE];
-    let len =
-        unsafe { ZigZagCodec::<i128, NonStrict>::encode_unchecked(i128::MIN, &mut output, 0) };
+    let len = unsafe { ZigZagCodec::<i128, NonStrict>::encode_unchecked(i128::MIN, &mut output, 0) };
 
-    let decoded = unsafe { ZigZagCodec::<i128, NonStrict>::decode_unchecked(&output, 0) }
-        .expect("valid i128 should decode");
+    let decoded =
+        unsafe { ZigZagCodec::<i128, NonStrict>::decode_unchecked(&output, 0) }.expect("valid i128 should decode");
     assert_decoded_eq((i128::MIN, len), decoded);
 }
 
