@@ -39,7 +39,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 ### Fixed-Width Binary Scalar
 
-- **整数覆盖**：支持基础 signed / unsigned integer 类型的编码和解码。
+- **整数覆盖**：支持固定宽度 signed / unsigned integer 类型的编码和解码。
 - **字节序支持**：支持 `BigEndian` 与 `LittleEndian` 类型标记。
 - **Unchecked 热路径**：调用方验证容量后，可用 `decode_unchecked` 和
   `encode_unchecked` 避免重复边界检查。

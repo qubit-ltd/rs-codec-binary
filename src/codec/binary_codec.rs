@@ -34,6 +34,28 @@ use crate::{
 /// - `O`: Type-level byte order marker. Multi-byte scalar implementations use
 ///   [`BigEndian`] or [`LittleEndian`]. Single-byte scalar implementations
 ///   accept any marker because byte order does not affect one-byte values.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_codec_binary::{
+///     BigEndian,
+///     BinaryCodec,
+/// };
+///
+/// let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
+/// let written = unsafe {
+///     BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut output, 0)
+/// };
+/// assert_eq!(4, written);
+/// assert_eq!([1, 2, 3, 4], output);
+///
+/// let (decoded, consumed) = unsafe {
+///     BinaryCodec::<u32, BigEndian>::decode_unchecked(&output, 0)
+/// };
+/// assert_eq!(0x0102_0304, decoded);
+/// assert_eq!(4, consumed.get());
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BinaryCodec<T, O> {
     marker: PhantomData<fn() -> (T, O)>,

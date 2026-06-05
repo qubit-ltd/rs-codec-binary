@@ -31,6 +31,27 @@ use crate::{
 /// - `P`: Type-level decoding policy implementing [`Leb128DecodePolicy`] for the
 ///   underlying unsigned LEB128 payload. Use [`crate::Strict`] to reject
 ///   non-canonical inputs, or [`NonStrict`] to accept non-canonical inputs.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_codec_binary::{
+///     NonStrict,
+///     ZigZagCodec,
+/// };
+///
+/// let mut output = [0_u8; ZigZagCodec::<i64, NonStrict>::MAX_UNITS_PER_VALUE];
+/// let written = unsafe {
+///     ZigZagCodec::<i64, NonStrict>::encode_unchecked(-42, &mut output, 0)
+/// };
+/// assert_eq!(1, written);
+///
+/// let (decoded, consumed) = unsafe {
+///     ZigZagCodec::<i64, NonStrict>::decode_unchecked(&output[..written], 0)
+/// }.expect("canonical ZigZag LEB128 value should decode");
+/// assert_eq!(-42, decoded);
+/// assert_eq!(1, consumed.get());
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ZigZagCodec<T, P = NonStrict> {
     marker: PhantomData<fn() -> (T, P)>,

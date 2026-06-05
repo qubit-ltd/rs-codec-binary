@@ -33,6 +33,27 @@ use crate::{
 /// - `P`: Type-level decoding policy implementing [`Leb128DecodePolicy`]. Use
 ///   [`crate::Strict`] to reject non-canonical inputs, or [`NonStrict`] to
 ///   accept non-canonical inputs.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_codec_binary::{
+///     Leb128Codec,
+///     NonStrict,
+/// };
+///
+/// let mut output = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
+/// let written = unsafe {
+///     Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut output, 0)
+/// };
+/// assert_eq!(2, written);
+///
+/// let (decoded, consumed) = unsafe {
+///     Leb128Codec::<u64, NonStrict>::decode_unchecked(&output[..written], 0)
+/// }.expect("canonical LEB128 value should decode");
+/// assert_eq!(300, decoded);
+/// assert_eq!(2, consumed.get());
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Leb128Codec<T, P = NonStrict> {
     marker: PhantomData<fn() -> (T, P)>,

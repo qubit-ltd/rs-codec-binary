@@ -45,8 +45,8 @@ This crate provides:
 
 ### Fixed-Width Binary Scalars
 
-- **Integer Coverage**: encodes and decodes primitive signed and unsigned
-  integer types.
+- **Integer Coverage**: encodes and decodes fixed-width primitive signed and
+  unsigned integer types.
 - **Byte Order Support**: supports `BigEndian` and `LittleEndian` type markers.
 - **Unchecked Hot Path**: `decode_unchecked` and `encode_unchecked` avoid repeated
   bounds checks after the caller validates capacity.
