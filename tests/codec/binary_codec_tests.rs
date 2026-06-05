@@ -60,6 +60,112 @@ fn test_binary_codec_writes_to_explicit_index_unchecked() {
 }
 
 #[test]
+fn test_binary_codec_roundtrips_integer_extremes_for_all_fixed_width_types() {
+    macro_rules! assert_extreme_roundtrip {
+        ($ty:ty, $value:expr) => {{
+            let value: $ty = $value;
+
+            let mut output = [0u8; BinaryCodec::<$ty, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<$ty, BigEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(value.to_be_bytes(), output);
+            let decoded = unsafe { BinaryCodec::<$ty, BigEndian>::decode_unchecked(&output, 0) };
+            assert_decoded_eq((value, output.len()), decoded);
+
+            let mut output = [0u8; BinaryCodec::<$ty, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<$ty, LittleEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(value.to_le_bytes(), output);
+            let decoded = unsafe { BinaryCodec::<$ty, LittleEndian>::decode_unchecked(&output, 0) };
+            assert_decoded_eq((value, output.len()), decoded);
+        }};
+    }
+
+    assert_extreme_roundtrip!(u8, u8::MIN);
+    assert_extreme_roundtrip!(u8, u8::MAX);
+    assert_extreme_roundtrip!(i8, i8::MIN);
+    assert_extreme_roundtrip!(i8, i8::MAX);
+    assert_extreme_roundtrip!(u16, u16::MIN);
+    assert_extreme_roundtrip!(u16, u16::MAX);
+    assert_extreme_roundtrip!(i16, i16::MIN);
+    assert_extreme_roundtrip!(i16, i16::MAX);
+    assert_extreme_roundtrip!(u32, u32::MIN);
+    assert_extreme_roundtrip!(u32, u32::MAX);
+    assert_extreme_roundtrip!(i32, i32::MIN);
+    assert_extreme_roundtrip!(i32, i32::MAX);
+    assert_extreme_roundtrip!(u64, u64::MIN);
+    assert_extreme_roundtrip!(u64, u64::MAX);
+    assert_extreme_roundtrip!(i64, i64::MIN);
+    assert_extreme_roundtrip!(i64, i64::MAX);
+    assert_extreme_roundtrip!(u128, u128::MIN);
+    assert_extreme_roundtrip!(u128, u128::MAX);
+    assert_extreme_roundtrip!(i128, i128::MIN);
+    assert_extreme_roundtrip!(i128, i128::MAX);
+}
+
+#[test]
+fn test_binary_codec_preserves_f32_bit_patterns() {
+    macro_rules! assert_f32_bit_roundtrip {
+        ($bits:expr) => {{
+            let bits: u32 = $bits;
+            let value = f32::from_bits(bits);
+
+            let mut output = [0u8; BinaryCodec::<f32, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<f32, BigEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(bits.to_be_bytes(), output);
+            let (decoded, consumed) = unsafe { BinaryCodec::<f32, BigEndian>::decode_unchecked(&output, 0) };
+            assert_eq!(bits, decoded.to_bits());
+            assert_eq!(output.len(), consumed.get());
+
+            let mut output = [0u8; BinaryCodec::<f32, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<f32, LittleEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(bits.to_le_bytes(), output);
+            let (decoded, consumed) = unsafe { BinaryCodec::<f32, LittleEndian>::decode_unchecked(&output, 0) };
+            assert_eq!(bits, decoded.to_bits());
+            assert_eq!(output.len(), consumed.get());
+        }};
+    }
+
+    assert_f32_bit_roundtrip!(0x8000_0000);
+    assert_f32_bit_roundtrip!(0x7f80_0000);
+    assert_f32_bit_roundtrip!(0xff80_0000);
+    assert_f32_bit_roundtrip!(0x7fc0_0123);
+}
+
+#[test]
+fn test_binary_codec_preserves_f64_bit_patterns() {
+    macro_rules! assert_f64_bit_roundtrip {
+        ($bits:expr) => {{
+            let bits: u64 = $bits;
+            let value = f64::from_bits(bits);
+
+            let mut output = [0u8; BinaryCodec::<f64, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<f64, BigEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(bits.to_be_bytes(), output);
+            let (decoded, consumed) = unsafe { BinaryCodec::<f64, BigEndian>::decode_unchecked(&output, 0) };
+            assert_eq!(bits, decoded.to_bits());
+            assert_eq!(output.len(), consumed.get());
+
+            let mut output = [0u8; BinaryCodec::<f64, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe { BinaryCodec::<f64, LittleEndian>::encode_unchecked(value, &mut output, 0) };
+            assert_eq!(output.len(), written);
+            assert_eq!(bits.to_le_bytes(), output);
+            let (decoded, consumed) = unsafe { BinaryCodec::<f64, LittleEndian>::decode_unchecked(&output, 0) };
+            assert_eq!(bits, decoded.to_bits());
+            assert_eq!(output.len(), consumed.get());
+        }};
+    }
+
+    assert_f64_bit_roundtrip!(0x8000_0000_0000_0000);
+    assert_f64_bit_roundtrip!(0x7ff0_0000_0000_0000);
+    assert_f64_bit_roundtrip!(0xfff0_0000_0000_0000);
+    assert_f64_bit_roundtrip!(0x7ff8_0000_0000_1234);
+}
+
+#[test]
 fn test_binary_codec_encodes_and_decodes_through_codec_trait() {
     let codec = BinaryCodec::<u32, BigEndian>::default();
     let mut output = [0xaa, 0, 0, 0, 0, 0xbb];
