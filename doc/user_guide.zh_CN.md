@@ -5,7 +5,7 @@
 
 ## 层次
 
-- 使用 `BinaryCodec<T, O>` 处理 fixed-width 整数和浮点数。
+- 使用 `BinaryCodec<T, O>` 处理明确位宽的 primitive integer 和浮点数。
 - 使用 `Leb128Codec<T, P>` 处理 unsigned / signed LEB128 值。
 - 当有符号值通常接近零、包括负数也要保持紧凑时，使用 `ZigZagCodec<T, P>`。
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
@@ -16,6 +16,10 @@
 engine、hook 和 value trait 请直接从 `qubit-codec` 引入。
 
 ## Fixed-Width 值
+
+`BinaryCodec` 支持 `u8`、`i8`、`u16`、`i16`、`u32`、`i32`、`u64`、`i64`、
+`u128`、`i128`、`f32` 和 `f64`。它不实现 `usize` 或 `isize`，因为它们的
+字节宽度依赖目标平台。
 
 ```rust
 use qubit_codec_binary::{

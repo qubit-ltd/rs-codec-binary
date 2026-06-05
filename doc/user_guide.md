@@ -6,7 +6,7 @@ want explicit byte indexes.
 
 ## Layers
 
-- Use `BinaryCodec<T, O>` for fixed-width integers and floats.
+- Use `BinaryCodec<T, O>` for explicit-width primitive integers and floats.
 - Use `Leb128Codec<T, P>` for unsigned and signed LEB128 values.
 - Use `ZigZagCodec<T, P>` when signed values should be compact around zero.
 - Use `Strict` to reject non-canonical LEB128 payloads and `NonStrict` to allow
@@ -19,6 +19,10 @@ the built-in LEB128 policy markers. Import generic adapters, engines, hooks,
 and value traits directly from `qubit-codec`.
 
 ## Fixed-Width Values
+
+`BinaryCodec` supports `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`, `i64`,
+`u128`, `i128`, `f32`, and `f64`. It does not implement `usize` or `isize`
+because their byte width is platform-dependent.
 
 ```rust
 use qubit_codec_binary::{

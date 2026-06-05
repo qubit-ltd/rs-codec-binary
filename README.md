@@ -45,8 +45,12 @@ This crate provides:
 
 ### Fixed-Width Binary Scalars
 
-- **Integer Coverage**: encodes and decodes fixed-width primitive signed and
-  unsigned integer types.
+- **Integer Coverage**: encodes and decodes explicit-width primitive integer
+  types: `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`, `i64`, `u128`, and
+  `i128`. Platform-width `usize` and `isize` are intentionally not fixed-width
+  binary scalar types.
+- **Floating-Point Coverage**: supports `f32` and `f64` while preserving their
+  IEEE 754 bit patterns.
 - **Byte Order Support**: supports `BigEndian` and `LittleEndian` type markers.
 - **Unchecked Hot Path**: `decode_unchecked` and `encode_unchecked` avoid repeated
   bounds checks after the caller validates capacity.
