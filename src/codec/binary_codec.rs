@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
- ******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 
 use core::{
     convert::Infallible,
@@ -23,10 +21,10 @@ use crate::{
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
-/// `BinaryCodec` is intentionally a zero-sized codec type. It exposes type-level
-/// unchecked helpers for direct hot-path use and also implements [`Codec`] for
-/// generic codec pipelines. Callers must validate buffer lengths before entering
-/// the hot path.
+/// `BinaryCodec` is intentionally a zero-sized codec type. It exposes
+/// type-level unchecked helpers for direct hot-path use and also implements
+/// [`Codec`] for generic codec pipelines. Callers must validate buffer lengths
+/// before entering the hot path.
 ///
 /// # Type Parameters
 ///
@@ -85,14 +83,21 @@ impl<O> BinaryCodec<u8, O> {
     /// read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> (u8, core::num::NonZeroUsize) {
+    pub unsafe fn decode_unchecked(
+        input: &[u8],
+        index: usize,
+    ) -> (u8, core::num::NonZeroUsize) {
         debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) },
             // SAFETY: `u8` is one byte wide.
-            unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+            unsafe {
+                core::num::NonZeroUsize::new_unchecked(
+                    Self::MIN_UNITS_PER_VALUE,
+                )
+            },
         )
     }
 
@@ -109,7 +114,11 @@ impl<O> BinaryCodec<u8, O> {
     /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
     /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode_unchecked(value: u8, output: &mut [u8], index: usize) -> usize {
+    pub unsafe fn encode_unchecked(
+        value: u8,
+        output: &mut [u8],
+        index: usize,
+    ) -> usize {
         debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
@@ -129,13 +138,17 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
         // SAFETY: `u8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+        unsafe {
+            core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE)
+        }
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
         // SAFETY: `u8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+        unsafe {
+            core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE)
+        }
     }
 
     #[inline(always)]
@@ -149,7 +162,12 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
     }
 
     #[inline(always)]
-    unsafe fn encode_unchecked(&self, value: &u8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+    unsafe fn encode_unchecked(
+        &self,
+        value: &u8,
+        output: &mut [u8],
+        index: usize,
+    ) -> Result<usize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
         Ok(unsafe { Self::encode_unchecked(*value, output, index) })
     }
@@ -179,14 +197,21 @@ impl<O> BinaryCodec<i8, O> {
     /// read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> (i8, core::num::NonZeroUsize) {
+    pub unsafe fn decode_unchecked(
+        input: &[u8],
+        index: usize,
+    ) -> (i8, core::num::NonZeroUsize) {
         debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) as i8 },
             // SAFETY: `i8` is one byte wide.
-            unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+            unsafe {
+                core::num::NonZeroUsize::new_unchecked(
+                    Self::MIN_UNITS_PER_VALUE,
+                )
+            },
         )
     }
 
@@ -203,7 +228,11 @@ impl<O> BinaryCodec<i8, O> {
     /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid
     /// to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode_unchecked(value: i8, output: &mut [u8], index: usize) -> usize {
+    pub unsafe fn encode_unchecked(
+        value: i8,
+        output: &mut [u8],
+        index: usize,
+    ) -> usize {
         debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
@@ -223,13 +252,17 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
         // SAFETY: `i8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+        unsafe {
+            core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE)
+        }
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
         // SAFETY: `i8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+        unsafe {
+            core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE)
+        }
     }
 
     #[inline(always)]
@@ -243,7 +276,12 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
     }
 
     #[inline(always)]
-    unsafe fn encode_unchecked(&self, value: &i8, output: &mut [u8], index: usize) -> Result<usize, Self::EncodeError> {
+    unsafe fn encode_unchecked(
+        &self,
+        value: &i8,
+        output: &mut [u8],
+        index: usize,
+    ) -> Result<usize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
         Ok(unsafe { Self::encode_unchecked(*value, output, index) })
     }
@@ -258,7 +296,8 @@ macro_rules! impl_integer_binary_codec {
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds checks.
+            /// Decodes a value from `input` starting at `index` without bounds
+            /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -270,24 +309,30 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value and the non-zero number of consumed bytes.
+            /// Returns the decoded value and the non-zero number of consumed
+            /// bytes.
             ///
             /// # Safety
             ///
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]` is valid for
+            ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
-                // The caller guarantees that the readable range is fully in-bounds.
-                // `read_unaligned` permits unaligned memory access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$ty>() };
+                // The caller guarantees that the readable range is fully
+                // in-bounds. `read_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { input.as_ptr().add(index).cast::<$ty>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer load.
@@ -295,8 +340,13 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    // SAFETY: `$ty` is a concrete primitive integer type with
+                    // non-zero size.
+                    unsafe {
+                        core::num::NonZeroUsize::new_unchecked(
+                            Self::MIN_UNITS_PER_VALUE,
+                        )
+                    },
                 )
             }
 
@@ -317,18 +367,26 @@ macro_rules! impl_integer_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MAX_UNITS_PER_VALUE <= output.len()`
-            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]`
-            ///   is valid for writing.
+            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
+            ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode_unchecked(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_be();
 
                 // SAFETY:
-                // The caller guarantees that the writable range is fully in-bounds.
-                // `write_unaligned` permits unaligned memory access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
+                // The caller guarantees that the writable range is fully
+                // in-bounds. `write_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer store.
@@ -347,14 +405,24 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive integer type with
+                // non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MIN_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive integer type with
+                // non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MAX_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
@@ -363,7 +431,8 @@ macro_rules! impl_integer_binary_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
-                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::decode_unchecked`
+                // contract.
                 Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
@@ -374,7 +443,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::encode_unchecked`
+                // contract.
                 Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
@@ -386,7 +456,8 @@ macro_rules! impl_integer_binary_codec {
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds checks.
+            /// Decodes a value from `input` starting at `index` without bounds
+            /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -398,24 +469,30 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// # Returns
             ///
-            /// Returns the decoded value and the non-zero number of consumed bytes.
+            /// Returns the decoded value and the non-zero number of consumed
+            /// bytes.
             ///
             /// # Safety
             ///
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]` is valid for
+            ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
-                // The caller guarantees that the readable range is fully in-bounds.
-                // `read_unaligned` permits unaligned memory access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$ty>() };
+                // The caller guarantees that the readable range is fully
+                // in-bounds. `read_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { input.as_ptr().add(index).cast::<$ty>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer load.
@@ -423,8 +500,13 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    // SAFETY: `$ty` is a concrete primitive integer type with
+                    // non-zero size.
+                    unsafe {
+                        core::num::NonZeroUsize::new_unchecked(
+                            Self::MIN_UNITS_PER_VALUE,
+                        )
+                    },
                 )
             }
 
@@ -445,18 +527,26 @@ macro_rules! impl_integer_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MAX_UNITS_PER_VALUE <= output.len()`
-            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]`
-            ///   is valid for writing.
+            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
+            ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode_unchecked(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_le();
 
                 // SAFETY:
-                // The caller guarantees that the writable range is fully in-bounds.
-                // `write_unaligned` permits unaligned memory access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
+                // The caller guarantees that the writable range is fully
+                // in-bounds. `write_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer store.
@@ -475,14 +565,24 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive integer type with
+                // non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MIN_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive integer type with
+                // non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MAX_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
@@ -491,7 +591,8 @@ macro_rules! impl_integer_binary_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
-                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::decode_unchecked`
+                // contract.
                 Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
@@ -502,7 +603,8 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::encode_unchecked`
+                // contract.
                 Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
@@ -518,7 +620,8 @@ macro_rules! impl_float_binary_codec {
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds checks.
+            /// Decodes a value from `input` starting at `index` without bounds
+            /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -538,17 +641,22 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]` is valid for
+            ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
-                // The caller guarantees that the readable range is fully in-bounds.
-                // `read_unaligned` permits unaligned memory access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$bits>() };
+                // The caller guarantees that the readable range is fully
+                // in-bounds. `read_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { input.as_ptr().add(index).cast::<$bits>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer load.
@@ -556,8 +664,13 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    // SAFETY: `$ty` is a concrete primitive floating-point
+                    // type with non-zero size.
+                    unsafe {
+                        core::num::NonZeroUsize::new_unchecked(
+                            Self::MIN_UNITS_PER_VALUE,
+                        )
+                    },
                 )
             }
 
@@ -578,18 +691,26 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MAX_UNITS_PER_VALUE <= output.len()`
-            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]`
-            ///   is valid for writing.
+            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
+            ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode_unchecked(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_bits().to_be();
 
                 // SAFETY:
-                // The caller guarantees that the writable range is fully in-bounds.
-                // `write_unaligned` permits unaligned memory access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
+                // The caller guarantees that the writable range is fully
+                // in-bounds. `write_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer store.
@@ -608,14 +729,24 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive floating-point type
+                // with non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MIN_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive floating-point type
+                // with non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MAX_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
@@ -624,7 +755,8 @@ macro_rules! impl_float_binary_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
-                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::decode_unchecked`
+                // contract.
                 Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
@@ -635,7 +767,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::encode_unchecked`
+                // contract.
                 Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
@@ -647,7 +780,8 @@ macro_rules! impl_float_binary_codec {
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds checks.
+            /// Decodes a value from `input` starting at `index` without bounds
+            /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -667,17 +801,22 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[index..index + Self::MIN_UNITS_PER_VALUE]` is valid for
+            ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode_unchecked(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode_unchecked(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
-                // The caller guarantees that the readable range is fully in-bounds.
-                // `read_unaligned` permits unaligned memory access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$bits>() };
+                // The caller guarantees that the readable range is fully
+                // in-bounds. `read_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { input.as_ptr().add(index).cast::<$bits>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer load.
@@ -685,8 +824,13 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    // SAFETY: `$ty` is a concrete primitive floating-point
+                    // type with non-zero size.
+                    unsafe {
+                        core::num::NonZeroUsize::new_unchecked(
+                            Self::MIN_UNITS_PER_VALUE,
+                        )
+                    },
                 )
             }
 
@@ -707,18 +851,26 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `index + Self::MAX_UNITS_PER_VALUE <= output.len()`
-            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]`
-            ///   is valid for writing.
+            /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
+            ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode_unchecked(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode_unchecked(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_bits().to_le();
 
                 // SAFETY:
-                // The caller guarantees that the writable range is fully in-bounds.
-                // `write_unaligned` permits unaligned memory access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
+                // The caller guarantees that the writable range is fully
+                // in-bounds. `write_unaligned` permits unaligned memory
+                // access.
+                let pointer =
+                    unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
 
                 // SAFETY:
                 // The pointer is valid for an unaligned integer store.
@@ -737,14 +889,24 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive floating-point type
+                // with non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MIN_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                // SAFETY: `$ty` is a concrete primitive floating-point type
+                // with non-zero size.
+                unsafe {
+                    core::num::NonZeroUsize::new_unchecked(
+                        Self::MAX_UNITS_PER_VALUE,
+                    )
+                }
             }
 
             #[inline(always)]
@@ -753,7 +915,8 @@ macro_rules! impl_float_binary_codec {
                 input: &[u8],
                 index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Self::DecodeError> {
-                // SAFETY: The caller upholds the `Codec::decode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::decode_unchecked`
+                // contract.
                 Ok(unsafe { Self::decode_unchecked(input, index) })
             }
 
@@ -764,7 +927,8 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 index: usize,
             ) -> Result<usize, Self::EncodeError> {
-                // SAFETY: The caller upholds the `Codec::encode_unchecked` contract.
+                // SAFETY: The caller upholds the `Codec::encode_unchecked`
+                // contract.
                 Ok(unsafe { Self::encode_unchecked(*value, output, index) })
             }
         }
