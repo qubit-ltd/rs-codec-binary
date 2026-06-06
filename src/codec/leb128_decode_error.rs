@@ -1,12 +1,10 @@
-/*******************************************************************************
- *
- *    Copyright (c) 2026 Haixing Hu.
- *
- *    SPDX-License-Identifier: Apache-2.0
- *
- *    Licensed under the Apache License, Version 2.0.
- *
-******************************************************************************/
+// =============================================================================
+//    Copyright (c) 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
 use core::{
     fmt::{
         self,
@@ -35,8 +33,8 @@ impl Leb128DecodeError {
     /// # Parameters
     ///
     /// - `start_index`: Byte index where the incomplete value starts.
-    /// - `required`: Non-zero lower bound for total bytes that must be
-    ///   readable from `start_index` before decoding can make progress.
+    /// - `required`: Non-zero lower bound for total bytes that must be readable
+    ///   from `start_index` before decoding can make progress.
     /// - `available`: Bytes currently available from `start_index`.
     ///
     /// # Returns
@@ -47,7 +45,11 @@ impl Leb128DecodeError {
     ///
     /// Panics when `required <= available`, or when the one-past-available
     /// error boundary overflows `usize`.
-    pub const fn incomplete(start_index: usize, required: NonZeroUsize, available: usize) -> Self {
+    pub const fn incomplete(
+        start_index: usize,
+        required: NonZeroUsize,
+        available: usize,
+    ) -> Self {
         assert!(
             required.get() > available,
             "incomplete LEB128 required bytes must exceed available bytes",
@@ -77,7 +79,11 @@ impl Leb128DecodeError {
     /// # Panics
     ///
     /// Panics when `error_index` is outside the consumed span.
-    pub const fn malformed(start_index: usize, error_index: usize, consumed: NonZeroUsize) -> Self {
+    pub const fn malformed(
+        start_index: usize,
+        error_index: usize,
+        consumed: NonZeroUsize,
+    ) -> Self {
         assert_error_index_in_consumed_span(start_index, error_index, consumed);
         Self {
             kind: Leb128DecodeErrorKind::Malformed,
@@ -103,7 +109,10 @@ impl Leb128DecodeError {
     /// # Panics
     ///
     /// Panics when the last consumed byte index overflows `usize`.
-    pub const fn noncanonical(start_index: usize, consumed: NonZeroUsize) -> Self {
+    pub const fn noncanonical(
+        start_index: usize,
+        consumed: NonZeroUsize,
+    ) -> Self {
         Self {
             kind: Leb128DecodeErrorKind::NonCanonical,
             start_index,
@@ -168,7 +177,8 @@ impl Leb128DecodeError {
         matches!(self.kind, Leb128DecodeErrorKind::NonCanonical)
     }
 
-    /// Returns a lower bound for bytes required to continue incomplete decoding.
+    /// Returns a lower bound for bytes required to continue incomplete
+    /// decoding.
     ///
     /// # Returns
     ///
@@ -224,13 +234,18 @@ impl Display for Leb128DecodeError {
                 write!(
                     formatter,
                     "{} at byte {}: need at least {} bytes, only {} available (next byte boundary {})",
-                    self.kind, self.start_index, required, available, self.error_index,
+                    self.kind,
+                    self.start_index,
+                    required,
+                    available,
+                    self.error_index,
                 )
             }
-            Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => {
-                let consumed = self
-                    .consumed
-                    .expect("invalid LEB128 errors always store a consumed byte count");
+            Leb128DecodeErrorKind::Malformed
+            | Leb128DecodeErrorKind::NonCanonical => {
+                let consumed = self.consumed.expect(
+                    "invalid LEB128 errors always store a consumed byte count",
+                );
                 write!(
                     formatter,
                     "{} at byte {}: detected at byte {} after consuming {} bytes",
@@ -278,7 +293,10 @@ const fn add_offset(index: usize, offset: usize) -> usize {
 /// # Panics
 ///
 /// Panics when the index overflows `usize`.
-const fn last_consumed_index(start_index: usize, consumed: NonZeroUsize) -> usize {
+const fn last_consumed_index(
+    start_index: usize,
+    consumed: NonZeroUsize,
+) -> usize {
     add_offset(start_index, consumed.get() - 1)
 }
 
@@ -294,7 +312,11 @@ const fn last_consumed_index(start_index: usize, consumed: NonZeroUsize) -> usiz
 ///
 /// Panics when `error_index` is before `start_index` or after the last consumed
 /// byte.
-const fn assert_error_index_in_consumed_span(start_index: usize, error_index: usize, consumed: NonZeroUsize) {
+const fn assert_error_index_in_consumed_span(
+    start_index: usize,
+    error_index: usize,
+    consumed: NonZeroUsize,
+) {
     let last_index = last_consumed_index(start_index, consumed);
     assert!(
         error_index >= start_index,
