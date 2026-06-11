@@ -29,7 +29,7 @@ use qubit_codec_binary::{
 
 let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut output, 0);
+    BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut output, 0);
 }
 assert_eq!([1, 2, 3, 4], output);
 ```
@@ -46,11 +46,11 @@ use qubit_codec_binary::{
 };
 
 let mut unsigned = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut unsigned, 0) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode(300, &mut unsigned, 0) };
 assert_eq!(2, written);
 
 let mut signed = [0_u8; ZigZagCodec::<i64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { ZigZagCodec::<i64, NonStrict>::encode_unchecked(-42, &mut signed, 0) };
+let written = unsafe { ZigZagCodec::<i64, NonStrict>::encode(-42, &mut signed, 0) };
 assert_eq!(1, written);
 ```
 
@@ -92,7 +92,7 @@ assert_eq!(1, written);
 通用 buffered engine 或 conversion trait 请直接从 `qubit-codec` 引入，并把这些
 binary codec 作为低层 codec 实现使用。
 
-如果自行封装 `decode_unchecked`，调用 unsafe 方法前要先检查起始 index 后至少有
+如果自行封装 `decode`，调用 unsafe 方法前要先检查起始 index 后至少有
 `MIN_UNITS_PER_VALUE` 个可读字节。对于 single-value decoder，还需要由你的格式决定
 返回的 `consumed` 之后是否允许 trailing bytes。
 

@@ -52,7 +52,7 @@ This crate provides:
 - **Floating-Point Coverage**: supports `f32` and `f64` while preserving their
   IEEE 754 bit patterns.
 - **Byte Order Support**: supports `BigEndian` and `LittleEndian` type markers.
-- **Unchecked Hot Path**: `decode_unchecked` and `encode_unchecked` avoid repeated
+- **Unchecked Hot Path**: `decode` and `encode` avoid repeated
   bounds checks after the caller validates capacity.
 
 ### LEB128 Values
@@ -105,12 +105,12 @@ use qubit_codec_binary::{
 
 let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
+    BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut fixed, 0);
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
 let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
 
@@ -119,14 +119,14 @@ assert_eq!(2, written);
 The low-level codec methods are intentionally unsafe. Callers must validate
 buffer bounds before using them:
 
-- `BinaryCodec::decode_unchecked` and `BinaryCodec::encode_unchecked` require
+- `BinaryCodec::decode` and `BinaryCodec::encode` require
   exactly `MIN_UNITS_PER_VALUE` readable bytes or `MAX_UNITS_PER_VALUE`
   writable bytes from `index`. For fixed-width values these bounds are equal.
 - `Leb128Codec` and `ZigZagCodec` expose `MIN_UNITS_PER_VALUE` and
-  `MAX_UNITS_PER_VALUE`. Their `encode_unchecked` methods require
+  `MAX_UNITS_PER_VALUE`. Their `encode` methods require
   `MAX_UNITS_PER_VALUE` writable bytes from `index`, even when the encoded value
   is shorter.
-- `Leb128Codec::decode_unchecked` and `ZigZagCodec::decode_unchecked` require
+- `Leb128Codec::decode` and `ZigZagCodec::decode` require
   at least `MIN_UNITS_PER_VALUE` readable byte from `index`. Callers should
   normally provide up to `MAX_UNITS_PER_VALUE` readable bytes unless EOF makes
   that impossible. Incomplete, malformed, and non-canonical input is reported
@@ -151,8 +151,8 @@ adapters. See the [User Guide](doc/user_guide.md) for binary codec examples.
 | `Codec` (`Unit = u8`) | Decode and encode one fixed-width scalar through the core trait |
 | `MIN_UNITS_PER_VALUE` | Minimum bytes required for the scalar type |
 | `MAX_UNITS_PER_VALUE` | Maximum bytes required for the scalar type |
-| `decode_unchecked(input, index)` | Decode one fixed-width scalar without bounds checks |
-| `encode_unchecked(value, output, index)` | Encode one fixed-width scalar without bounds checks |
+| `decode(input, index)` | Decode one fixed-width scalar without bounds checks |
+| `encode(value, output, index)` | Encode one fixed-width scalar without bounds checks |
 
 ### `Leb128Codec` Operations
 
@@ -161,8 +161,8 @@ adapters. See the [User Guide](doc/user_guide.md) for binary codec examples.
 | `Codec` (`Unit = u8`) | Decode and encode one LEB128 value through the core trait |
 | `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
 | `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the integer type |
-| `decode_unchecked(input, index)` | Decode one complete LEB128 value |
-| `encode_unchecked(value, output, index)` | Encode one canonical LEB128 value |
+| `decode(input, index)` | Decode one complete LEB128 value |
+| `encode(value, output, index)` | Encode one canonical LEB128 value |
 
 ### `ZigZagCodec` Operations
 
@@ -171,8 +171,8 @@ adapters. See the [User Guide](doc/user_guide.md) for binary codec examples.
 | `Codec` (`Unit = u8`) | Decode and encode one ZigZag LEB128 value through the core trait |
 | `MIN_UNITS_PER_VALUE` | Minimum readable bytes that can contain a complete value |
 | `MAX_UNITS_PER_VALUE` | Maximum bytes needed for the signed integer type |
-| `decode_unchecked(input, index)` | Decode ZigZag over unsigned LEB128 |
-| `encode_unchecked(value, output, index)` | Encode signed integer as ZigZag plus unsigned LEB128 |
+| `decode(input, index)` | Decode ZigZag over unsigned LEB128 |
+| `encode(value, output, index)` | Encode signed integer as ZigZag plus unsigned LEB128 |
 
 ### LEB128 Decode Policies
 

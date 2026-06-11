@@ -44,8 +44,8 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
   平台相关位宽的 `usize` 和 `isize` 不作为 fixed-width binary scalar 支持。
 - **浮点覆盖**：支持 `f32` 和 `f64`，并保留 IEEE 754 bit pattern。
 - **字节序支持**：支持 `BigEndian` 与 `LittleEndian` 类型标记。
-- **Unchecked 热路径**：调用方验证容量后，可用 `decode_unchecked` 和
-  `encode_unchecked` 避免重复边界检查。
+- **Unchecked 热路径**：调用方验证容量后，可用 `decode` 和
+  `encode` 避免重复边界检查。
 
 ### LEB128 值
 
@@ -95,12 +95,12 @@ use qubit_codec_binary::{
 
 let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
-    BinaryCodec::<u32, BigEndian>::encode_unchecked(0x0102_0304, &mut fixed, 0);
+    BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut fixed, 0);
 }
 assert_eq!([1, 2, 3, 4], fixed);
 
 let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::encode_unchecked(300, &mut compact, 0) };
+let written = unsafe { Leb128Codec::<u64, NonStrict>::encode(300, &mut compact, 0) };
 assert_eq!(2, written);
 ```
 
@@ -108,13 +108,13 @@ assert_eq!(2, written);
 
 底层 codec 方法刻意设计为 unsafe。调用方必须先验证 buffer 边界：
 
-- `BinaryCodec::decode_unchecked` 和 `BinaryCodec::encode_unchecked` 要求从
+- `BinaryCodec::decode` 和 `BinaryCodec::encode` 要求从
   `index` 开始分别有 `MIN_UNITS_PER_VALUE` 个可读字节或
   `MAX_UNITS_PER_VALUE` 个可写字节。对于 fixed-width 值，这两个边界相等。
 - `Leb128Codec` 和 `ZigZagCodec` 暴露 `MIN_UNITS_PER_VALUE` 和
-  `MAX_UNITS_PER_VALUE`。它们的 `encode_unchecked` 要求从 `index` 开始至少有
+  `MAX_UNITS_PER_VALUE`。它们的 `encode` 要求从 `index` 开始至少有
   `MAX_UNITS_PER_VALUE` 个可写字节，即使实际编码结果可能更短。
-- `Leb128Codec::decode_unchecked` 和 `ZigZagCodec::decode_unchecked` 要求从
+- `Leb128Codec::decode` 和 `ZigZagCodec::decode` 要求从
   `index` 开始至少有 `MIN_UNITS_PER_VALUE` 个可读字节。调用方通常应尽量提供到
   `MAX_UNITS_PER_VALUE`，除非 EOF 已经无法继续读取。不完整、畸形和非 canonical
   输入都通过 `Leb128DecodeError` 表达。
@@ -136,8 +136,8 @@ codec adapter。binary codec 示例见[用户指南](doc/user_guide.zh_CN.md)。
 | `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 fixed-width scalar |
 | `MIN_UNITS_PER_VALUE` | 当前标量类型所需的最少字节数 |
 | `MAX_UNITS_PER_VALUE` | 当前标量类型所需的最多字节数 |
-| `decode_unchecked(input, index)` | 无边界检查解码一个 fixed-width scalar |
-| `encode_unchecked(value, output, index)` | 无边界检查编码一个 fixed-width scalar |
+| `decode(input, index)` | 无边界检查解码一个 fixed-width scalar |
+| `encode(value, output, index)` | 无边界检查编码一个 fixed-width scalar |
 
 ### `Leb128Codec` 操作
 
@@ -146,8 +146,8 @@ codec adapter。binary codec 示例见[用户指南](doc/user_guide.zh_CN.md)。
 | `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 LEB128 值 |
 | `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
 | `MAX_UNITS_PER_VALUE` | 当前整数类型最多需要的字节数 |
-| `decode_unchecked(input, index)` | 解码一个完整 LEB128 值 |
-| `encode_unchecked(value, output, index)` | 编码一个 canonical LEB128 值 |
+| `decode(input, index)` | 解码一个完整 LEB128 值 |
+| `encode(value, output, index)` | 编码一个 canonical LEB128 值 |
 
 ### `ZigZagCodec` 操作
 
@@ -156,8 +156,8 @@ codec adapter。binary codec 示例见[用户指南](doc/user_guide.zh_CN.md)。
 | `Codec` (`Unit = u8`) | 通过 core trait 解码和编码一个 ZigZag LEB128 值 |
 | `MIN_UNITS_PER_VALUE` | 可能构成完整值的最少可读字节数 |
 | `MAX_UNITS_PER_VALUE` | 当前 signed integer 类型最多需要的字节数 |
-| `decode_unchecked(input, index)` | 解码 ZigZag over unsigned LEB128 |
-| `encode_unchecked(value, output, index)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
+| `decode(input, index)` | 解码 ZigZag over unsigned LEB128 |
+| `encode(value, output, index)` | 把 signed integer 编码为 ZigZag + unsigned LEB128 |
 
 ### LEB128 Decode Policy
 

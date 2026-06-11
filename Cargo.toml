@@ -30,7 +30,7 @@ doctest = true
 
 [dependencies]
 thiserror = "2.0"
-qubit-codec = { version = "0.6", path = "../rs-codec" }
+qubit-codec = { version = "0.7", path = "../rs-codec" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
