@@ -6,7 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{convert::Infallible, marker::PhantomData};
+use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
 
 use qubit_codec::Codec;
 
@@ -132,9 +132,6 @@ macro_rules! impl_zig_zag_codec {
             type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
-
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
@@ -143,8 +140,13 @@ macro_rules! impl_zig_zag_codec {
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: ZigZag LEB128 has a non-zero maximum encoded width.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+            }
+
+            #[inline(always)]
+            fn encode_len(&self, value: &$signed) -> core::num::NonZeroUsize {
+                let encoded = ((*value as $unsigned) << 1) ^ ((*value >> $shift) as $unsigned);
+                non_zero_len(uleb_encoded_len(encoded as u128))
             }
 
             #[inline(always)]
@@ -166,12 +168,13 @@ macro_rules! impl_zig_zag_codec {
                 value: &$signed,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                let written = unsafe { Self::encode(*value, output, index) };
+                Ok(non_zero_len(written))
             }
         }
     };
@@ -183,3 +186,24 @@ impl_zig_zag_codec!(i32, u32, 31);
 impl_zig_zag_codec!(i64, u64, 63);
 impl_zig_zag_codec!(i128, u128, 127);
 impl_zig_zag_codec!(isize, usize, isize::BITS - 1);
+
+/// Computes the canonical unsigned LEB128 byte width for a ZigZag payload.
+#[must_use]
+#[inline(always)]
+fn uleb_encoded_len(mut value: u128) -> usize {
+    let mut len = 0;
+    loop {
+        value >>= 7;
+        len += 1;
+        if value == 0 {
+            return len;
+        }
+    }
+}
+
+/// Converts a successful encode width to its non-zero representation.
+#[must_use]
+#[inline(always)]
+fn non_zero_len(len: usize) -> NonZeroUsize {
+    NonZeroUsize::new(len).expect("ZigZag LEB128 encoding always writes at least one byte")
+}

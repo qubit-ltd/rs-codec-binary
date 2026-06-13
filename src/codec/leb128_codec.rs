@@ -133,9 +133,6 @@ macro_rules! impl_unsigned_leb128_codec {
             type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
-
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
@@ -144,8 +141,12 @@ macro_rules! impl_unsigned_leb128_codec {
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: LEB128 has a non-zero maximum encoded width.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+            }
+
+            #[inline(always)]
+            fn encode_len(&self, value: &$ty) -> core::num::NonZeroUsize {
+                non_zero_len(uleb_encoded_len(*value as u128))
             }
 
             #[inline(always)]
@@ -167,12 +168,13 @@ macro_rules! impl_unsigned_leb128_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                let written = unsafe { Self::encode(*value, output, index) };
+                Ok(non_zero_len(written))
             }
         }
     };
@@ -262,9 +264,6 @@ macro_rules! impl_signed_leb128_codec {
             type Unit = u8;
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
-
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
@@ -273,8 +272,12 @@ macro_rules! impl_signed_leb128_codec {
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: LEB128 has a non-zero maximum encoded width.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+            }
+
+            #[inline(always)]
+            fn encode_len(&self, value: &$ty) -> core::num::NonZeroUsize {
+                non_zero_len(sleb_encoded_len(*value as i128))
             }
 
             #[inline(always)]
@@ -296,12 +299,13 @@ macro_rules! impl_signed_leb128_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 debug_assert!(output.len().saturating_sub(index) >= Self::MAX_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                let written = unsafe { Self::encode(*value, output, index) };
+                Ok(non_zero_len(written))
             }
         }
     };
@@ -792,6 +796,20 @@ unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128)
     }
 }
 
+/// Computes the canonical unsigned LEB128 byte width for `value`.
+#[must_use]
+#[inline(always)]
+fn uleb_encoded_len(mut value: u128) -> usize {
+    let mut len = 0;
+    loop {
+        value >>= 7;
+        len += 1;
+        if value == 0 {
+            return len;
+        }
+    }
+}
+
 /// Encodes a signed integer as canonical LEB128 without bounds checks.
 ///
 /// # Parameters
@@ -828,4 +846,28 @@ unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128)
             return offset;
         }
     }
+}
+
+/// Computes the canonical signed LEB128 byte width for `value`.
+#[must_use]
+#[inline(always)]
+fn sleb_encoded_len(mut value: i128) -> usize {
+    let mut len = 0;
+    loop {
+        let byte = (value & 0x7F) as u8;
+        let sign_bit_set = byte & 0x40 != 0;
+        value >>= 7;
+        let done = (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set);
+        len += 1;
+        if done {
+            return len;
+        }
+    }
+}
+
+/// Converts a successful encode width to its non-zero representation.
+#[must_use]
+#[inline(always)]
+fn non_zero_len(len: usize) -> NonZeroUsize {
+    NonZeroUsize::new(len).expect("canonical LEB128 encoding always writes at least one byte")
 }
