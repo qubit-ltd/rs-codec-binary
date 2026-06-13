@@ -84,7 +84,7 @@ fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
         .expect("ZigZag encoding should be infallible");
-    assert_eq!(2, written);
+    assert_eq!(2, written.get());
     assert_eq!([0x00, 0xd7, 0x04, 0x00, 0x00], output);
 
     let decoded =

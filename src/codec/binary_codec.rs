@@ -82,8 +82,7 @@ impl<O> BinaryCodec<u8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) },
-            // SAFETY: `u8` is one byte wide.
-            unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -116,19 +115,15 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
     type Unit = u8;
     type DecodeError = Infallible;
     type EncodeError = Infallible;
-    type DecodeState = ();
-    type EncodeState = ();
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        // SAFETY: `u8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+        qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        // SAFETY: `u8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+        qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -147,9 +142,12 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
         value: &u8,
         output: &mut [u8],
         index: usize,
-    ) -> Result<usize, Self::EncodeError> {
+    ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode` contract.
-        Ok(unsafe { Self::encode(*value, output, index) })
+        unsafe {
+            Self::encode(*value, output, index);
+        }
+        Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -183,8 +181,7 @@ impl<O> BinaryCodec<i8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) as i8 },
-            // SAFETY: `i8` is one byte wide.
-            unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -217,19 +214,15 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
     type Unit = u8;
     type DecodeError = Infallible;
     type EncodeError = Infallible;
-    type DecodeState = ();
-    type EncodeState = ();
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        // SAFETY: `i8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+        qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        // SAFETY: `i8` is one byte wide.
-        unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+        qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -248,9 +241,12 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
         value: &i8,
         output: &mut [u8],
         index: usize,
-    ) -> Result<usize, Self::EncodeError> {
+    ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
         // SAFETY: The caller upholds the `Codec::encode` contract.
-        Ok(unsafe { Self::encode(*value, output, index) })
+        unsafe {
+            Self::encode(*value, output, index);
+        }
+        Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -303,9 +299,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    // SAFETY: `$ty` is a concrete primitive integer type with
-                    // non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -354,21 +348,15 @@ macro_rules! impl_integer_binary_codec {
             type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with
-                // non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with
-                // non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -388,10 +376,13 @@ macro_rules! impl_integer_binary_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                unsafe {
+                    Self::encode(*value, output, index);
+                }
+                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -442,9 +433,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    // SAFETY: `$ty` is a concrete primitive integer type with
-                    // non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -493,21 +482,15 @@ macro_rules! impl_integer_binary_codec {
             type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with
-                // non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive integer type with
-                // non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -527,10 +510,13 @@ macro_rules! impl_integer_binary_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                unsafe {
+                    Self::encode(*value, output, index);
+                }
+                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };
@@ -585,9 +571,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    // SAFETY: `$ty` is a concrete primitive floating-point
-                    // type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -636,21 +620,15 @@ macro_rules! impl_float_binary_codec {
             type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type
-                // with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type
-                // with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -670,10 +648,13 @@ macro_rules! impl_float_binary_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                unsafe {
+                    Self::encode(*value, output, index);
+                }
+                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -724,9 +705,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    // SAFETY: `$ty` is a concrete primitive floating-point
-                    // type with non-zero size.
-                    unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) },
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -775,21 +754,15 @@ macro_rules! impl_float_binary_codec {
             type Unit = u8;
             type DecodeError = Infallible;
             type EncodeError = Infallible;
-            type DecodeState = ();
-            type EncodeState = ();
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type
-                // with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MIN_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                // SAFETY: `$ty` is a concrete primitive floating-point type
-                // with non-zero size.
-                unsafe { core::num::NonZeroUsize::new_unchecked(Self::MAX_UNITS_PER_VALUE) }
+                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -809,10 +782,13 @@ macro_rules! impl_float_binary_codec {
                 value: &$ty,
                 output: &mut [u8],
                 index: usize,
-            ) -> Result<usize, Self::EncodeError> {
+            ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                Ok(unsafe { Self::encode(*value, output, index) })
+                unsafe {
+                    Self::encode(*value, output, index);
+                }
+                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };

@@ -122,7 +122,7 @@ fn test_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     let written = unsafe { Codec::encode(&mut codec, &300, &mut output, 1) }
         .expect("LEB128 encoding should be infallible");
-    assert_eq!(2, written);
+    assert_eq!(2, written.get());
     assert_eq!([0x00, 0xac, 0x02, 0x00, 0x00], output);
 
     let decoded =
@@ -157,7 +157,7 @@ fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
         .expect("signed LEB128 encoding should be infallible");
-    assert_eq!(2, written);
+    assert_eq!(2, written.get());
     assert_eq!([0x00, 0xd4, 0x7d, 0x00, 0x00], output);
 
     let decoded = unsafe { Codec::decode(&mut codec, &output, 1) }
