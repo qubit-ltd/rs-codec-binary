@@ -10,6 +10,8 @@ use core::{
     num::NonZeroUsize,
 };
 
+use qubit_codec::CodecDecodeSignal;
+
 use crate::Leb128DecodeErrorKind;
 
 /// Error reported while decoding a LEB128 integer from a byte buffer.
@@ -233,6 +235,18 @@ impl Display for Leb128DecodeError {
                 )
             }
         }
+    }
+}
+
+impl CodecDecodeSignal for Leb128DecodeError {
+    #[inline(always)]
+    fn required_total(&self) -> Option<usize> {
+        self.required.map(NonZeroUsize::get)
+    }
+
+    #[inline(always)]
+    fn consumed_units(&self) -> Option<NonZeroUsize> {
+        self.consumed
     }
 }
 
