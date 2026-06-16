@@ -8,7 +8,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, ptr};
 
-use qubit_codec::Codec;
+use qubit_codec::{Codec, nz};
 
 use crate::{BigEndian, LittleEndian};
 
@@ -82,7 +82,7 @@ impl<O> BinaryCodec<u8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) },
-            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+            nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -118,12 +118,12 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+        nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+        nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -147,7 +147,7 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
         unsafe {
             Self::encode(*value, output, index);
         }
-        Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+        Ok(nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -181,7 +181,7 @@ impl<O> BinaryCodec<i8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { *input.as_ptr().add(index) as i8 },
-            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+            nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -217,12 +217,12 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+        nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+        nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -246,7 +246,7 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
         unsafe {
             Self::encode(*value, output, index);
         }
-        Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+        Ok(nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -299,7 +299,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -351,12 +351,12 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+                nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+                nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -382,7 +382,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -433,7 +433,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -485,12 +485,12 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+                nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+                nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -516,7 +516,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };
@@ -571,7 +571,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -623,12 +623,12 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+                nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+                nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -654,7 +654,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -705,7 +705,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -757,12 +757,12 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE)
+                nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+                nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -788,7 +788,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };

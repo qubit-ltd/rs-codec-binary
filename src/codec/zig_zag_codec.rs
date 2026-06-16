@@ -8,7 +8,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
 
-use qubit_codec::Codec;
+use qubit_codec::{Codec, nz};
 
 use crate::{Leb128Codec, Leb128DecodeError, Leb128DecodePolicy, NonStrict};
 
@@ -140,7 +140,7 @@ macro_rules! impl_zig_zag_codec {
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_codec::nz!(Self::MAX_UNITS_PER_VALUE)
+                nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
