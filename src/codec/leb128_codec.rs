@@ -8,7 +8,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
 
-use qubit_codec::{Codec, nz};
+use qubit_codec::{Codec, nz, read_unchecked, write_unchecked};
 
 use crate::{Leb128DecodeError, Leb128DecodePolicy, NonStrict};
 
@@ -427,12 +427,9 @@ where
     );
     let mut value = 0u128;
     let mut shift = 0u32;
-    // SAFETY: The caller guarantees that `available` bytes are readable from
-    // `index`, so this base pointer can be advanced by every loop offset.
-    let base = unsafe { input.as_ptr().add(index) };
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte = unsafe { *base.add(offset) };
+        let byte = unsafe { read_unchecked(input, index + offset) };
         let payload = u128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -559,12 +556,9 @@ where
     );
     let mut value = 0i128;
     let mut shift = 0u32;
-    // SAFETY: The caller guarantees that `available` bytes are readable from
-    // `index`, so this base pointer can be advanced by every loop offset.
-    let base = unsafe { input.as_ptr().add(index) };
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte = unsafe { *base.add(offset) };
+        let byte = unsafe { read_unchecked(input, index + offset) };
         let payload = i128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -787,7 +781,7 @@ unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128)
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            *output.as_mut_ptr().add(index + offset) = byte;
+            write_unchecked(output, index + offset, byte);
         }
         offset += 1;
         if value == 0 {
@@ -839,7 +833,7 @@ unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128)
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            *output.as_mut_ptr().add(index + offset) = byte;
+            write_unchecked(output, index + offset, byte);
         }
         offset += 1;
         if done {
