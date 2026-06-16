@@ -6,9 +6,12 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{convert::Infallible, marker::PhantomData, ptr};
+use core::{convert::Infallible, marker::PhantomData};
 
-use qubit_codec::{Codec, nz};
+use qubit_codec::{
+    Codec, nz, read_ne_unaligned_unchecked, read_unchecked, write_ne_unaligned_unchecked,
+    write_unchecked,
+};
 
 use crate::{BigEndian, LittleEndian};
 
@@ -81,7 +84,7 @@ impl<O> BinaryCodec<u8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-            unsafe { *input.as_ptr().add(index) },
+            unsafe { read_unchecked(input, index) },
             nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
@@ -104,7 +107,7 @@ impl<O> BinaryCodec<u8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            *output.as_mut_ptr().add(index) = value;
+            write_unchecked(output, index, value);
         }
         Self::MAX_UNITS_PER_VALUE
     }
@@ -180,7 +183,7 @@ impl<O> BinaryCodec<i8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-            unsafe { *input.as_ptr().add(index) as i8 },
+            unsafe { read_unchecked::<u8>(input, index) } as i8,
             nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
@@ -203,7 +206,7 @@ impl<O> BinaryCodec<i8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            *output.as_mut_ptr().add(index) = value as u8;
+            write_unchecked(output, index, value as u8);
         }
         Self::MAX_UNITS_PER_VALUE
     }
@@ -289,18 +292,10 @@ macro_rules! impl_integer_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
-                // in-bounds. `read_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$ty>() };
+                // in-bounds. This unaligned helper handles byte-aligned load.
+                let raw = unsafe { read_ne_unaligned_unchecked::<$ty>(input, index) };
 
-                // SAFETY:
-                // The pointer is valid for an unaligned integer load.
-                let raw = unsafe { ptr::read_unaligned(pointer) };
-
-                (
-                    <$ty>::from_be(raw),
-                    nz!(Self::MIN_UNITS_PER_VALUE),
-                )
+                (<$ty>::from_be(raw), nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -330,14 +325,9 @@ macro_rules! impl_integer_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the writable range is fully
-                // in-bounds. `write_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer store.
+                // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    ptr::write_unaligned(pointer, raw);
+                    write_ne_unaligned_unchecked::<$ty>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -423,18 +413,10 @@ macro_rules! impl_integer_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
-                // in-bounds. `read_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$ty>() };
+                // in-bounds. This unaligned helper handles byte-aligned load.
+                let raw = unsafe { read_ne_unaligned_unchecked::<$ty>(input, index) };
 
-                // SAFETY:
-                // The pointer is valid for an unaligned integer load.
-                let raw = unsafe { ptr::read_unaligned(pointer) };
-
-                (
-                    <$ty>::from_le(raw),
-                    nz!(Self::MIN_UNITS_PER_VALUE),
-                )
+                (<$ty>::from_le(raw), nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -464,14 +446,9 @@ macro_rules! impl_integer_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the writable range is fully
-                // in-bounds. `write_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$ty>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer store.
+                // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    ptr::write_unaligned(pointer, raw);
+                    write_ne_unaligned_unchecked::<$ty>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -561,13 +538,8 @@ macro_rules! impl_float_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
-                // in-bounds. `read_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$bits>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer load.
-                let raw = unsafe { ptr::read_unaligned(pointer) };
+                // in-bounds. This unaligned helper handles byte-aligned load.
+                let raw = unsafe { read_ne_unaligned_unchecked::<$bits>(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
@@ -602,14 +574,9 @@ macro_rules! impl_float_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the writable range is fully
-                // in-bounds. `write_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer store.
+                // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    ptr::write_unaligned(pointer, raw);
+                    write_ne_unaligned_unchecked::<$bits>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -695,13 +662,8 @@ macro_rules! impl_float_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
-                // in-bounds. `read_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { input.as_ptr().add(index).cast::<$bits>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer load.
-                let raw = unsafe { ptr::read_unaligned(pointer) };
+                // in-bounds. This unaligned helper handles byte-aligned load.
+                let raw = unsafe { read_ne_unaligned_unchecked::<$bits>(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
@@ -736,14 +698,9 @@ macro_rules! impl_float_binary_codec {
 
                 // SAFETY:
                 // The caller guarantees that the writable range is fully
-                // in-bounds. `write_unaligned` permits unaligned memory
-                // access.
-                let pointer = unsafe { output.as_mut_ptr().add(index).cast::<$bits>() };
-
-                // SAFETY:
-                // The pointer is valid for an unaligned integer store.
+                // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    ptr::write_unaligned(pointer, raw);
+                    write_ne_unaligned_unchecked::<$bits>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
