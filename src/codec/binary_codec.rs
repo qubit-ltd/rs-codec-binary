@@ -8,10 +8,8 @@
 
 use core::{convert::Infallible, marker::PhantomData};
 
-use qubit_codec::{
-    Codec, nz, read_ne_unaligned_unchecked, read_unchecked, write_ne_unaligned_unchecked,
-    write_unchecked,
-};
+use qubit_codec::Codec;
+use qubit_io::UncheckedSlice;
 
 use crate::{BigEndian, LittleEndian};
 
@@ -84,8 +82,8 @@ impl<O> BinaryCodec<u8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-            unsafe { read_unchecked(input, index) },
-            nz!(Self::MIN_UNITS_PER_VALUE),
+            unsafe { qubit_io::UncheckedSlice::read(input, index) },
+            qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -107,7 +105,7 @@ impl<O> BinaryCodec<u8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            write_unchecked(output, index, value);
+            qubit_io::UncheckedSlice::write(output, index, value);
         }
         Self::MAX_UNITS_PER_VALUE
     }
@@ -121,12 +119,12 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        nz!(Self::MIN_UNITS_PER_VALUE)
+        qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        nz!(Self::MAX_UNITS_PER_VALUE)
+        qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -150,7 +148,7 @@ unsafe impl<O> Codec for BinaryCodec<u8, O> {
         unsafe {
             Self::encode(*value, output, index);
         }
-        Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+        Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -183,8 +181,8 @@ impl<O> BinaryCodec<i8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-            unsafe { read_unchecked::<u8>(input, index) } as i8,
-            nz!(Self::MIN_UNITS_PER_VALUE),
+                unsafe { UncheckedSlice::read(input, index) } as i8,
+            qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -206,7 +204,7 @@ impl<O> BinaryCodec<i8, O> {
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            write_unchecked(output, index, value as u8);
+            qubit_io::UncheckedSlice::write(output, index, value as u8);
         }
         Self::MAX_UNITS_PER_VALUE
     }
@@ -220,12 +218,12 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
 
     #[inline(always)]
     fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-        nz!(Self::MIN_UNITS_PER_VALUE)
+        qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
     fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-        nz!(Self::MAX_UNITS_PER_VALUE)
+        qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
     }
 
     #[inline(always)]
@@ -249,7 +247,7 @@ unsafe impl<O> Codec for BinaryCodec<i8, O> {
         unsafe {
             Self::encode(*value, output, index);
         }
-        Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+        Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
     }
 }
 
@@ -293,9 +291,9 @@ macro_rules! impl_integer_binary_codec {
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { read_ne_unaligned_unchecked::<$ty>(input, index) };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
-                (<$ty>::from_be(raw), nz!(Self::MIN_UNITS_PER_VALUE))
+                (<$ty>::from_be(raw), qubit_io::nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -327,7 +325,7 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    write_ne_unaligned_unchecked::<$ty>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$ty>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -341,12 +339,12 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MIN_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -372,7 +370,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -414,9 +412,9 @@ macro_rules! impl_integer_binary_codec {
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { read_ne_unaligned_unchecked::<$ty>(input, index) };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
-                (<$ty>::from_le(raw), nz!(Self::MIN_UNITS_PER_VALUE))
+                (<$ty>::from_le(raw), qubit_io::nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -448,7 +446,7 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    write_ne_unaligned_unchecked::<$ty>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$ty>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -462,12 +460,12 @@ macro_rules! impl_integer_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MIN_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -493,7 +491,7 @@ macro_rules! impl_integer_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };
@@ -539,11 +537,11 @@ macro_rules! impl_float_binary_codec {
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { read_ne_unaligned_unchecked::<$bits>(input, index) };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -576,7 +574,7 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    write_ne_unaligned_unchecked::<$bits>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$bits>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -590,12 +588,12 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MIN_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -621,7 +619,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
 
@@ -663,11 +661,11 @@ macro_rules! impl_float_binary_codec {
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { read_ne_unaligned_unchecked::<$bits>(input, index) };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -700,7 +698,7 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    write_ne_unaligned_unchecked::<$bits>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$bits>(output, index, raw);
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -714,12 +712,12 @@ macro_rules! impl_float_binary_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MIN_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MIN_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -745,7 +743,7 @@ macro_rules! impl_float_binary_codec {
                 unsafe {
                     Self::encode(*value, output, index);
                 }
-                Ok(nz!(Self::MAX_UNITS_PER_VALUE))
+                Ok(qubit_io::nz!(Self::MAX_UNITS_PER_VALUE))
             }
         }
     };

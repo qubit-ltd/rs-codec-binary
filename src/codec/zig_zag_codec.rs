@@ -8,8 +8,7 @@
 
 use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
 
-use qubit_codec::{Codec, nz};
-
+use qubit_codec::Codec;
 use crate::{Leb128Codec, Leb128DecodeError, Leb128DecodePolicy, NonStrict};
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
@@ -135,12 +134,12 @@ macro_rules! impl_zig_zag_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                core::num::NonZeroUsize::MIN
+                qubit_io::nz!(1)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -205,5 +204,5 @@ fn uleb_encoded_len(mut value: u128) -> usize {
 #[must_use]
 #[inline(always)]
 fn non_zero_len(len: usize) -> NonZeroUsize {
-    NonZeroUsize::new(len).expect("ZigZag LEB128 encoding always writes at least one byte")
+    qubit_io::nz!(len)
 }

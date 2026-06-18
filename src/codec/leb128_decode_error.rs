@@ -10,6 +10,7 @@ use core::{
     num::NonZeroUsize,
 };
 
+use qubit_io;
 use qubit_codec::CodecDecodeSignal;
 
 use crate::Leb128DecodeErrorKind;
@@ -190,8 +191,7 @@ impl Leb128DecodeError {
         match (self.required, self.available) {
             (Some(required), Some(available)) => {
                 let additional = required.get() - available;
-                // SAFETY: `incomplete` enforces `required > available`.
-                Some(unsafe { NonZeroUsize::new_unchecked(additional) })
+                Some(qubit_io::nz!(additional))
             }
             _ => None,
         }

@@ -30,6 +30,7 @@ doctest = true
 
 [dependencies]
 thiserror = "2.0"
+qubit-io = { version = "0.9", path = "../rs-io" }
 qubit-codec = { version = "0.8", path = "../rs-codec" }
 
 [lints.rust]

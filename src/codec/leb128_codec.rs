@@ -8,7 +8,8 @@
 
 use core::{convert::Infallible, marker::PhantomData, num::NonZeroUsize};
 
-use qubit_codec::{Codec, nz, read_unchecked, write_unchecked};
+use qubit_codec::Codec;
+use qubit_io;
 
 use crate::{Leb128DecodeError, Leb128DecodePolicy, NonStrict};
 
@@ -136,12 +137,12 @@ macro_rules! impl_unsigned_leb128_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                core::num::NonZeroUsize::MIN
+                qubit_io::nz!(1)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -267,12 +268,12 @@ macro_rules! impl_signed_leb128_codec {
 
             #[inline(always)]
             fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                core::num::NonZeroUsize::MIN
+                qubit_io::nz!(1)
             }
 
             #[inline(always)]
             fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                nz!(Self::MAX_UNITS_PER_VALUE)
+                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
             }
 
             #[inline(always)]
@@ -371,14 +372,14 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = unsafe { core::num::NonZeroUsize::new_unchecked(consumed) };
+            let consumed = qubit_io::nz!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
             debug_assert!(available < usize::MAX, "available byte count overflowed");
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = unsafe { NonZeroUsize::new_unchecked(available + 1) };
+            let required = qubit_io::nz!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -429,7 +430,7 @@ where
     let mut shift = 0u32;
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte = unsafe { read_unchecked(input, index + offset) };
+        let byte = unsafe { qubit_io::UncheckedSlice::read(input, index + offset) };
         let payload = u128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -500,14 +501,14 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = unsafe { core::num::NonZeroUsize::new_unchecked(consumed) };
+            let consumed = qubit_io::nz!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
             debug_assert!(available < usize::MAX, "available byte count overflowed");
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = unsafe { NonZeroUsize::new_unchecked(available + 1) };
+            let required = qubit_io::nz!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -558,7 +559,7 @@ where
     let mut shift = 0u32;
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte = unsafe { read_unchecked(input, index + offset) };
+        let byte = unsafe { qubit_io::UncheckedSlice::read(input, index + offset) };
         let payload = i128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -607,7 +608,7 @@ fn malformed_decode_error(
     debug_assert!(consumed > 0, "malformed LEB128 errors must consume bytes");
     // SAFETY: All malformed call sites pass either `offset + 1` or `max_bytes`,
     // both of which are non-zero for supported LEB128 codecs.
-    let consumed = unsafe { NonZeroUsize::new_unchecked(consumed) };
+    let consumed = qubit_io::nz!(consumed);
     Leb128DecodeError::malformed(start_index, error_index, consumed)
 }
 
@@ -630,7 +631,7 @@ fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError
     );
     // SAFETY: Non-canonical errors are detected only after reading at least one
     // terminating byte.
-    let consumed = unsafe { NonZeroUsize::new_unchecked(consumed) };
+    let consumed = qubit_io::nz!(consumed);
     Leb128DecodeError::noncanonical(index, consumed)
 }
 
@@ -781,7 +782,7 @@ unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128)
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            write_unchecked(output, index + offset, byte);
+            qubit_io::UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if value == 0 {
@@ -833,7 +834,7 @@ unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128)
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            write_unchecked(output, index + offset, byte);
+            qubit_io::UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if done {
@@ -863,5 +864,5 @@ fn sleb_encoded_len(mut value: i128) -> usize {
 #[must_use]
 #[inline(always)]
 fn non_zero_len(len: usize) -> NonZeroUsize {
-    NonZeroUsize::new(len).expect("canonical LEB128 encoding always writes at least one byte")
+    qubit_io::nz!(len)
 }
