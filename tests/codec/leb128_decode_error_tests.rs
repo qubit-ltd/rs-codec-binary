@@ -1,10 +1,14 @@
 use core::num::NonZeroUsize;
 
 use qubit_codec::CodecDecodeSignal;
-use qubit_codec_binary::{Leb128DecodeError, Leb128DecodeErrorKind};
+use qubit_codec_binary::{
+    Leb128DecodeError,
+    Leb128DecodeErrorKind,
+};
 
 #[test]
-fn test_incomplete_stores_start_error_required_available_and_additional_units() {
+fn test_incomplete_stores_start_error_required_available_and_additional_units()
+{
     let required = NonZeroUsize::new(3).expect("required bound is non-zero");
     let error = Leb128DecodeError::incomplete(5, required, 2);
 
@@ -28,7 +32,9 @@ fn test_incomplete_stores_start_error_required_available_and_additional_units() 
 fn test_incomplete_rejects_satisfied_required_bound() {
     let required = NonZeroUsize::new(2).expect("required bound is non-zero");
 
-    let result = std::panic::catch_unwind(|| Leb128DecodeError::incomplete(5, required, 2));
+    let result = std::panic::catch_unwind(|| {
+        Leb128DecodeError::incomplete(5, required, 2)
+    });
 
     assert!(result.is_err());
 }
@@ -37,19 +43,22 @@ fn test_incomplete_rejects_satisfied_required_bound() {
 fn test_incomplete_rejects_error_boundary_overflow() {
     let required = NonZeroUsize::new(2).expect("required bound is non-zero");
 
-    let result =
-        std::panic::catch_unwind(|| Leb128DecodeError::incomplete(usize::MAX, required, 1));
+    let result = std::panic::catch_unwind(|| {
+        Leb128DecodeError::incomplete(usize::MAX, required, 1)
+    });
 
     assert!(result.is_err());
 }
 
 #[test]
 fn test_invalid_errors_store_start_error_and_consumed_units() {
-    let malformed_consumed = NonZeroUsize::new(4).expect("malformed consumed count is non-zero");
+    let malformed_consumed =
+        NonZeroUsize::new(4).expect("malformed consumed count is non-zero");
     let noncanonical_consumed =
         NonZeroUsize::new(2).expect("non-canonical consumed count is non-zero");
     let malformed = Leb128DecodeError::malformed(5, 7, malformed_consumed);
-    let noncanonical = Leb128DecodeError::noncanonical(9, noncanonical_consumed);
+    let noncanonical =
+        Leb128DecodeError::noncanonical(9, noncanonical_consumed);
 
     assert!(malformed.is_malformed());
     assert!(noncanonical.is_noncanonical());
@@ -79,8 +88,12 @@ fn test_invalid_errors_store_start_error_and_consumed_units() {
 fn test_malformed_rejects_error_index_outside_consumed_span() {
     let consumed = NonZeroUsize::new(2).expect("consumed count is non-zero");
 
-    let before_start = std::panic::catch_unwind(|| Leb128DecodeError::malformed(5, 4, consumed));
-    let after_consumed = std::panic::catch_unwind(|| Leb128DecodeError::malformed(5, 7, consumed));
+    let before_start = std::panic::catch_unwind(|| {
+        Leb128DecodeError::malformed(5, 4, consumed)
+    });
+    let after_consumed = std::panic::catch_unwind(|| {
+        Leb128DecodeError::malformed(5, 7, consumed)
+    });
 
     assert!(before_start.is_err());
     assert!(after_consumed.is_err());

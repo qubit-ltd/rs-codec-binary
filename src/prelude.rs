@@ -12,6 +12,17 @@
 //! core codec types into scope.
 
 pub use crate::{
-    BigEndian, BinaryCodec, ByteOrder, ByteOrderSpec, Codec, Leb128Codec, Leb128DecodeError,
-    Leb128DecodeErrorKind, Leb128DecodePolicy, LittleEndian, NonStrict, Strict, ZigZagCodec,
+    BigEndian,
+    BinaryCodec,
+    ByteOrder,
+    ByteOrderSpec,
+    Codec,
+    Leb128Codec,
+    Leb128DecodeError,
+    Leb128DecodeErrorKind,
+    Leb128DecodePolicy,
+    LittleEndian,
+    NonStrict,
+    Strict,
+    ZigZagCodec,
 };

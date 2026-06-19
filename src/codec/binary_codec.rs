@@ -6,12 +6,18 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{convert::Infallible, marker::PhantomData};
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+};
 
 use qubit_codec::Codec;
 use qubit_io::UncheckedSlice;
 
-use crate::{BigEndian, LittleEndian};
+use crate::{
+    BigEndian,
+    LittleEndian,
+};
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
@@ -77,7 +83,10 @@ impl<O> BinaryCodec<u8, O> {
     /// read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(input: &[u8], index: usize) -> (u8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(
+        input: &[u8],
+        index: usize,
+    ) -> (u8, core::num::NonZeroUsize) {
         debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -176,12 +185,15 @@ impl<O> BinaryCodec<i8, O> {
     /// read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(input: &[u8], index: usize) -> (i8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(
+        input: &[u8],
+        index: usize,
+    ) -> (i8, core::num::NonZeroUsize) {
         debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-                unsafe { UncheckedSlice::read(input, index) } as i8,
+            unsafe { UncheckedSlice::read(input, index) } as i8,
             qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
@@ -285,15 +297,22 @@ macro_rules! impl_integer_binary_codec {
             ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
+                let raw =
+                    unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
-                (<$ty>::from_be(raw), qubit_io::nz!(Self::MIN_UNITS_PER_VALUE))
+                (
+                    <$ty>::from_be(raw),
+                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                )
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -316,8 +335,14 @@ macro_rules! impl_integer_binary_codec {
             /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
             ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_be();
 
@@ -325,7 +350,9 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$ty>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$ty>(
+                        output, index, raw,
+                    );
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -406,15 +433,22 @@ macro_rules! impl_integer_binary_codec {
             ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
+                let raw =
+                    unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
-                (<$ty>::from_le(raw), qubit_io::nz!(Self::MIN_UNITS_PER_VALUE))
+                (
+                    <$ty>::from_le(raw),
+                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                )
             }
 
             /// Encodes `value` into `output` starting at `index`
@@ -437,8 +471,14 @@ macro_rules! impl_integer_binary_codec {
             /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
             ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_le();
 
@@ -446,7 +486,9 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$ty>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$ty>(
+                        output, index, raw,
+                    );
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -531,13 +573,17 @@ macro_rules! impl_float_binary_codec {
             ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
+                let raw =
+                    unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
@@ -565,8 +611,14 @@ macro_rules! impl_float_binary_codec {
             /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
             ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_bits().to_be();
 
@@ -574,7 +626,9 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$bits>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$bits>(
+                        output, index, raw,
+                    );
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
@@ -655,13 +709,17 @@ macro_rules! impl_float_binary_codec {
             ///   reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], index: usize) -> ($ty, core::num::NonZeroUsize) {
+            pub unsafe fn decode(
+                input: &[u8],
+                index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
                 debug_assert!(index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
+                let raw =
+                    unsafe { UncheckedSlice::read_ne_unaligned(input, index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
@@ -689,8 +747,14 @@ macro_rules! impl_float_binary_codec {
             /// - `output[index..index + Self::MAX_UNITS_PER_VALUE]` is valid
             ///   for writing.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], index: usize) -> usize {
-                debug_assert!(index + Self::MAX_UNITS_PER_VALUE <= output.len());
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                index: usize,
+            ) -> usize {
+                debug_assert!(
+                    index + Self::MAX_UNITS_PER_VALUE <= output.len()
+                );
 
                 let raw = value.to_bits().to_le();
 
@@ -698,7 +762,9 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$bits>(output, index, raw);
+                    UncheckedSlice::write_ne_unaligned::<$bits>(
+                        output, index, raw,
+                    );
                 }
                 Self::MAX_UNITS_PER_VALUE
             }
