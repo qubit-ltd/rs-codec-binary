@@ -14,7 +14,7 @@ use core::{
     num::NonZeroUsize,
 };
 
-use qubit_codec::CodecDecodeSignal;
+use qubit_codec::CodecDecodeErrorSignal;
 
 use crate::Leb128DecodeErrorKind;
 
@@ -257,7 +257,7 @@ impl Display for Leb128DecodeError {
     }
 }
 
-impl CodecDecodeSignal for Leb128DecodeError {
+impl CodecDecodeErrorSignal for Leb128DecodeError {
     #[inline(always)]
     fn required_total(&self) -> Option<usize> {
         self.required.map(NonZeroUsize::get)
