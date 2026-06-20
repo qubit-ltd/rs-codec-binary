@@ -1,6 +1,6 @@
 use core::num::NonZeroUsize;
 
-use qubit_codec::CodecDecodeSignal;
+use qubit_codec::CodecDecodeErrorSignal;
 use qubit_codec_binary::{
     Leb128DecodeError,
     Leb128DecodeErrorKind,
