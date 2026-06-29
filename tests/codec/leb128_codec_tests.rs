@@ -1,6 +1,9 @@
 use core::num::NonZeroUsize;
 
-use qubit_codec::Codec;
+use qubit_codec::{
+    Codec,
+    DecodeFailure,
+};
 use qubit_codec_binary::{
     Leb128Codec,
     Leb128DecodeErrorKind,
@@ -125,11 +128,11 @@ fn test_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         Leb128Codec::<u16, NonStrict>::MIN_UNITS_PER_VALUE,
-        codec.min_units_per_value().get()
+        <Leb128Codec<u16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
     );
     assert_eq!(
         Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE,
-        codec.max_units_per_value().get()
+        <Leb128Codec<u16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
     );
 
     let written = unsafe { Codec::encode(&mut codec, &300, &mut output, 1) }
@@ -154,6 +157,19 @@ fn test_unsigned_leb128_codec_trait_reports_exact_encoded_lengths() {
 }
 
 #[test]
+fn test_unsigned_leb128_codec_trait_encodes_into_exact_length_buffer() {
+    let mut codec = Leb128Codec::<u32, NonStrict>::default();
+    let value = 0x7f;
+    let mut output = vec![0_u8; codec.encode_len(&value).get()];
+
+    let written = unsafe { Codec::encode(&mut codec, &value, &mut output, 0) }
+        .expect("unsigned LEB128 encoding should be infallible");
+
+    assert_eq!(output.len(), written.get());
+    assert_eq!([0x7f], output.as_slice());
+}
+
+#[test]
 fn test_leb128_codec_trait_decodes_single_byte_unsigned_value() {
     let mut codec = Leb128Codec::<u64, NonStrict>::default();
     let input = [0x00u8];
@@ -165,6 +181,32 @@ fn test_leb128_codec_trait_decodes_single_byte_unsigned_value() {
 }
 
 #[test]
+fn test_leb128_codec_trait_maps_decode_failures() {
+    let mut codec = Leb128Codec::<u16, NonStrict>::default();
+    let incomplete = unsafe { Codec::decode(&mut codec, &[0xac], 0) }
+        .expect_err("partial LEB128 value should request more input");
+    assert_eq!(
+        DecodeFailure::Incomplete {
+            required_total: nonzero(2),
+        },
+        incomplete,
+    );
+
+    let mut codec = Leb128Codec::<u16, Strict>::default();
+    let invalid = unsafe { Codec::decode(&mut codec, &[0x80, 0x00], 0) }
+        .expect_err("non-canonical LEB128 value should be invalid");
+    match invalid {
+        DecodeFailure::Invalid { source, consumed } => {
+            assert_eq!(Leb128DecodeErrorKind::NonCanonical, source.kind());
+            assert_eq!(Some(nonzero(2)), consumed);
+        }
+        other => {
+            panic!("non-canonical LEB128 value must be invalid: {other:?}");
+        }
+    }
+}
+
+#[test]
 fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
     let mut codec = Leb128Codec::<i16, NonStrict>::default();
     let mut output =
@@ -172,11 +214,11 @@ fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         Leb128Codec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
-        codec.min_units_per_value().get()
+        <Leb128Codec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
     );
     assert_eq!(
         Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        codec.max_units_per_value().get()
+        <Leb128Codec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
@@ -201,6 +243,19 @@ fn test_signed_leb128_codec_trait_reports_exact_encoded_lengths() {
     assert_eq!(2, codec.encode_len(&-65).get());
     assert_eq!(5, codec.encode_len(&i32::MIN).get());
     assert_eq!(5, codec.encode_len(&i32::MAX).get());
+}
+
+#[test]
+fn test_signed_leb128_codec_trait_encodes_into_exact_length_buffer() {
+    let mut codec = Leb128Codec::<i32, NonStrict>::default();
+    let value = -1;
+    let mut output = vec![0_u8; codec.encode_len(&value).get()];
+
+    let written = unsafe { Codec::encode(&mut codec, &value, &mut output, 0) }
+        .expect("signed LEB128 encoding should be infallible");
+
+    assert_eq!(output.len(), written.get());
+    assert_eq!([0x7f], output.as_slice());
 }
 
 #[test]

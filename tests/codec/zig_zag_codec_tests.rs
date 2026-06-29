@@ -84,11 +84,11 @@ fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         ZigZagCodec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
-        codec.min_units_per_value().get()
+        <ZigZagCodec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
     );
     assert_eq!(
         ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        codec.max_units_per_value().get()
+        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
@@ -113,6 +113,19 @@ fn test_zig_zag_codec_trait_reports_exact_encoded_lengths() {
     assert_eq!(2, codec.encode_len(&-65).get());
     assert_eq!(3, codec.encode_len(&i16::MIN).get());
     assert_eq!(3, codec.encode_len(&i16::MAX).get());
+}
+
+#[test]
+fn test_zig_zag_codec_trait_encodes_into_exact_length_buffer() {
+    let mut codec = ZigZagCodec::<i16, NonStrict>::default();
+    let value = -1;
+    let mut output = vec![0_u8; codec.encode_len(&value).get()];
+
+    let written = unsafe { Codec::encode(&mut codec, &value, &mut output, 0) }
+        .expect("ZigZag encoding should be infallible");
+
+    assert_eq!(output.len(), written.get());
+    assert_eq!([0x01], output.as_slice());
 }
 
 #[test]
