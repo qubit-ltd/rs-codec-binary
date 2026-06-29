@@ -17,6 +17,7 @@ use crate::{
     Leb128DecodeError,
     Leb128DecodePolicy,
     NonStrict,
+    codec::leb128_codec::map_leb128_decode_failure,
 };
 use qubit_codec::Codec;
 
@@ -68,13 +69,13 @@ macro_rules! impl_zig_zag_codec {
             pub const MAX_UNITS_PER_VALUE: usize =
                 Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
-            /// checks.
+            /// Decodes a value from `input` starting at `input_index` without
+            /// bounds checks.
             ///
             /// # Parameters
             ///
             /// - `input`: Source byte buffer.
-            /// - `index`: Start index in `input`.
+            /// - `input_index`: Start index in `input`.
             ///
             /// # Returns
             ///
@@ -88,38 +89,38 @@ macro_rules! impl_zig_zag_codec {
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that `index` is a valid boundary and
-            /// at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable from
-            /// `index`.
+            /// The caller must guarantee that `input_index` is a valid boundary
+            /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
+            /// from `input_index`.
             #[inline(always)]
             pub unsafe fn decode(
                 input: &[u8],
-                index: usize,
+                input_index: usize,
             ) -> Result<($signed, core::num::NonZeroUsize), Leb128DecodeError>
             {
                 debug_assert!(
-                    input.len().saturating_sub(index)
+                    input.len().saturating_sub(input_index)
                         >= Self::MIN_UNITS_PER_VALUE
                 );
 
                 // SAFETY: The caller guarantees enough readable bytes for this
                 // type.
                 let (encoded, consumed) = unsafe {
-                    Leb128Codec::<$unsigned, P>::decode(input, index)?
+                    Leb128Codec::<$unsigned, P>::decode(input, input_index)?
                 };
                 let value =
                     ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
             }
 
-            /// Encodes `value` into `output` starting at `index` without bounds
-            /// checks.
+            /// Encodes `value` into `output` starting at `output_index` without
+            /// bounds checks.
             ///
             /// # Parameters
             ///
             /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
-            /// - `index`: Start index in `output`.
+            /// - `output_index`: Start index in `output`.
             ///
             /// # Returns
             ///
@@ -127,13 +128,14 @@ macro_rules! impl_zig_zag_codec {
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that `output.as_mut_ptr().add(index)`
-            /// is valid to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
+            /// The caller must guarantee that
+            /// `output.as_mut_ptr().add(output_index)` is valid to write
+            /// [`Self::MAX_UNITS_PER_VALUE`] bytes.
             #[inline(always)]
             pub unsafe fn encode(
                 value: $signed,
                 output: &mut [u8],
-                index: usize,
+                output_index: usize,
             ) -> usize {
                 let encoded = ((value as $unsigned) << 1)
                     ^ ((value >> $shift) as $unsigned);
@@ -141,13 +143,15 @@ macro_rules! impl_zig_zag_codec {
                 // type.
                 unsafe {
                     Leb128Codec::<$unsigned, NonStrict>::encode(
-                        encoded, output, index,
+                        encoded,
+                        output,
+                        output_index,
                     )
                 }
             }
         }
 
-        unsafe impl<P> Codec for ZigZagCodec<$signed, P>
+        impl<P> Codec for ZigZagCodec<$signed, P>
         where
             P: Leb128DecodePolicy,
         {
@@ -156,15 +160,11 @@ macro_rules! impl_zig_zag_codec {
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
-            #[inline(always)]
-            fn min_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_io::nz!(1)
-            }
-
-            #[inline(always)]
-            fn max_units_per_value(&self) -> core::num::NonZeroUsize {
-                qubit_io::nz!(Self::MAX_UNITS_PER_VALUE)
-            }
+            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
+                qubit_io::nz!(1);
+            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(
+                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE
+            );
 
             #[inline(always)]
             fn encode_len(&self, value: &$signed) -> core::num::NonZeroUsize {
@@ -177,17 +177,20 @@ macro_rules! impl_zig_zag_codec {
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
-                index: usize,
-            ) -> Result<($signed, core::num::NonZeroUsize), Self::DecodeError>
-            {
+                input_index: usize,
+            ) -> Result<
+                ($signed, core::num::NonZeroUsize),
+                qubit_codec::DecodeFailure<Self::DecodeError>,
+            > {
                 debug_assert!(
-                    input.len().saturating_sub(index)
+                    input.len().saturating_sub(input_index)
                         >= Self::MIN_UNITS_PER_VALUE
                 );
 
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
-                unsafe { Self::decode(input, index) }
+                unsafe { Self::decode(input, input_index) }
+                    .map_err(map_leb128_decode_failure)
             }
 
             #[inline(always)]
@@ -195,16 +198,17 @@ macro_rules! impl_zig_zag_codec {
                 &mut self,
                 value: &$signed,
                 output: &mut [u8],
-                index: usize,
+                output_index: usize,
             ) -> Result<core::num::NonZeroUsize, Self::EncodeError> {
+                let required = self.encode_len(value).get();
                 debug_assert!(
-                    output.len().saturating_sub(index)
-                        >= Self::MAX_UNITS_PER_VALUE
+                    output.len().saturating_sub(output_index) >= required
                 );
 
                 // SAFETY: The caller upholds the `Codec::encode`
                 // contract.
-                let written = unsafe { Self::encode(*value, output, index) };
+                let written =
+                    unsafe { Self::encode(*value, output, output_index) };
                 Ok(non_zero_len(written))
             }
         }
