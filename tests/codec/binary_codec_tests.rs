@@ -199,8 +199,14 @@ fn test_binary_codec_encodes_and_decodes_through_codec_trait() {
     let mut codec = BinaryCodec::<u32, BigEndian>::default();
     let mut output = [0xaa, 0, 0, 0, 0, 0xbb];
 
-    assert_eq!(4, codec.min_units_per_value().get());
-    assert_eq!(4, codec.max_units_per_value().get());
+    assert_eq!(
+        4,
+        <BinaryCodec<u32, BigEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        4,
+        <BinaryCodec<u32, BigEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
 
     let written =
         unsafe { Codec::encode(&mut codec, &0x1234_5678, &mut output, 1) }
@@ -223,16 +229,46 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     let mut little_float = BinaryCodec::<f64, LittleEndian>::default();
     let mut output = [0u8; 24];
 
-    assert_eq!(1, unsigned_byte.min_units_per_value().get());
-    assert_eq!(1, unsigned_byte.max_units_per_value().get());
-    assert_eq!(1, signed_byte.min_units_per_value().get());
-    assert_eq!(1, signed_byte.max_units_per_value().get());
-    assert_eq!(2, little_integer.min_units_per_value().get());
-    assert_eq!(2, little_integer.max_units_per_value().get());
-    assert_eq!(4, big_float.min_units_per_value().get());
-    assert_eq!(4, big_float.max_units_per_value().get());
-    assert_eq!(8, little_float.min_units_per_value().get());
-    assert_eq!(8, little_float.max_units_per_value().get());
+    assert_eq!(
+        1,
+        <BinaryCodec<u8, BigEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        1,
+        <BinaryCodec<u8, BigEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        1,
+        <BinaryCodec<i8, LittleEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        1,
+        <BinaryCodec<i8, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        2,
+        <BinaryCodec<u16, LittleEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        2,
+        <BinaryCodec<u16, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        4,
+        <BinaryCodec<f32, BigEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        4,
+        <BinaryCodec<f32, BigEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        8,
+        <BinaryCodec<f64, LittleEndian> as Codec>::MIN_UNITS_PER_VALUE.get(),
+    );
+    assert_eq!(
+        8,
+        <BinaryCodec<f64, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
+    );
 
     assert_eq!(
         1,
