@@ -80,7 +80,7 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.1"
+qubit-codec-binary = "0.2"
 ```
 
 ## 快速开始
