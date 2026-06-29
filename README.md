@@ -90,7 +90,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.1"
+qubit-codec-binary = "0.2"
 ```
 
 ## Quick Start
