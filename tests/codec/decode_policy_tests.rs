@@ -1,4 +1,8 @@
-use qubit_codec_binary::{Leb128DecodePolicy, NonStrict, Strict};
+use qubit_codec_binary::{
+    Leb128DecodePolicy,
+    NonStrict,
+    Strict,
+};
 
 fn is_strict<P: Leb128DecodePolicy>() -> bool {
     P::STRICT
