@@ -6,12 +6,18 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{convert::Infallible, marker::PhantomData};
+use core::{
+    convert::Infallible,
+    marker::PhantomData,
+};
 
 use qubit_codec::Codec;
 use qubit_io::UncheckedSlice;
 
-use crate::{BigEndian, LittleEndian};
+use crate::{
+    BigEndian,
+    LittleEndian,
+};
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
@@ -78,7 +84,10 @@ impl<O> BinaryCodec<u8, O> {
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(input: &[u8], input_index: usize) -> (u8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(
+        input: &[u8],
+        input_index: usize,
+    ) -> (u8, core::num::NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -102,7 +111,11 @@ impl<O> BinaryCodec<u8, O> {
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode(value: u8, output: &mut [u8], output_index: usize) -> usize {
+    pub unsafe fn encode(
+        value: u8,
+        output: &mut [u8],
+        output_index: usize,
+    ) -> usize {
         debug_assert!(output_index + Self::MAX_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
@@ -127,7 +140,10 @@ impl<O> Codec for BinaryCodec<u8, O> {
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(u8, core::num::NonZeroUsize), qubit_codec::DecodeFailure<Self::DecodeError>> {
+    ) -> Result<
+        (u8, core::num::NonZeroUsize),
+        qubit_codec::DecodeFailure<Self::DecodeError>,
+    > {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }
@@ -172,7 +188,10 @@ impl<O> BinaryCodec<i8, O> {
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(input: &[u8], input_index: usize) -> (i8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(
+        input: &[u8],
+        input_index: usize,
+    ) -> (i8, core::num::NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -196,7 +215,11 @@ impl<O> BinaryCodec<i8, O> {
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode(value: i8, output: &mut [u8], output_index: usize) -> usize {
+    pub unsafe fn encode(
+        value: i8,
+        output: &mut [u8],
+        output_index: usize,
+    ) -> usize {
         debug_assert!(output_index + Self::MAX_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
@@ -221,7 +244,10 @@ impl<O> Codec for BinaryCodec<i8, O> {
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(i8, core::num::NonZeroUsize), qubit_codec::DecodeFailure<Self::DecodeError>> {
+    ) -> Result<
+        (i8, core::num::NonZeroUsize),
+        qubit_codec::DecodeFailure<Self::DecodeError>,
+    > {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }

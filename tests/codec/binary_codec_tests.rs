@@ -1,5 +1,9 @@
 use qubit_codec::Codec;
-use qubit_codec_binary::{BigEndian, BinaryCodec, LittleEndian};
+use qubit_codec_binary::{
+    BigEndian,
+    BinaryCodec,
+    LittleEndian,
+};
 
 use super::assertions_tests::assert_decoded_eq;
 
@@ -30,7 +34,8 @@ fn test_binary_codec_reads_from_explicit_index_unchecked() {
     let decoded = unsafe { BinaryCodec::<u32, BigEndian>::decode(&input, 1) };
     assert_decoded_eq((0x1234_5678, 4), decoded);
 
-    let decoded = unsafe { BinaryCodec::<u32, LittleEndian>::decode(&input, 1) };
+    let decoded =
+        unsafe { BinaryCodec::<u32, LittleEndian>::decode(&input, 1) };
     assert_decoded_eq((0x7856_3412, 4), decoded);
 }
 
@@ -49,7 +54,11 @@ fn test_binary_codec_writes_to_explicit_index_unchecked() {
     unsafe {
         assert_eq!(
             4,
-            BinaryCodec::<u32, LittleEndian>::encode(0x1234_5678, &mut output, 1)
+            BinaryCodec::<u32, LittleEndian>::encode(
+                0x1234_5678,
+                &mut output,
+                1
+            )
         );
     }
     assert_eq!([0xaa, 0x78, 0x56, 0x34, 0x12, 0xbb], output);
@@ -61,19 +70,26 @@ fn test_binary_codec_roundtrips_integer_extremes_for_all_fixed_width_types() {
         ($ty:ty, $value:expr) => {{
             let value: $ty = $value;
 
-            let mut output = [0u8; BinaryCodec::<$ty, BigEndian>::MAX_UNITS_PER_VALUE];
-            let written = unsafe { BinaryCodec::<$ty, BigEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<$ty, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<$ty, BigEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(value.to_be_bytes(), output);
-            let decoded = unsafe { BinaryCodec::<$ty, BigEndian>::decode(&output, 0) };
+            let decoded =
+                unsafe { BinaryCodec::<$ty, BigEndian>::decode(&output, 0) };
             assert_decoded_eq((value, output.len()), decoded);
 
-            let mut output = [0u8; BinaryCodec::<$ty, LittleEndian>::MAX_UNITS_PER_VALUE];
-            let written =
-                unsafe { BinaryCodec::<$ty, LittleEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<$ty, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<$ty, LittleEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(value.to_le_bytes(), output);
-            let decoded = unsafe { BinaryCodec::<$ty, LittleEndian>::decode(&output, 0) };
+            let decoded =
+                unsafe { BinaryCodec::<$ty, LittleEndian>::decode(&output, 0) };
             assert_decoded_eq((value, output.len()), decoded);
         }};
     }
@@ -107,17 +123,23 @@ fn test_binary_codec_preserves_f32_bit_patterns() {
             let bits: u32 = $bits;
             let value = f32::from_bits(bits);
 
-            let mut output = [0u8; BinaryCodec::<f32, BigEndian>::MAX_UNITS_PER_VALUE];
-            let written = unsafe { BinaryCodec::<f32, BigEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<f32, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<f32, BigEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(bits.to_be_bytes(), output);
-            let (decoded, consumed) = unsafe { BinaryCodec::<f32, BigEndian>::decode(&output, 0) };
+            let (decoded, consumed) =
+                unsafe { BinaryCodec::<f32, BigEndian>::decode(&output, 0) };
             assert_eq!(bits, decoded.to_bits());
             assert_eq!(output.len(), consumed.get());
 
-            let mut output = [0u8; BinaryCodec::<f32, LittleEndian>::MAX_UNITS_PER_VALUE];
-            let written =
-                unsafe { BinaryCodec::<f32, LittleEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<f32, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<f32, LittleEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(bits.to_le_bytes(), output);
             let (decoded, consumed) =
@@ -140,17 +162,23 @@ fn test_binary_codec_preserves_f64_bit_patterns() {
             let bits: u64 = $bits;
             let value = f64::from_bits(bits);
 
-            let mut output = [0u8; BinaryCodec::<f64, BigEndian>::MAX_UNITS_PER_VALUE];
-            let written = unsafe { BinaryCodec::<f64, BigEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<f64, BigEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<f64, BigEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(bits.to_be_bytes(), output);
-            let (decoded, consumed) = unsafe { BinaryCodec::<f64, BigEndian>::decode(&output, 0) };
+            let (decoded, consumed) =
+                unsafe { BinaryCodec::<f64, BigEndian>::decode(&output, 0) };
             assert_eq!(bits, decoded.to_bits());
             assert_eq!(output.len(), consumed.get());
 
-            let mut output = [0u8; BinaryCodec::<f64, LittleEndian>::MAX_UNITS_PER_VALUE];
-            let written =
-                unsafe { BinaryCodec::<f64, LittleEndian>::encode(value, &mut output, 0) };
+            let mut output =
+                [0u8; BinaryCodec::<f64, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<f64, LittleEndian>::encode(value, &mut output, 0)
+            };
             assert_eq!(output.len(), written);
             assert_eq!(bits.to_le_bytes(), output);
             let (decoded, consumed) =
@@ -180,8 +208,9 @@ fn test_binary_codec_encodes_and_decodes_through_codec_trait() {
         <BinaryCodec<u32, BigEndian> as Codec>::MAX_UNITS_PER_VALUE.get(),
     );
 
-    let written = unsafe { Codec::encode(&mut codec, &0x1234_5678, &mut output, 1) }
-        .expect("fixed-width encoding should be infallible");
+    let written =
+        unsafe { Codec::encode(&mut codec, &0x1234_5678, &mut output, 1) }
+            .expect("fixed-width encoding should be infallible");
     assert_eq!(4, written);
     assert_eq!([0xaa, 0x12, 0x34, 0x56, 0x78, 0xbb], output);
 
@@ -267,24 +296,29 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
             .expect("little-endian float encoding should be infallible")
     );
 
-    let (decoded, consumed) = unsafe { Codec::decode(&mut unsigned_byte, &output, 0) }
-        .expect("u8 decoding should be infallible");
+    let (decoded, consumed) =
+        unsafe { Codec::decode(&mut unsigned_byte, &output, 0) }
+            .expect("u8 decoding should be infallible");
     assert_eq!(0x7f, decoded);
     assert_eq!(1, consumed.get());
-    let (decoded, consumed) = unsafe { Codec::decode(&mut signed_byte, &output, 1) }
-        .expect("i8 decoding should be infallible");
+    let (decoded, consumed) =
+        unsafe { Codec::decode(&mut signed_byte, &output, 1) }
+            .expect("i8 decoding should be infallible");
     assert_eq!(-1, decoded);
     assert_eq!(1, consumed.get());
-    let (decoded, consumed) = unsafe { Codec::decode(&mut little_integer, &output, 2) }
-        .expect("little-endian integer decoding should be infallible");
+    let (decoded, consumed) =
+        unsafe { Codec::decode(&mut little_integer, &output, 2) }
+            .expect("little-endian integer decoding should be infallible");
     assert_eq!(0x1234, decoded);
     assert_eq!(2, consumed.get());
-    let (decoded, consumed) = unsafe { Codec::decode(&mut big_float, &output, 4) }
-        .expect("big-endian float decoding should be infallible");
+    let (decoded, consumed) =
+        unsafe { Codec::decode(&mut big_float, &output, 4) }
+            .expect("big-endian float decoding should be infallible");
     assert_eq!(12.5, decoded);
     assert_eq!(4, consumed.get());
-    let (decoded, consumed) = unsafe { Codec::decode(&mut little_float, &output, 8) }
-        .expect("little-endian float decoding should be infallible");
+    let (decoded, consumed) =
+        unsafe { Codec::decode(&mut little_float, &output, 8) }
+            .expect("little-endian float decoding should be infallible");
     assert_eq!(-25.25, decoded);
     assert_eq!(8, consumed.get());
 }
