@@ -80,11 +80,12 @@ macro_rules! impl_unsigned_leb128_codec {
             P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
-            pub const MIN_UNITS_PER_VALUE: usize = 1;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -174,10 +175,9 @@ macro_rules! impl_unsigned_leb128_codec {
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!(1);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!((<$ty>::BITS as usize).div_ceil(7));
+            const MIN_UNITS_PER_VALUE: usize = 1;
+            const MAX_UNITS_PER_VALUE: usize =
+                (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
             fn encode_len(&self, value: &$ty) -> usize {
@@ -233,11 +233,12 @@ macro_rules! impl_signed_leb128_codec {
             P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
-            pub const MIN_UNITS_PER_VALUE: usize = 1;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -327,10 +328,9 @@ macro_rules! impl_signed_leb128_codec {
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!(1);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!((<$ty>::BITS as usize).div_ceil(7));
+            const MIN_UNITS_PER_VALUE: usize = 1;
+            const MAX_UNITS_PER_VALUE: usize =
+                (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
             fn encode_len(&self, value: &$ty) -> usize {

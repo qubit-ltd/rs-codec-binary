@@ -128,11 +128,11 @@ fn test_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         Leb128Codec::<u16, NonStrict>::MIN_UNITS_PER_VALUE,
-        <Leb128Codec<u16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
+        <Leb128Codec<u16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
         Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <Leb128Codec<u16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
+        <Leb128Codec<u16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &300, &mut output, 1) }
@@ -214,11 +214,11 @@ fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         Leb128Codec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
-        <Leb128Codec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
+        <Leb128Codec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
         Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <Leb128Codec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
+        <Leb128Codec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }

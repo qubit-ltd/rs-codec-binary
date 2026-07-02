@@ -62,11 +62,12 @@ macro_rules! impl_zig_zag_codec {
             P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
-            pub const MIN_UNITS_PER_VALUE: usize = 1;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
             pub const MAX_UNITS_PER_VALUE: usize =
-                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -159,11 +160,9 @@ macro_rules! impl_zig_zag_codec {
             type DecodeError = Leb128DecodeError;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!(1);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(
-                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE
-            );
+            const MIN_UNITS_PER_VALUE: usize = 1;
+            const MAX_UNITS_PER_VALUE: usize =
+                Leb128Codec::<$unsigned, NonStrict>::MAX_UNITS_PER_VALUE;
 
             #[inline(always)]
             fn encode_len(&self, value: &$signed) -> usize {

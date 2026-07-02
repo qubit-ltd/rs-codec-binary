@@ -61,10 +61,10 @@ pub struct BinaryCodec<T, O> {
 
 impl<O> BinaryCodec<u8, O> {
     /// Minimum number of bytes required to encode or decode this type.
-    pub const MIN_UNITS_PER_VALUE: usize = 1;
+    pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
     /// Maximum number of bytes required to encode or decode this type.
-    pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+    pub const MAX_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_UNITS_PER_VALUE;
 
     /// Decodes a value from `input` starting at `input_index` without bounds
     /// checks.
@@ -132,8 +132,8 @@ impl<O> Codec for BinaryCodec<u8, O> {
     type DecodeError = Infallible;
     type EncodeError = Infallible;
 
-    const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(1);
-    const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(1);
+    const MIN_UNITS_PER_VALUE: usize = 1;
+    const MAX_UNITS_PER_VALUE: usize = 1;
 
     #[inline(always)]
     unsafe fn decode(
@@ -165,10 +165,10 @@ impl<O> Codec for BinaryCodec<u8, O> {
 
 impl<O> BinaryCodec<i8, O> {
     /// Minimum number of bytes required to encode or decode this type.
-    pub const MIN_UNITS_PER_VALUE: usize = 1;
+    pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
     /// Maximum number of bytes required to encode or decode this type.
-    pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+    pub const MAX_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_UNITS_PER_VALUE;
 
     /// Decodes a value from `input` starting at `input_index` without bounds
     /// checks.
@@ -236,8 +236,8 @@ impl<O> Codec for BinaryCodec<i8, O> {
     type DecodeError = Infallible;
     type EncodeError = Infallible;
 
-    const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(1);
-    const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize = qubit_io::nz!(1);
+    const MIN_UNITS_PER_VALUE: usize = 1;
+    const MAX_UNITS_PER_VALUE: usize = 1;
 
     #[inline(always)]
     unsafe fn decode(
@@ -271,10 +271,12 @@ macro_rules! impl_integer_binary_codec {
     ($ty:ty, $len:expr) => {
         impl BinaryCodec<$ty, BigEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = $len;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -373,10 +375,8 @@ macro_rules! impl_integer_binary_codec {
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
+            const MIN_UNITS_PER_VALUE: usize = $len;
+            const MAX_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
             unsafe fn decode(
@@ -410,10 +410,12 @@ macro_rules! impl_integer_binary_codec {
 
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = $len;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -512,10 +514,8 @@ macro_rules! impl_integer_binary_codec {
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
+            const MIN_UNITS_PER_VALUE: usize = $len;
+            const MAX_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
             unsafe fn decode(
@@ -553,10 +553,12 @@ macro_rules! impl_float_binary_codec {
     ($ty:ty, $bits:ty, $len:expr) => {
         impl BinaryCodec<$ty, BigEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = $len;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -655,10 +657,8 @@ macro_rules! impl_float_binary_codec {
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
+            const MIN_UNITS_PER_VALUE: usize = $len;
+            const MAX_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
             unsafe fn decode(
@@ -692,10 +692,12 @@ macro_rules! impl_float_binary_codec {
 
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = $len;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize = Self::MIN_UNITS_PER_VALUE;
+            pub const MAX_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -794,10 +796,8 @@ macro_rules! impl_float_binary_codec {
             type DecodeError = Infallible;
             type EncodeError = Infallible;
 
-            const MIN_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
-            const MAX_UNITS_PER_VALUE: core::num::NonZeroUsize =
-                qubit_io::nz!($len);
+            const MIN_UNITS_PER_VALUE: usize = $len;
+            const MAX_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
             unsafe fn decode(

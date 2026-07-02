@@ -84,11 +84,11 @@ fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
 
     assert_eq!(
         ZigZagCodec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
-        <ZigZagCodec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE.get()
+        <ZigZagCodec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
         ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE.get()
+        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
