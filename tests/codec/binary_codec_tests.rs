@@ -1,9 +1,9 @@
-use qubit_codec::Codec;
-use qubit_codec_binary::{
+use qubit_codec::{
     BigEndian,
-    BinaryCodec,
+    Codec,
     LittleEndian,
 };
+use qubit_codec_binary::BinaryCodec;
 
 use super::assertions_tests::assert_decoded_eq;
 

@@ -15,7 +15,6 @@
 //! `qubit-io-binary`.
 
 mod codec;
-pub mod prelude;
 
 pub use codec::{
     BinaryCodec,
@@ -26,11 +25,4 @@ pub use codec::{
     NonStrict,
     Strict,
     ZigZagCodec,
-};
-pub use qubit_codec::{
-    BigEndian,
-    ByteOrder,
-    ByteOrderSpec,
-    Codec,
-    LittleEndian,
 };

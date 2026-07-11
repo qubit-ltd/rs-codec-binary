@@ -11,13 +11,12 @@ use core::{
     marker::PhantomData,
 };
 
-use qubit_codec::Codec;
-use qubit_io::UncheckedSlice;
-
-use crate::{
+use qubit_codec::{
     BigEndian,
+    Codec,
     LittleEndian,
 };
+use qubit_io::UncheckedSlice;
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
@@ -36,10 +35,8 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use qubit_codec_binary::{
-///     BigEndian,
-///     BinaryCodec,
-/// };
+/// use qubit_codec::BigEndian;
+/// use qubit_codec_binary::BinaryCodec;
 ///
 /// let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 /// let written = unsafe {
