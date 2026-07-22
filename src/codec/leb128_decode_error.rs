@@ -203,7 +203,7 @@ impl Leb128DecodeError {
         match (self.required, self.available) {
             (Some(required), Some(available)) => {
                 let additional = required.get() - available;
-                Some(qubit_io::nz!(additional))
+                Some(qubit_codec::nz!(additional))
             }
             _ => None,
         }

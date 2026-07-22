@@ -8,7 +8,7 @@ use qubit_codec_binary::{
 #[test]
 fn test_incomplete_stores_start_error_required_available_and_additional_units()
 {
-    let required = qubit_io::nz!(3);
+    let required = qubit_codec::nz!(3);
     let error = Leb128DecodeError::incomplete(5, required, 2);
 
     assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
@@ -27,7 +27,7 @@ fn test_incomplete_stores_start_error_required_available_and_additional_units()
 
 #[test]
 fn test_incomplete_rejects_satisfied_required_bound() {
-    let required = qubit_io::nz!(2);
+    let required = qubit_codec::nz!(2);
 
     let result = std::panic::catch_unwind(|| {
         Leb128DecodeError::incomplete(5, required, 2)
@@ -38,7 +38,7 @@ fn test_incomplete_rejects_satisfied_required_bound() {
 
 #[test]
 fn test_incomplete_rejects_error_boundary_overflow() {
-    let required = qubit_io::nz!(2);
+    let required = qubit_codec::nz!(2);
 
     let result = std::panic::catch_unwind(|| {
         Leb128DecodeError::incomplete(usize::MAX, required, 1)
@@ -49,8 +49,8 @@ fn test_incomplete_rejects_error_boundary_overflow() {
 
 #[test]
 fn test_invalid_errors_store_start_error_and_consumed_units() {
-    let malformed_consumed = qubit_io::nz!(4);
-    let noncanonical_consumed = qubit_io::nz!(2);
+    let malformed_consumed = qubit_codec::nz!(4);
+    let noncanonical_consumed = qubit_codec::nz!(2);
     let malformed = Leb128DecodeError::malformed(5, 7, malformed_consumed);
     let noncanonical =
         Leb128DecodeError::noncanonical(9, noncanonical_consumed);
@@ -78,7 +78,7 @@ fn test_invalid_errors_store_start_error_and_consumed_units() {
 
 #[test]
 fn test_malformed_rejects_error_index_outside_consumed_span() {
-    let consumed = qubit_io::nz!(2);
+    let consumed = qubit_codec::nz!(2);
 
     let before_start = std::panic::catch_unwind(|| {
         Leb128DecodeError::malformed(5, 4, consumed)

@@ -90,7 +90,7 @@ impl<O> BinaryCodec<u8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { qubit_io::UncheckedSlice::read(input, input_index) },
-            qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -194,7 +194,7 @@ impl<O> BinaryCodec<i8, O> {
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { UncheckedSlice::read(input, input_index) } as i8,
-            qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -317,7 +317,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -456,7 +456,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -599,7 +599,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -738,7 +738,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    qubit_io::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 

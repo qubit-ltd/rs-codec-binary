@@ -203,8 +203,11 @@ under `tests/`.
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run tests with the default feature set
 cargo test
+
+# Run tests with all declared features
+cargo test --all-features
 
 # Run with coverage report
 ./coverage.sh
