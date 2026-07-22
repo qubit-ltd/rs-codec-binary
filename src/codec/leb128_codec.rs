@@ -443,7 +443,7 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_io::nz!(consumed);
+            let consumed = qubit_codec::nz!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
@@ -453,7 +453,7 @@ where
             );
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_io::nz!(available + 1);
+            let required = qubit_codec::nz!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -586,7 +586,7 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_io::nz!(consumed);
+            let consumed = qubit_codec::nz!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
@@ -596,7 +596,7 @@ where
             );
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_io::nz!(available + 1);
+            let required = qubit_codec::nz!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -703,7 +703,7 @@ fn malformed_decode_error(
     debug_assert!(consumed > 0, "malformed LEB128 errors must consume bytes");
     // SAFETY: All malformed call sites pass either `offset + 1` or `max_bytes`,
     // both of which are non-zero for supported LEB128 codecs.
-    let consumed = qubit_io::nz!(consumed);
+    let consumed = qubit_codec::nz!(consumed);
     Leb128DecodeError::malformed(start_index, error_index, consumed)
 }
 
@@ -729,7 +729,7 @@ fn noncanonical_decode_error(
     );
     // SAFETY: Non-canonical errors are detected only after reading at least one
     // terminating byte.
-    let consumed = qubit_io::nz!(consumed);
+    let consumed = qubit_codec::nz!(consumed);
     Leb128DecodeError::noncanonical(index, consumed)
 }
 
