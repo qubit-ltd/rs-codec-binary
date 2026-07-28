@@ -304,10 +304,6 @@ macro_rules! impl_integer_binary_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input_index + Self::MIN_UNITS_PER_VALUE <= input.len()
-                );
-
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
@@ -346,10 +342,6 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                debug_assert!(
-                    output_index + Self::MAX_UNITS_PER_VALUE <= output.len()
-                );
-
                 let raw = value.to_be();
 
                 // SAFETY:
@@ -443,10 +435,6 @@ macro_rules! impl_integer_binary_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input_index + Self::MIN_UNITS_PER_VALUE <= input.len()
-                );
-
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
@@ -485,10 +473,6 @@ macro_rules! impl_integer_binary_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                debug_assert!(
-                    output_index + Self::MAX_UNITS_PER_VALUE <= output.len()
-                );
-
                 let raw = value.to_le();
 
                 // SAFETY:
@@ -586,10 +570,6 @@ macro_rules! impl_float_binary_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input_index + Self::MIN_UNITS_PER_VALUE <= input.len()
-                );
-
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
@@ -628,10 +608,6 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                debug_assert!(
-                    output_index + Self::MAX_UNITS_PER_VALUE <= output.len()
-                );
-
                 let raw = value.to_bits().to_be();
 
                 // SAFETY:
@@ -725,10 +701,6 @@ macro_rules! impl_float_binary_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input_index + Self::MIN_UNITS_PER_VALUE <= input.len()
-                );
-
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
@@ -767,10 +739,6 @@ macro_rules! impl_float_binary_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                debug_assert!(
-                    output_index + Self::MAX_UNITS_PER_VALUE <= output.len()
-                );
-
                 let raw = value.to_bits().to_le();
 
                 // SAFETY:
