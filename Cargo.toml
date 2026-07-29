@@ -28,6 +28,10 @@ include = [
 name = "qubit_codec_binary"
 doctest = true
 
+[package.metadata.rs-ci]
+miri = true
+sanitizers = ["address"]
+
 [dependencies]
 thiserror = "2.0"
 qubit-io = { path = "../rs-io", version = "0.14.0" }
