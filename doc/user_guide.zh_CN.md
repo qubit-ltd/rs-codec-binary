@@ -10,10 +10,9 @@
 - 当有符号值通常接近零、包括负数也要保持紧凑时，使用 `ZigZagCodec<T, P>`。
 - 使用 `Strict` 拒绝非 canonical LEB128 payload，使用 `NonStrict` 做宽松解码。
 
-本库只重导出属于 binary codec 表面的必要 `qubit-codec` 原语：`Codec`、
-`ByteOrder`、`ByteOrderSpec`、`BigEndian` 和 `LittleEndian`。同时暴露 sealed
-`Leb128DecodePolicy` trait，用于内置 LEB128 policy marker。通用 adapter、
-engine、hook 和 value trait 请直接从 `qubit-codec` 引入。
+本库暴露 sealed `Leb128DecodePolicy` trait，用于内置 LEB128 policy marker。
+byte-order marker、通用 adapter、engine、hook 和 value trait 请直接从
+`qubit-codec` 引入。
 
 ## Fixed-Width 值
 
@@ -22,10 +21,8 @@ engine、hook 和 value trait 请直接从 `qubit-codec` 引入。
 字节宽度依赖目标平台。
 
 ```rust
-use qubit_codec_binary::{
-    BigEndian,
-    BinaryCodec,
-};
+use qubit_codec::BigEndian;
+use qubit_codec_binary::BinaryCodec;
 
 let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
@@ -57,6 +54,9 @@ assert_eq!(1, written);
 `MIN_UNITS_PER_VALUE` 适合用于判断是否可以开始解码。
 `MAX_UNITS_PER_VALUE` 是容量上界，适合用于分配输出 buffer，或者在调用方无法
 证明终止字节位置时保证最大可读范围。
+
+LEB128 的 `usize` 和 `isize` 使用当前 Rust target 的 pointer width。持久化文件和
+跨平台协议应使用 `u64`、`i64` 等 fixed-width 类型。
 
 ## LEB128 解码错误
 
