@@ -22,18 +22,17 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - `Strict` 和 `NonStrict` sealed LEB128 解码策略。
 - 内置 LEB128 policy marker 使用的 `Leb128DecodePolicy`。
 - `Leb128DecodeError` 和 `Leb128DecodeErrorKind`。
-- binary codec 表面使用的必要 `qubit-codec` 原语：`Codec`、`ByteOrder`、
-  `ByteOrderSpec`、`BigEndian` 和 `LittleEndian`。
 
 ## 设计目标
 
 - **缓冲区优先**：直接操作调用方持有的 byte slice，不要求 `Read` 或 `Write`。
 - **热路径效率**：为已经验证过边界的调用方提供 unchecked 静态 codec 方法，并
   实现 `Unit = u8` 的 `Codec` 以接入通用 codec pipeline。
-- **分层清晰**：只依赖 `qubit-codec`，stream adapter 交给 `qubit-io-binary`。
+- **分层清晰**：使用 `qubit-codec` 提供共享 codec trait，使用 `qubit-io`
+  提供 checked slice helper，stream adapter 交给 `qubit-io-binary`。
 - **规范编码**：始终写出 canonical LEB128，同时允许配置 decode strictness。
 - **强类型字节序**：通过类型级 byte-order marker 选择 endian 行为。
-- **依赖图小**：让低层二进制线格式代码不必拉入通用 I/O 工具。
+- **依赖图小**：让运行时依赖保持精简，并聚焦二进制线格式支持。
 
 ## 特性
 
@@ -56,6 +55,9 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 - **Sealed Policy Trait**：`Leb128DecodePolicy` 刻意封闭，只使用内置
   `Strict` 或 `NonStrict` marker。
 
+LEB128 的 `usize` 和 `isize` 使用当前 Rust target 的 pointer width。持久化文件和
+跨平台协议应使用 `u64`、`i64` 等 fixed-width 类型。
+
 ### ZigZag 值
 
 - **有符号整数映射**：把 signed integer 映射到 unsigned LEB128 payload。
@@ -63,9 +65,10 @@ Qubit Binary Codec 提供基于调用方管理 byte buffer 的低层 binary code
 
 ### 聚焦的公开 API
 
-- **`prelude` 模块**：导入 binary codec 类型和核心字节序标记。
 - **核心 codec trait**：`BinaryCodec`、`Leb128Codec` 和 `ZigZagCodec`
   实现 `qubit_codec::Codec`，其中 `Unit = u8`，`Value` 由具体 codec 决定。
+- **显式导入共享类型**：byte-order marker 和通用 codec trait 请直接从
+  `qubit-codec` 导入。
 - **不包含 `std::io` adapter**：stream helper 位于 `qubit-io-binary`。
 
 ## 文档
@@ -86,8 +89,8 @@ qubit-codec-binary = "0.3"
 ## 快速开始
 
 ```rust
+use qubit_codec::BigEndian;
 use qubit_codec_binary::{
-    BigEndian,
     BinaryCodec,
     Leb128Codec,
     NonStrict,
@@ -179,7 +182,7 @@ reader/writer 使用 `qubit-io-binary`。
 它们的 unchecked 方法和 `Codec` 实现（`Unit = u8`）面向已经验证缓冲区容量的热路径，或被
 buffered stream adapter 在内部使用。
 
-## 测试与代码覆盖率
+## 测试
 
 本项目通过 `tests/` 下的集成测试覆盖二进制线格式行为。
 
@@ -210,7 +213,16 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 运行时依赖保持很少：
 
 - `qubit-codec` 提供共享 codec 和字节序原语。
+- `qubit-io` 提供 unchecked codec 方法所用的 checked slice helper。
 - `thiserror` 提供公共 LEB128 错误类型实现。
+
+## 相关项目
+
+- [qubit-codec](https://github.com/qubit-ltd/rs-codec)：共享核心 codec trait 与字节序标记。
+- [qubit-io-binary](https://github.com/qubit-ltd/rs-io-binary)：这些 binary codec 的 stream adapter。
+- [qubit-io](https://github.com/qubit-ltd/rs-io)：通用 `std::io` helper。
+- Qubit 旗下的更多 Rust 库发布在 GitHub 组织
+  [qubit-ltd](https://github.com/qubit-ltd)。
 
 ## 许可证
 
@@ -219,8 +231,7 @@ Copyright (c) 2026. Haixing Hu.
 根据 Apache 许可证 2.0 版（"许可证"）授权；
 除非遵守许可证，否则您不得使用此文件。
 您可以在以下位置获取许可证副本：
-
-    http://www.apache.org/licenses/LICENSE-2.0
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)。
 
 除非适用法律要求或书面同意，否则根据许可证分发的软件
 按"原样"分发，不附带任何明示或暗示的担保或条件。
@@ -242,15 +253,3 @@ Copyright (c) 2026. Haixing Hu.
 ## 作者
 
 **胡海星**
-
-## 相关项目
-
-- [qubit-codec](https://github.com/qubit-ltd/rs-codec)：共享核心 codec trait 与字节序标记。
-- [qubit-io-binary](https://github.com/qubit-ltd/rs-io-binary)：这些 binary codec 的 stream adapter。
-- [qubit-io](https://github.com/qubit-ltd/rs-io)：通用 `std::io` helper。
-- Qubit 旗下的更多 Rust 库发布在 GitHub 组织
-  [qubit-ltd](https://github.com/qubit-ltd)。
-
----
-
-仓库地址：[https://github.com/qubit-ltd/rs-codec-binary](https://github.com/qubit-ltd/rs-codec-binary)

@@ -5,7 +5,7 @@
 [![Crates.io](https://img.shields.io/crates/v/qubit-codec-binary.svg?color=blue)](https://crates.io/crates/qubit-codec-binary)
 [![Rust](https://img.shields.io/badge/rust-1.94+-blue.svg?logo=rust)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Chinese Document](https://img.shields.io/badge/Document-Chinese-blue.svg)](README.zh_CN.md)
+[![中文文档](https://img.shields.io/badge/Document-Chinese-blue.svg)](README.zh_CN.md)
 
 Buffer-oriented binary codecs for Rust.
 
@@ -23,8 +23,6 @@ This crate provides:
 - `Strict` and `NonStrict` sealed LEB128 decode policies.
 - `Leb128DecodePolicy` for the built-in LEB128 policy markers.
 - `Leb128DecodeError` and `Leb128DecodeErrorKind`.
-- Essential `qubit-codec` primitives used by the binary surface: `Codec`,
-  `ByteOrder`, `ByteOrderSpec`, `BigEndian`, and `LittleEndian`.
 
 ## Design Goals
 
@@ -33,13 +31,14 @@ This crate provides:
 - **Hot-Path Efficiency**: provide unchecked static codec methods for callers
   that already validated buffer bounds, plus `Codec` implementations with `Unit = u8`
   for generic codec pipelines.
-- **Precise Layering**: depend only on `qubit-codec`, leaving stream adapters to
+- **Precise Layering**: use `qubit-codec` for shared codec traits and
+  `qubit-io` for checked slice helpers, leaving stream adapters to
   `qubit-io-binary`.
 - **Canonical Encoding**: always emit canonical LEB128 bytes while allowing
   configurable decode strictness.
 - **Typed Byte Order**: select endian behavior through type-level byte-order markers.
-- **Small Dependency Graph**: keep binary wire-format code usable by low-level
-  crates without pulling in generic I/O utilities.
+- **Small Dependency Graph**: keep runtime dependencies narrow and focused on
+  binary wire-format support.
 
 ## Features
 
@@ -65,6 +64,10 @@ This crate provides:
 - **Sealed Policy Trait**: `Leb128DecodePolicy` is intentionally sealed; use the
   built-in `Strict` or `NonStrict` markers.
 
+`usize` and `isize` LEB128 values use the current Rust target's pointer width.
+Use fixed-width types such as `u64` or `i64` for persistent files and
+cross-platform protocols.
+
 ### ZigZag Values
 
 - **Signed Integer Mapping**: maps signed integers to unsigned LEB128 payloads.
@@ -73,9 +76,10 @@ This crate provides:
 
 ### Focused Public API
 
-- **`prelude` module**: imports binary codec types and core byte-order markers.
 - **Core codec trait**: `BinaryCodec`, `Leb128Codec`, and `ZigZagCodec`
   implement `qubit_codec::Codec` with `Unit = u8` and a codec-specific `Value`.
+- **Explicit shared imports**: import byte-order markers and generic codec traits
+  directly from `qubit-codec`.
 - **No `std::io` adapters**: stream helpers live in `qubit-io-binary`.
 
 ## Documentation
@@ -96,8 +100,8 @@ qubit-codec-binary = "0.3"
 ## Quick Start
 
 ```rust
+use qubit_codec::BigEndian;
 use qubit_codec_binary::{
-    BigEndian,
     BinaryCodec,
     Leb128Codec,
     NonStrict,
@@ -195,7 +199,7 @@ no runtime allocation. Their unchecked methods and `Codec` implementations with
 `Unit = u8` are intended for validated hot paths where a caller has already
 checked buffer capacity or is operating inside a buffered stream adapter.
 
-## Testing & Code Coverage
+## Testing
 
 This project keeps binary wire-format behavior covered by integration tests
 under `tests/`.
@@ -227,7 +231,18 @@ RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 Runtime dependencies are intentionally small:
 
 - `qubit-codec` provides shared codec and byte-order primitives.
+- `qubit-io` provides checked slice helpers used by unchecked codec methods.
 - `thiserror` provides the public LEB128 error type implementation.
+
+## Related Projects
+
+- [qubit-codec](https://github.com/qubit-ltd/rs-codec): shared core codec
+  traits and byte-order markers.
+- [qubit-io-binary](https://github.com/qubit-ltd/rs-io-binary): stream adapters
+  for these binary codecs.
+- [qubit-io](https://github.com/qubit-ltd/rs-io): generic `std::io` helpers.
+- More Rust libraries from Qubit are available under the
+  [qubit-ltd](https://github.com/qubit-ltd) GitHub organization.
 
 ## License
 
@@ -236,8 +251,7 @@ Copyright (c) 2026. Haixing Hu.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -261,17 +275,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Author
 
 **Haixing Hu**
-
-## Related Projects
-
-- [qubit-codec](https://github.com/qubit-ltd/rs-codec): shared core codec
-  traits and byte-order markers.
-- [qubit-io-binary](https://github.com/qubit-ltd/rs-io-binary): stream adapters
-  for these binary codecs.
-- [qubit-io](https://github.com/qubit-ltd/rs-io): generic `std::io` helpers.
-- More Rust libraries from Qubit are available under the
-  [qubit-ltd](https://github.com/qubit-ltd) GitHub organization.
-
----
-
-Repository: [https://github.com/qubit-ltd/rs-codec-binary](https://github.com/qubit-ltd/rs-codec-binary)

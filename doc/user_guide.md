@@ -12,11 +12,9 @@ want explicit byte indexes.
 - Use `Strict` to reject non-canonical LEB128 payloads and `NonStrict` to allow
   permissive decoding.
 
-The crate re-exports only the `qubit-codec` primitives that are part of the
-binary codec surface: `Codec`, `ByteOrder`, `ByteOrderSpec`, `BigEndian`,
-and `LittleEndian`. It also exposes the sealed `Leb128DecodePolicy` trait for
-the built-in LEB128 policy markers. Import generic adapters, engines, hooks,
-and value traits directly from `qubit-codec`.
+The crate exposes the sealed `Leb128DecodePolicy` trait for the built-in
+LEB128 policy markers. Import byte-order markers, generic adapters, engines,
+hooks, and value traits directly from `qubit-codec`.
 
 ## Fixed-Width Values
 
@@ -25,10 +23,8 @@ and value traits directly from `qubit-codec`.
 because their byte width is platform-dependent.
 
 ```rust
-use qubit_codec_binary::{
-    BigEndian,
-    BinaryCodec,
-};
+use qubit_codec::BigEndian;
+use qubit_codec_binary::BinaryCodec;
 
 let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
 unsafe {
@@ -61,6 +57,10 @@ assert_eq!(1, written);
 `MIN_UNITS_PER_VALUE` is useful for deciding whether decode can even start.
 `MAX_UNITS_PER_VALUE` is the capacity upper bound used when sizing output
 buffers or when a caller cannot otherwise prove where the terminating byte is.
+
+`usize` and `isize` LEB128 values use the current Rust target's pointer width.
+Use fixed-width types such as `u64` or `i64` for persistent files and
+cross-platform protocols.
 
 ## LEB128 Decode Errors
 
