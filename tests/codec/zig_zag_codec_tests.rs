@@ -1,3 +1,11 @@
+// =============================================================================
+//    Copyright (c) 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+
 use core::num::NonZeroUsize;
 
 use qubit_codec::Codec;
@@ -58,6 +66,33 @@ fn test_zig_zag_codec_encodes_7_bit_boundaries() {
 
     for &(value, expected) in cases {
         assert_i16_zig_zag_bytes(value, expected);
+    }
+}
+
+#[test]
+fn test_zig_zag_codec_non_strict_accepts_redundant_values() {
+    let decoded =
+        unsafe { ZigZagCodec::<i16, NonStrict>::decode(&[0x80, 0x00], 0) }
+            .expect("non-strict ZigZag should accept redundant zero");
+    assert_decoded_eq((0, 2), decoded);
+
+    let decoded =
+        unsafe { ZigZagCodec::<i16, NonStrict>::decode(&[0x81, 0x00], 0) }
+            .expect("non-strict ZigZag should accept redundant negative one");
+    assert_decoded_eq((-1, 2), decoded);
+}
+
+#[test]
+fn test_zig_zag_codec_roundtrips_all_i8_values() {
+    let mut output = [0u8; ZigZagCodec::<i8, NonStrict>::MAX_UNITS_PER_VALUE];
+    for value in i8::MIN..=i8::MAX {
+        let len = unsafe {
+            ZigZagCodec::<i8, NonStrict>::encode(value, &mut output, 0)
+        };
+        let decoded =
+            unsafe { ZigZagCodec::<i8, Strict>::decode(&output[..len], 0) }
+                .expect("canonical i8 ZigZag should decode");
+        assert_decoded_eq((value, len), decoded);
     }
 }
 

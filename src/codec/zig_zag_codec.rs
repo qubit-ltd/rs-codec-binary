@@ -131,6 +131,7 @@ macro_rules! impl_zig_zag_codec {
             /// The caller must guarantee that
             /// `output.as_mut_ptr().add(output_index)` is valid to write
             /// [`Self::MAX_UNITS_PER_VALUE`] bytes.
+            #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
             pub unsafe fn encode(
                 value: $signed,

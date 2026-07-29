@@ -213,6 +213,12 @@ cargo test
 # Run tests with all declared features
 cargo test --all-features
 
+# List available fuzz targets (requires `cargo install cargo-fuzz`)
+cargo +nightly fuzz list
+
+# Run the bounded codec property fuzz target
+cargo +nightly fuzz run codec_properties -- -max_total_time=60 -max_len=19
+
 # Run with coverage report
 ./coverage.sh
 
@@ -225,6 +231,13 @@ cargo test --all-features
 # Run CI checks (format, clippy, test, coverage, audit)
 RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 ```
+
+### Fuzzing
+
+The CI smoke check builds and runs `codec_properties` with bounded input. It
+exercises arbitrary LEB128-family payloads, canonical encode/decode roundtrips,
+and the difference between `Strict` and `NonStrict` decoding. Longer fuzzing
+campaigns should run separately from ordinary CI.
 
 ## Dependencies
 
