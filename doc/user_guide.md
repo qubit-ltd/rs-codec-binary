@@ -1,111 +1,117 @@
 # Qubit Binary Codec User Guide
 
-`qubit-codec-binary` contains buffer-level binary codecs. It is intended for
-parsers, binary formats, and stream adapters that already own their buffers and
-want explicit byte indexes.
+[中文](user_guide.zh_CN.md) · [README](../README.md) · [API reference](https://docs.rs/qubit-codec-binary)
 
-## Layers
+This guide applies to `qubit-codec-binary` 0.3. It is for Rust developers
+implementing byte-buffer protocols or file formats that need fixed-width and
+LEB128 fields while retaining ownership of buffering and I/O.
 
-- Use `BinaryCodec<T, O>` for explicit-width primitive integers and floats.
-- Use `Leb128Codec<T, P>` for unsigned and signed LEB128 values.
-- Use `ZigZagCodec<T, P>` when signed values should be compact around zero.
-- Use `Strict` to reject non-canonical LEB128 payloads and `NonStrict` to allow
-  permissive decoding.
+## Conceptual Model
 
-The crate exposes the sealed `Leb128DecodePolicy` trait for the built-in
-LEB128 policy markers. Import byte-order markers, generic adapters, engines,
-hooks, and value traits directly from `qubit-codec`.
+The crate works at one boundary: one value and caller-managed byte slices.
 
-## Fixed-Width Values
+```text
+application buffer -> codec<T, policy> -> value or wire bytes
+                         |
+                         +-> malformed/incomplete/non-canonical diagnostics
+```
 
-`BinaryCodec` supports `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`, `i64`,
-`u128`, `i128`, `f32`, and `f64`. It does not implement `usize` or `isize`
-because their byte width is platform-dependent.
+`BinaryCodec<T, O>` handles fixed-width values with a type-level byte order.
+`Leb128Codec<T, P>` handles signed or unsigned variable-width integers;
+`ZigZagCodec<T, P>` represents signed values as ZigZag followed by unsigned
+LEB128. All implement `qubit_codec::Codec` with `Unit = u8`.
+
+## Scenario: Decode a Compact Record
+
+Assume a record begins with a big-endian `u32` identifier followed by a signed
+ZigZag LEB128 delta. The encoder reserves each codec's declared maximum before
+entering the unsafe layer; the decoder supplies a complete record slice.
+
+## Installation and Minimal Configuration
+
+```toml
+[dependencies]
+qubit-codec-binary = "0.3"
+qubit-codec = "0.11"
+```
+
+Import byte-order markers and the shared `Codec` trait from `qubit-codec`.
+
+## Core Workflow
 
 ```rust
 use qubit_codec::BigEndian;
-use qubit_codec_binary::BinaryCodec;
+use qubit_codec_binary::{BinaryCodec, Strict, ZigZagCodec};
 
-let mut output = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
-unsafe {
-    BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut output, 0);
+let mut record = [0_u8; 9];
+let id_len = unsafe {
+    BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut record, 0)
+};
+let delta_len = unsafe {
+    ZigZagCodec::<i32, Strict>::encode(-42, &mut record, id_len)
+};
+assert_eq!(5, id_len + delta_len);
+
+let (id, used_id) = unsafe { BinaryCodec::<u32, BigEndian>::decode(&record, 0) };
+let (delta, used_delta) = unsafe {
+    ZigZagCodec::<i32, Strict>::decode(&record, used_id.get())
 }
-assert_eq!([1, 2, 3, 4], output);
+.expect("the encoded delta is canonical");
+
+assert_eq!(0x0102_0304, id);
+assert_eq!(-42, delta);
+assert_eq!(id_len, used_id.get());
+assert_eq!(delta_len, used_delta.get());
 ```
 
-The unchecked APIs are for hot paths where the caller has already validated
-buffer capacity.
+The `MAX_UNITS_PER_VALUE` allocation is deliberately conservative for LEB128
+and ZigZag; encode returns the actual byte count. Fixed-width codecs consume
+and write their exact scalar width.
 
-## LEB128 and ZigZag
+## LEB128 Policies and Errors
+
+Encoding is always canonical. Select the decoding policy according to the wire
+contract:
+
+| Policy | Use when | Result for `80 00` as an unsigned zero |
+| --- | --- | --- |
+| `Strict` | Your format requires a unique byte representation. | `NonCanonical` error. |
+| `NonStrict` | You must accept compatible legacy or permissive input. | Decodes to `0`. |
+
+`Leb128DecodeError` reports `Incomplete`, `Malformed`, or `NonCanonical`.
+`start_index()` identifies the attempted value, and `error_index()` identifies
+where failure became observable. For incomplete data, use `required()`,
+`available()`, and `additional()` to decide whether to refill a buffer.
 
 ```rust
-use qubit_codec_binary::{
-    Leb128Codec,
-    NonStrict,
-    ZigZagCodec,
-};
+use qubit_codec_binary::{Leb128Codec, Leb128DecodeErrorKind, NonStrict};
 
-let mut unsigned = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { Leb128Codec::<u64, NonStrict>::encode(300, &mut unsigned, 0) };
-assert_eq!(2, written);
-
-let mut signed = [0_u8; ZigZagCodec::<i64, NonStrict>::MAX_UNITS_PER_VALUE];
-let written = unsafe { ZigZagCodec::<i64, NonStrict>::encode(-42, &mut signed, 0) };
-assert_eq!(1, written);
+let error = unsafe { Leb128Codec::<u16, NonStrict>::decode(&[0xac], 0) }
+    .expect_err("one continuation byte is incomplete");
+assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
+assert_eq!(Some(2), error.required().map(|count| count.get()));
+assert_eq!(Some(1), error.available());
 ```
 
-`MIN_UNITS_PER_VALUE` is useful for deciding whether decode can even start.
-`MAX_UNITS_PER_VALUE` is the capacity upper bound used when sizing output
-buffers or when a caller cannot otherwise prove where the terminating byte is.
+## Unsafe Boundary and Best Practices
 
-`usize` and `isize` LEB128 values use the current Rust target's pointer width.
-Use fixed-width types such as `u64` or `i64` for persistent files and
-cross-platform protocols.
+The direct codec methods do not check slice bounds. Before calling them:
 
-## LEB128 Decode Errors
+1. For `BinaryCodec`, make at least `MIN_UNITS_PER_VALUE` bytes readable or
+   `MAX_UNITS_PER_VALUE` bytes writable from the index.
+2. For LEB128 and ZigZag encoding, reserve `MAX_UNITS_PER_VALUE` writable
+   bytes, then retain only the returned prefix.
+3. For LEB128 and ZigZag decoding, supply at least one readable byte and,
+   where possible, all bytes currently buffered up to the type maximum.
+4. Keep `usize` and `isize` out of persistent or cross-platform formats: their
+   bounds follow the target pointer width. Prefer fixed-width integers.
 
-`Leb128DecodeError` separates the attempted value start from the point where an
-error became observable:
+Wrap these calls in a checked protocol reader or writer when input comes from
+untrusted buffers. Use `qubit-io-binary` for stream-oriented binary adapters;
+this crate neither owns buffering nor maps errors to `std::io::Error`.
 
-- `start_index()` returns the byte index where the attempted value starts.
-- `error_index()` returns the byte index where decoding detected the error. For
-  incomplete input this is the one-past-available boundary where the next byte
-  would be required.
-- `required()`, `available()`, and `additional()` describe incomplete input.
-- `consumed()` describes how many invalid bytes a caller may consume after
-  malformed or non-canonical input.
+## Further Reading
 
-## Unsafe Boundary
-
-These codecs are low-level building blocks. Their unchecked methods do not own
-the responsibility of discovering whether a buffer has enough space:
-
-- Fixed-width `BinaryCodec` decode and encode calls require
-  `MIN_UNITS_PER_VALUE` readable bytes or `MAX_UNITS_PER_VALUE` writable bytes
-  from the supplied index. For fixed-width values these bounds are equal.
-- LEB128 and ZigZag encode calls require `MAX_UNITS_PER_VALUE` writable bytes
-  from the supplied index.
-- LEB128 and ZigZag decode calls require at least `MIN_UNITS_PER_VALUE`
-  readable byte from the supplied index. Callers should normally provide up to
-  `MAX_UNITS_PER_VALUE` readable bytes unless EOF prevents that.
-- If EOF prevents the caller from providing enough readable bytes to complete a
-  variable-length value, `decode` reports the incomplete value through
-  `Leb128DecodeError`.
-
-When exposing a safe API, validate these conditions before crossing the unsafe
-boundary.
-
-## Safe Adapters and Streams
-
-This crate intentionally stops at buffer-level binary codecs. If you need owned
-single-value adapters, generic buffered engines, or conversion traits, import
-them from `qubit-codec` and use these binary codecs as the low-level codec
-implementations.
-
-When writing your own safe wrapper around `decode`, check that the
-start index has at least `MIN_UNITS_PER_VALUE` readable byte before calling the
-unsafe method. For single-value decoders, also decide whether trailing bytes
-after the returned `consumed` count are allowed by your format.
-
-Use `qubit-io-binary` when you need `std::io::Read` / `Write` adapters around
-these codecs.
+- [README](../README.md)
+- [中文用户指南](user_guide.zh_CN.md)
+- [API reference](https://docs.rs/qubit-codec-binary)
