@@ -1,3 +1,11 @@
+// =============================================================================
+//    Copyright (c) 2026 Haixing Hu.
+//
+//    SPDX-License-Identifier: Apache-2.0
+//
+//    Licensed under the Apache License, Version 2.0.
+// =============================================================================
+
 use core::num::NonZeroUsize;
 
 use qubit_codec::{
@@ -94,6 +102,50 @@ fn test_leb128_codec_encodes_signed_7_bit_boundaries() {
 
     for &(value, expected) in cases {
         assert_signed_i32_leb128_bytes(value, expected);
+    }
+}
+
+#[test]
+fn test_leb128_codec_non_strict_accepts_redundant_values() {
+    let decoded =
+        unsafe { Leb128Codec::<u16, NonStrict>::decode(&[0x80, 0x00], 0) }
+            .expect("non-strict unsigned LEB128 should accept redundant zero");
+    assert_decoded_eq((0, 2), decoded);
+
+    let decoded =
+        unsafe { Leb128Codec::<i16, NonStrict>::decode(&[0xff, 0x7f], 0) }
+            .expect(
+                "non-strict signed LEB128 should accept redundant negative one",
+            );
+    assert_decoded_eq((-1, 2), decoded);
+}
+
+#[test]
+fn test_leb128_codec_roundtrips_all_u8_and_i8_values() {
+    let mut unsigned_output =
+        [0u8; Leb128Codec::<u8, NonStrict>::MAX_UNITS_PER_VALUE];
+    for value in u8::MIN..=u8::MAX {
+        let len = unsafe {
+            Leb128Codec::<u8, NonStrict>::encode(value, &mut unsigned_output, 0)
+        };
+        let decoded = unsafe {
+            Leb128Codec::<u8, Strict>::decode(&unsigned_output[..len], 0)
+        }
+        .expect("canonical u8 LEB128 should decode");
+        assert_decoded_eq((value, len), decoded);
+    }
+
+    let mut signed_output =
+        [0u8; Leb128Codec::<i8, NonStrict>::MAX_UNITS_PER_VALUE];
+    for value in i8::MIN..=i8::MAX {
+        let len = unsafe {
+            Leb128Codec::<i8, NonStrict>::encode(value, &mut signed_output, 0)
+        };
+        let decoded = unsafe {
+            Leb128Codec::<i8, Strict>::decode(&signed_output[..len], 0)
+        }
+        .expect("canonical i8 LEB128 should decode");
+        assert_decoded_eq((value, len), decoded);
     }
 }
 

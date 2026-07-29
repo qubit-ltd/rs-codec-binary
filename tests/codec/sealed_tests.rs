@@ -12,12 +12,15 @@ use qubit_codec_binary::{
     Strict,
 };
 
-fn is_strict<P: Leb128DecodePolicy>() -> bool {
-    P::STRICT
+/// Requires a type to be one of the crate's sealed LEB128 policy markers.
+fn require_sealed_policy<P>()
+where
+    P: Leb128DecodePolicy,
+{
 }
 
 #[test]
-fn test_leb128_decode_policy_exposes_strict_flag() {
-    assert!(is_strict::<Strict>());
-    assert!(!is_strict::<NonStrict>());
+fn test_sealed_policy_trait_is_implemented_by_builtin_markers() {
+    require_sealed_policy::<NonStrict>();
+    require_sealed_policy::<Strict>();
 }

@@ -195,6 +195,12 @@ cargo test
 # 使用项目声明的全部 feature 运行测试
 cargo test --all-features
 
+# 列出 fuzz target（需要先执行 `cargo install cargo-fuzz`）
+cargo +nightly fuzz list
+
+# 运行有界的 codec property fuzz target
+cargo +nightly fuzz run codec_properties -- -max_total_time=60 -max_len=19
+
 # 运行覆盖率报告
 ./coverage.sh
 
@@ -207,6 +213,12 @@ cargo test --all-features
 # 运行 CI 检查（格式化、clippy、测试、覆盖率、安全审计）
 RS_CI_SKIP_TOOLCHAIN_UPDATE=1 ./ci-check.sh
 ```
+
+### Fuzzing
+
+CI smoke check 会以有界输入构建并运行 `codec_properties`。它覆盖任意
+LEB128-family payload、canonical encode/decode roundtrip，以及 `Strict` 和
+`NonStrict` 解码的语义差异。更长时间的 fuzz campaign 应独立于常规 CI 运行。
 
 ## 依赖项
 
