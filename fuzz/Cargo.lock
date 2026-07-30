@@ -99,12 +99,15 @@ name = "qubit-codec-binary-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "qubit-codec",
  "qubit-codec-binary",
 ]
 
 [[package]]
 name = "qubit-io"
 version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d49f7760498a997e081e164910f7fb9d2732dd0eb6571d272ca2b0eb6681b01e"
 
 [[package]]
 name = "quote"
