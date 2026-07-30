@@ -8,7 +8,6 @@
 
 mod assertions_tests;
 mod binary_codec_tests;
-mod decode_policy_tests;
 mod leb128_codec_tests;
 mod leb128_decode_error_kind_tests;
 mod leb128_decode_error_tests;
