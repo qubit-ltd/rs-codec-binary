@@ -6,7 +6,7 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use super::sealed::Sealed;
+use super::internal::sealed::Sealed;
 
 /// Describes a type-level LEB128 decoding policy.
 ///
