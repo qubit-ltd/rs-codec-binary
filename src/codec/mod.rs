@@ -6,13 +6,15 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
+//! Internal binary codec type definitions and public reexports.
+
 mod binary_codec;
+mod internal;
 mod leb128_codec;
 mod leb128_decode_error;
 mod leb128_decode_error_kind;
 mod leb128_decode_policy;
 mod non_strict;
-mod sealed;
 mod strict;
 mod zig_zag_codec;
 

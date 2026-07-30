@@ -12,7 +12,7 @@ use super::Leb128DecodePolicy;
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct NonStrict;
 
-impl super::sealed::Sealed for NonStrict {}
+impl super::internal::sealed::Sealed for NonStrict {}
 
 impl Leb128DecodePolicy for NonStrict {
     /// Whether this policy accepts non-canonical encodings.
