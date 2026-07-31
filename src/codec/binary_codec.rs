@@ -846,10 +846,17 @@ macro_rules! impl_float_binary_codec {
 macro_rules! impl_native_integer_binary_codec {
     ($ty:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
+            /// Minimum number of bytes required to encode or decode this type.
             pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
+            /// Maximum number of bytes emitted when encoding this type.
             pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            /// Maximum number of bytes consumed when decoding this type.
             pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
+            /// Decodes a native-endian value without bounds checks.
+            ///
+            /// # Safety
+            /// The caller must guarantee that the value-sized range is readable.
             #[must_use]
             #[inline(always)]
             pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
@@ -857,6 +864,10 @@ macro_rules! impl_native_integer_binary_codec {
                 (raw, qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
+            /// Encodes a native-endian value without bounds checks.
+            ///
+            /// # Safety
+            /// The caller must guarantee that the value-sized range is writable.
             #[inline(always)]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value) };
@@ -890,10 +901,17 @@ macro_rules! impl_native_integer_binary_codec {
 macro_rules! impl_native_float_binary_codec {
     ($ty:ty, $bits:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
+            /// Minimum number of bytes required to encode or decode this type.
             pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
+            /// Maximum number of bytes emitted when encoding this type.
             pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            /// Maximum number of bytes consumed when decoding this type.
             pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
+            /// Decodes a native-endian floating-point value without bounds checks.
+            ///
+            /// # Safety
+            /// The caller must guarantee that the value-sized range is readable.
             #[must_use]
             #[inline(always)]
             pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
@@ -901,6 +919,10 @@ macro_rules! impl_native_float_binary_codec {
                 (<$ty>::from_bits(raw), qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
+            /// Encodes a native-endian floating-point value without bounds checks.
+            ///
+            /// # Safety
+            /// The caller must guarantee that the value-sized range is writable.
             #[inline(always)]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value.to_bits()) };
