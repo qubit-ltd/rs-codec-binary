@@ -6,22 +6,26 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
+use qubit_codec::NativeEndian;
 use qubit_codec::{
     BigEndian,
     Codec,
     LittleEndian,
 };
 use qubit_codec_binary::BinaryCodec;
-use qubit_codec::NativeEndian;
 
 #[test]
 fn native_endian_round_trip_matches_platform_order() {
     let value = 0x1234_5678_u32;
-    let mut output = [0_u8; BinaryCodec::<u32, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
-    let written = unsafe { BinaryCodec::<u32, NativeEndian>::encode(value, &mut output, 0) };
+    let mut output =
+        [0_u8; BinaryCodec::<u32, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
+    let written = unsafe {
+        BinaryCodec::<u32, NativeEndian>::encode(value, &mut output, 0)
+    };
     assert_eq!(4, written);
     assert_eq!(value.to_ne_bytes(), output);
-    let (decoded, consumed) = unsafe { BinaryCodec::<u32, NativeEndian>::decode(&output, 0) };
+    let (decoded, consumed) =
+        unsafe { BinaryCodec::<u32, NativeEndian>::decode(&output, 0) };
     assert_eq!(value, decoded);
     assert_eq!(4, consumed.get());
 }
