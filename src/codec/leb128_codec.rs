@@ -61,7 +61,7 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 ///     NonStrict,
 /// };
 ///
-/// let mut output = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
+/// let mut output = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
 /// let written = unsafe {
 ///     Leb128Codec::<u64, NonStrict>::encode(300, &mut output, 0)
 /// };
@@ -88,9 +88,13 @@ macro_rules! impl_unsigned_leb128_codec {
             pub const MIN_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MIN_UNITS_PER_VALUE;
 
-            /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_UNITS_PER_VALUE;
+            /// Maximum number of bytes emitted when encoding this type.
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+
+            /// Maximum number of bytes consumed when decoding this type.
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -133,20 +137,20 @@ macro_rules! impl_unsigned_leb128_codec {
                         input,
                         input_index,
                         <$ty>::BITS,
-                        Self::MAX_UNITS_PER_VALUE,
+                        Self::MAX_DECODE_UNITS_PER_VALUE,
                     )?
                 };
                 Ok((value as $ty, consumed))
             }
 
-            /// Encodes `value` into `output` starting at `index` without bounds
-            /// checks.
+            /// Encodes `value` into `output` starting at `output_index` without
+            /// bounds checks.
             ///
             /// # Parameters
             ///
             /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
-            /// - `index`: Start index in `output`.
+            /// - `output_index`: Start index in `output`.
             ///
             /// # Returns
             ///
@@ -154,9 +158,11 @@ macro_rules! impl_unsigned_leb128_codec {
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that
-            /// `output.as_mut_ptr().add(output_index)` is valid to write
-            /// [`Self::MAX_UNITS_PER_VALUE`] bytes.
+            /// The caller must guarantee that the canonical unsigned LEB128
+            /// byte width of `value` is writable starting at `output_index`.
+            /// Reserving [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes always satisfies
+            /// this requirement; for a known value, the exact
+            /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
             pub unsafe fn encode(
@@ -164,8 +170,8 @@ macro_rules! impl_unsigned_leb128_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                // SAFETY: The caller guarantees enough writable bytes for this
-                // type.
+                // SAFETY: The caller guarantees enough writable bytes for the
+                // canonical representation of this value.
                 unsafe {
                     write_uleb_unchecked(output, output_index, value as u128)
                 }
@@ -182,7 +188,9 @@ macro_rules! impl_unsigned_leb128_codec {
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = 1;
-            const MAX_UNITS_PER_VALUE: usize =
+            const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_DECODE_UNITS_PER_VALUE: usize =
                 (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
@@ -222,8 +230,8 @@ macro_rules! impl_unsigned_leb128_codec {
                     output.len().saturating_sub(output_index) >= required
                 );
 
-                // SAFETY: The caller upholds the `Codec::encode`
-                // contract.
+                // SAFETY: The `Codec::encode` contract provides either the
+                // exact canonical width or this type's maximum width.
                 let written =
                     unsafe { Self::encode(*value, output, output_index) };
                 Ok(written)
@@ -242,9 +250,13 @@ macro_rules! impl_signed_leb128_codec {
             pub const MIN_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MIN_UNITS_PER_VALUE;
 
-            /// Maximum number of bytes required to encode or decode this type.
-            pub const MAX_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_UNITS_PER_VALUE;
+            /// Maximum number of bytes emitted when encoding this type.
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+
+            /// Maximum number of bytes consumed when decoding this type.
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `index` without bounds
             /// checks.
@@ -287,7 +299,7 @@ macro_rules! impl_signed_leb128_codec {
                         input,
                         input_index,
                         <$ty>::BITS,
-                        Self::MAX_UNITS_PER_VALUE,
+                        Self::MAX_DECODE_UNITS_PER_VALUE,
                     )?
                 };
                 Ok((value as $ty, consumed))
@@ -308,9 +320,11 @@ macro_rules! impl_signed_leb128_codec {
             ///
             /// # Safety
             ///
-            /// The caller must guarantee that
-            /// `output.as_mut_ptr().add(output_index)` is valid to write
-            /// [`Self::MAX_UNITS_PER_VALUE`] bytes.
+            /// The caller must guarantee that the canonical signed LEB128 byte
+            /// width of `value` is writable starting at `output_index`.
+            /// Reserving [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes always satisfies
+            /// this requirement; for a known value, the exact
+            /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
             pub unsafe fn encode(
@@ -318,8 +332,8 @@ macro_rules! impl_signed_leb128_codec {
                 output: &mut [u8],
                 output_index: usize,
             ) -> usize {
-                // SAFETY: The caller guarantees enough writable bytes for this
-                // type.
+                // SAFETY: The caller guarantees enough writable bytes for the
+                // canonical representation of this value.
                 unsafe {
                     write_sleb_unchecked(output, output_index, value as i128)
                 }
@@ -336,7 +350,9 @@ macro_rules! impl_signed_leb128_codec {
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = 1;
-            const MAX_UNITS_PER_VALUE: usize =
+            const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_DECODE_UNITS_PER_VALUE: usize =
                 (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
@@ -376,8 +392,8 @@ macro_rules! impl_signed_leb128_codec {
                     output.len().saturating_sub(output_index) >= required
                 );
 
-                // SAFETY: The caller upholds the `Codec::encode`
-                // contract.
+                // SAFETY: The `Codec::encode` contract provides either the
+                // exact canonical width or this type's maximum width.
                 let written =
                     unsafe { Self::encode(*value, output, output_index) };
                 Ok(written)

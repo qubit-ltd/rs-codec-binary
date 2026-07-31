@@ -27,7 +27,8 @@ fn nonzero(value: usize) -> NonZeroUsize {
 
 /// Checks the exact unsigned LEB128 bytes for a `u32` value.
 fn assert_unsigned_u32_leb128_bytes(value: u32, expected: &[u8]) {
-    let mut output = [0u8; Leb128Codec::<u32, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<u32, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
 
     let len =
         unsafe { Leb128Codec::<u32, NonStrict>::encode(value, &mut output, 0) };
@@ -41,7 +42,8 @@ fn assert_unsigned_u32_leb128_bytes(value: u32, expected: &[u8]) {
 
 /// Checks the exact signed LEB128 bytes for an `i32` value.
 fn assert_signed_i32_leb128_bytes(value: i32, expected: &[u8]) {
-    let mut output = [0u8; Leb128Codec::<i32, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<i32, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
 
     let len =
         unsafe { Leb128Codec::<i32, NonStrict>::encode(value, &mut output, 0) };
@@ -56,18 +58,41 @@ fn assert_signed_i32_leb128_bytes(value: i32, expected: &[u8]) {
 #[test]
 fn test_leb128_codec_exposes_unit_bounds() {
     assert_eq!(1, Leb128Codec::<u8, NonStrict>::MIN_UNITS_PER_VALUE);
-    assert_eq!(2, Leb128Codec::<u8, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(3, Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(5, Leb128Codec::<u32, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(10, Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(19, Leb128Codec::<u128, NonStrict>::MAX_UNITS_PER_VALUE);
+    assert_eq!(2, Leb128Codec::<u8, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(2, Leb128Codec::<u8, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(3, Leb128Codec::<u16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(3, Leb128Codec::<u16, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(5, Leb128Codec::<u32, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(5, Leb128Codec::<u32, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(
+        10,
+        Leb128Codec::<u64, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        10,
+        Leb128Codec::<u64, NonStrict>::MAX_DECODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        19,
+        Leb128Codec::<u128, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        19,
+        Leb128Codec::<u128, NonStrict>::MAX_DECODE_UNITS_PER_VALUE
+    );
     assert_eq!(
         (usize::BITS as usize).div_ceil(7),
-        Leb128Codec::<usize, NonStrict>::MAX_UNITS_PER_VALUE
+        Leb128Codec::<usize, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        (usize::BITS as usize).div_ceil(7),
+        Leb128Codec::<usize, NonStrict>::MAX_DECODE_UNITS_PER_VALUE
     );
     assert_eq!(1, Leb128Codec::<i8, Strict>::MIN_UNITS_PER_VALUE);
-    assert_eq!(2, Leb128Codec::<i8, Strict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(3, Leb128Codec::<i16, Strict>::MAX_UNITS_PER_VALUE);
+    assert_eq!(2, Leb128Codec::<i8, Strict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(2, Leb128Codec::<i8, Strict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(3, Leb128Codec::<i16, Strict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(3, Leb128Codec::<i16, Strict>::MAX_DECODE_UNITS_PER_VALUE);
 }
 
 #[test]
@@ -153,7 +178,7 @@ fn test_leb128_codec_strictly_checks_terminal_sign_extensions() {
 #[test]
 fn test_leb128_codec_roundtrips_all_u8_and_i8_values() {
     let mut unsigned_output =
-        [0u8; Leb128Codec::<u8, NonStrict>::MAX_UNITS_PER_VALUE];
+        [0u8; Leb128Codec::<u8, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     for value in u8::MIN..=u8::MAX {
         let len = unsafe {
             Leb128Codec::<u8, NonStrict>::encode(value, &mut unsigned_output, 0)
@@ -166,7 +191,7 @@ fn test_leb128_codec_roundtrips_all_u8_and_i8_values() {
     }
 
     let mut signed_output =
-        [0u8; Leb128Codec::<i8, NonStrict>::MAX_UNITS_PER_VALUE];
+        [0u8; Leb128Codec::<i8, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     for value in i8::MIN..=i8::MAX {
         let len = unsafe {
             Leb128Codec::<i8, NonStrict>::encode(value, &mut signed_output, 0)
@@ -182,7 +207,7 @@ fn test_leb128_codec_roundtrips_all_u8_and_i8_values() {
 #[test]
 fn test_leb128_codec_reads_and_writes_unsigned_values_unchecked() {
     let mut output =
-        [0u8; Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; Leb128Codec::<u16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
     let len =
         unsafe { Leb128Codec::<u16, NonStrict>::encode(300, &mut output, 1) };
 
@@ -193,7 +218,8 @@ fn test_leb128_codec_reads_and_writes_unsigned_values_unchecked() {
         .expect("valid u16 should decode");
     assert_decoded_eq((300, 2), decoded);
 
-    let mut output = [0u8; Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<u16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     let len = unsafe {
         Leb128Codec::<u16, NonStrict>::encode(u16::MAX, &mut output, 0)
     };
@@ -206,15 +232,19 @@ fn test_leb128_codec_reads_and_writes_unsigned_values_unchecked() {
 fn test_leb128_codec_encodes_and_decodes_through_codec_trait() {
     let mut codec = Leb128Codec::<u16, NonStrict>::default();
     let mut output =
-        [0u8; Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; Leb128Codec::<u16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
 
     assert_eq!(
         Leb128Codec::<u16, NonStrict>::MIN_UNITS_PER_VALUE,
         <Leb128Codec<u16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
-        Leb128Codec::<u16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <Leb128Codec<u16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
+        Leb128Codec::<u16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE,
+        <Leb128Codec<u16, NonStrict> as Codec>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        Leb128Codec::<u16, NonStrict>::MAX_DECODE_UNITS_PER_VALUE,
+        <Leb128Codec<u16, NonStrict> as Codec>::MAX_DECODE_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &300, &mut output, 1) }
@@ -249,6 +279,17 @@ fn test_unsigned_leb128_codec_trait_encodes_into_exact_length_buffer() {
 
     assert_eq!(output.len(), written);
     assert_eq!([0x7f], output.as_slice());
+}
+
+#[test]
+fn test_unsigned_leb128_inherent_encode_accepts_exact_length_buffer() {
+    let mut output = [0_u8; 1];
+
+    let written =
+        unsafe { Leb128Codec::<u64, NonStrict>::encode(0x7f, &mut output, 0) };
+
+    assert_eq!(1, written);
+    assert_eq!([0x7f], output);
 }
 
 #[test]
@@ -292,15 +333,15 @@ fn test_leb128_codec_trait_maps_decode_failures() {
 fn test_signed_leb128_codec_encodes_and_decodes_through_codec_trait() {
     let mut codec = Leb128Codec::<i16, NonStrict>::default();
     let mut output =
-        [0u8; Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; Leb128Codec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
 
     assert_eq!(
         Leb128Codec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
         <Leb128Codec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
-        Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <Leb128Codec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
+        Leb128Codec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE,
+        <Leb128Codec<i16, NonStrict> as Codec>::MAX_ENCODE_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
@@ -341,6 +382,17 @@ fn test_signed_leb128_codec_trait_encodes_into_exact_length_buffer() {
 }
 
 #[test]
+fn test_signed_leb128_inherent_encode_accepts_exact_length_buffer() {
+    let mut output = [0_u8; 1];
+
+    let written =
+        unsafe { Leb128Codec::<i64, NonStrict>::encode(-1, &mut output, 0) };
+
+    assert_eq!(1, written);
+    assert_eq!([0x7f], output);
+}
+
+#[test]
 fn test_leb128_codec_trait_decodes_single_byte_signed_value() {
     let mut codec = Leb128Codec::<i64, NonStrict>::default();
     let input = [0x7fu8];
@@ -354,7 +406,7 @@ fn test_leb128_codec_trait_decodes_single_byte_signed_value() {
 #[test]
 fn test_leb128_codec_reads_and_writes_signed_values_unchecked() {
     let mut output =
-        [0u8; Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; Leb128Codec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
     let len =
         unsafe { Leb128Codec::<i16, NonStrict>::encode(-300, &mut output, 1) };
 
@@ -365,14 +417,16 @@ fn test_leb128_codec_reads_and_writes_signed_values_unchecked() {
         .expect("valid i16 should decode");
     assert_decoded_eq((-300, 2), decoded);
 
-    let mut output = [0u8; Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     let len =
         unsafe { Leb128Codec::<i16, NonStrict>::encode(300, &mut output, 0) };
     let decoded = unsafe { Leb128Codec::<i16, NonStrict>::decode(&output, 0) }
         .expect("positive i16 should decode");
     assert_decoded_eq((300, len), decoded);
 
-    let mut output = [0u8; Leb128Codec::<i128, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<i128, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     let len = unsafe {
         Leb128Codec::<i128, NonStrict>::encode(i128::MIN, &mut output, 0)
     };
@@ -381,7 +435,8 @@ fn test_leb128_codec_reads_and_writes_signed_values_unchecked() {
     assert_decoded_eq((i128::MIN, len), decoded);
 
     let values: [i16; 8] = [0, -1, 63, 64, -64, -65, i16::MIN, i16::MAX];
-    let mut output = [0u8; Leb128Codec::<i16, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; Leb128Codec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     for value in values {
         output.fill(0);
         let len = unsafe {
@@ -400,8 +455,8 @@ fn test_leb128_codec_roundtrips_all_strict_and_non_strict_instantiations() {
         ($ty:ty, $value:expr) => {{
             let value = $value as $ty;
 
-            let mut output =
-                [0u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
             let len = unsafe {
                 Leb128Codec::<$ty, NonStrict>::encode(value, &mut output, 0)
             };
@@ -411,7 +466,7 @@ fn test_leb128_codec_roundtrips_all_strict_and_non_strict_instantiations() {
             assert_decoded_eq((value, len), decoded);
 
             let mut output =
-                [0u8; Leb128Codec::<$ty, Strict>::MAX_UNITS_PER_VALUE];
+                [0u8; Leb128Codec::<$ty, Strict>::MAX_ENCODE_UNITS_PER_VALUE];
             let len = unsafe {
                 Leb128Codec::<$ty, Strict>::encode(value, &mut output, 0)
             };
@@ -426,8 +481,8 @@ fn test_leb128_codec_roundtrips_all_strict_and_non_strict_instantiations() {
         ($ty:ty, $value:expr) => {{
             let value = $value as $ty;
 
-            let mut output =
-                [0u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
             let len = unsafe {
                 Leb128Codec::<$ty, NonStrict>::encode(value, &mut output, 0)
             };
@@ -437,7 +492,7 @@ fn test_leb128_codec_roundtrips_all_strict_and_non_strict_instantiations() {
             assert_decoded_eq((value, len), decoded);
 
             let mut output =
-                [0u8; Leb128Codec::<$ty, Strict>::MAX_UNITS_PER_VALUE];
+                [0u8; Leb128Codec::<$ty, Strict>::MAX_ENCODE_UNITS_PER_VALUE];
             let len = unsafe {
                 Leb128Codec::<$ty, Strict>::encode(value, &mut output, 0)
             };
@@ -521,8 +576,8 @@ fn test_leb128_codec_reports_incomplete_signed_values_unchecked() {
 fn test_leb128_codec_rejects_all_instantiated_error_paths() {
     macro_rules! reject_unsigned {
         ($ty:ty) => {{
-            let unterminated =
-                [0x80u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let unterminated = [0x80u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE];
             let error = unsafe {
                 Leb128Codec::<$ty, NonStrict>::decode(&unterminated, 0)
             }
@@ -536,11 +591,12 @@ fn test_leb128_codec_rejects_all_instantiated_error_paths() {
                     );
             assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
 
-            let max_bytes = Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE;
+            let max_bytes =
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
             let bits = <$ty>::BITS as usize;
             let used_bits = bits - (max_bytes - 1) * 7;
-            let mut malformed =
-                [0x80u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let mut malformed = [0x80u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE];
             malformed[max_bytes - 1] = 1u8 << used_bits;
             let error =
                 unsafe { Leb128Codec::<$ty, NonStrict>::decode(&malformed, 0) }
@@ -548,7 +604,7 @@ fn test_leb128_codec_rejects_all_instantiated_error_paths() {
             assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
 
             let mut noncanonical =
-                [0u8; Leb128Codec::<$ty, Strict>::MAX_UNITS_PER_VALUE];
+                [0u8; Leb128Codec::<$ty, Strict>::MAX_DECODE_UNITS_PER_VALUE];
             noncanonical[0] = 0x80;
             let error =
                 unsafe { Leb128Codec::<$ty, Strict>::decode(&noncanonical, 0) }
@@ -559,8 +615,8 @@ fn test_leb128_codec_rejects_all_instantiated_error_paths() {
 
     macro_rules! reject_signed {
         ($ty:ty) => {{
-            let unterminated =
-                [0x80u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let unterminated = [0x80u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE];
             let error = unsafe {
                 Leb128Codec::<$ty, NonStrict>::decode(&unterminated, 0)
             }
@@ -572,20 +628,21 @@ fn test_leb128_codec_rejects_all_instantiated_error_paths() {
                     .expect_err("unterminated strict signed value should fail");
             assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
 
-            let max_bytes = Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE;
+            let max_bytes =
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
             let bits = <$ty>::BITS as usize;
             let used_bits = bits - (max_bytes - 1) * 7;
 
-            let mut malformed =
-                [0x80u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let mut malformed = [0x80u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE];
             malformed[max_bytes - 1] = 1u8 << used_bits;
             let error =
                 unsafe { Leb128Codec::<$ty, NonStrict>::decode(&malformed, 0) }
                     .expect_err("too-wide positive signed payload should fail");
             assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
 
-            let mut malformed =
-                [0x80u8; Leb128Codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+            let mut malformed = [0x80u8;
+                Leb128Codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE];
             malformed[max_bytes - 1] = 1u8 << (used_bits - 1);
             let error =
                 unsafe { Leb128Codec::<$ty, NonStrict>::decode(&malformed, 0) }
@@ -595,7 +652,7 @@ fn test_leb128_codec_rejects_all_instantiated_error_paths() {
             assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
 
             let mut noncanonical =
-                [0u8; Leb128Codec::<$ty, Strict>::MAX_UNITS_PER_VALUE];
+                [0u8; Leb128Codec::<$ty, Strict>::MAX_DECODE_UNITS_PER_VALUE];
             noncanonical[0] = 0xff;
             noncanonical[1] = 0x7f;
             let error =
