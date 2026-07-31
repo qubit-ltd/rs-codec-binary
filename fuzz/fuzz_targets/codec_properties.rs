@@ -9,9 +9,16 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use qubit_codec::{BigEndian, LittleEndian};
+use qubit_codec::{
+    BigEndian,
+    LittleEndian,
+};
 use qubit_codec_binary::{
-    BinaryCodec, Leb128Codec, Leb128DecodeErrorKind, NonStrict, Strict,
+    BinaryCodec,
+    Leb128Codec,
+    Leb128DecodeErrorKind,
+    NonStrict,
+    Strict,
     ZigZagCodec,
 };
 
@@ -33,11 +40,10 @@ macro_rules! assert_leb128_roundtrip {
         let written = unsafe {
             $codec::<$ty, NonStrict>::encode(expected, &mut output, 0)
         };
-        let strict =
-            unsafe { $codec::<$ty, Strict>::decode(&output[..written], 0) }
-                .expect(
-                "canonical LEB128-family encoding must pass strict decoding",
-            );
+        let strict = unsafe {
+            $codec::<$ty, Strict>::decode(&output[..written], 0)
+        }
+        .expect("canonical LEB128-family encoding must pass strict decoding");
         let non_strict = unsafe {
             $codec::<$ty, NonStrict>::decode(&output[..written], 0)
         }
