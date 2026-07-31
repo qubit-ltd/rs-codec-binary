@@ -9,6 +9,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
+leb128 = "0.2"
 libfuzzer-sys = "0.4"
 qubit-codec = { path = "../../rs-codec", version = "0.11.0" }
 qubit-codec-binary = { path = ".." }

@@ -24,7 +24,8 @@ fn nonzero(value: usize) -> NonZeroUsize {
 
 /// Checks the exact ZigZag LEB128 bytes for an `i16` value.
 fn assert_i16_zig_zag_bytes(value: i16, expected: &[u8]) {
-    let mut output = [0u8; ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; ZigZagCodec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
 
     let len =
         unsafe { ZigZagCodec::<i16, NonStrict>::encode(value, &mut output, 0) };
@@ -39,14 +40,35 @@ fn assert_i16_zig_zag_bytes(value: i16, expected: &[u8]) {
 #[test]
 fn test_zig_zag_codec_exposes_unit_bounds() {
     assert_eq!(1, ZigZagCodec::<i8, NonStrict>::MIN_UNITS_PER_VALUE);
-    assert_eq!(2, ZigZagCodec::<i8, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(3, ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(5, ZigZagCodec::<i32, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(10, ZigZagCodec::<i64, NonStrict>::MAX_UNITS_PER_VALUE);
-    assert_eq!(19, ZigZagCodec::<i128, NonStrict>::MAX_UNITS_PER_VALUE);
+    assert_eq!(2, ZigZagCodec::<i8, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(2, ZigZagCodec::<i8, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(3, ZigZagCodec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(3, ZigZagCodec::<i16, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(5, ZigZagCodec::<i32, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE);
+    assert_eq!(5, ZigZagCodec::<i32, NonStrict>::MAX_DECODE_UNITS_PER_VALUE);
+    assert_eq!(
+        10,
+        ZigZagCodec::<i64, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        10,
+        ZigZagCodec::<i64, NonStrict>::MAX_DECODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        19,
+        ZigZagCodec::<i128, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        19,
+        ZigZagCodec::<i128, NonStrict>::MAX_DECODE_UNITS_PER_VALUE
+    );
     assert_eq!(
         (isize::BITS as usize).div_ceil(7),
-        ZigZagCodec::<isize, Strict>::MAX_UNITS_PER_VALUE
+        ZigZagCodec::<isize, Strict>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        (isize::BITS as usize).div_ceil(7),
+        ZigZagCodec::<isize, Strict>::MAX_DECODE_UNITS_PER_VALUE
     );
 }
 
@@ -84,7 +106,8 @@ fn test_zig_zag_codec_non_strict_accepts_redundant_values() {
 
 #[test]
 fn test_zig_zag_codec_roundtrips_all_i8_values() {
-    let mut output = [0u8; ZigZagCodec::<i8, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; ZigZagCodec::<i8, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     for value in i8::MIN..=i8::MAX {
         let len = unsafe {
             ZigZagCodec::<i8, NonStrict>::encode(value, &mut output, 0)
@@ -99,7 +122,7 @@ fn test_zig_zag_codec_roundtrips_all_i8_values() {
 #[test]
 fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
     let mut output =
-        [0u8; ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; ZigZagCodec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
     let len =
         unsafe { ZigZagCodec::<i16, NonStrict>::encode(-300, &mut output, 1) };
 
@@ -115,15 +138,19 @@ fn test_zig_zag_codec_reads_and_writes_values_unchecked() {
 fn test_zig_zag_codec_encodes_and_decodes_through_codec_trait() {
     let mut codec = ZigZagCodec::<i16, NonStrict>::default();
     let mut output =
-        [0u8; ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE + 2];
+        [0u8; ZigZagCodec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
 
     assert_eq!(
         ZigZagCodec::<i16, NonStrict>::MIN_UNITS_PER_VALUE,
         <ZigZagCodec<i16, NonStrict> as Codec>::MIN_UNITS_PER_VALUE
     );
     assert_eq!(
-        ZigZagCodec::<i16, NonStrict>::MAX_UNITS_PER_VALUE,
-        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_UNITS_PER_VALUE
+        ZigZagCodec::<i16, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE,
+        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_ENCODE_UNITS_PER_VALUE
+    );
+    assert_eq!(
+        ZigZagCodec::<i16, NonStrict>::MAX_DECODE_UNITS_PER_VALUE,
+        <ZigZagCodec<i16, NonStrict> as Codec>::MAX_DECODE_UNITS_PER_VALUE
     );
 
     let written = unsafe { Codec::encode(&mut codec, &-300, &mut output, 1) }
@@ -164,6 +191,17 @@ fn test_zig_zag_codec_trait_encodes_into_exact_length_buffer() {
 }
 
 #[test]
+fn test_zig_zag_inherent_encode_accepts_exact_length_buffer() {
+    let mut output = [0_u8; 1];
+
+    let written =
+        unsafe { ZigZagCodec::<i64, NonStrict>::encode(-1, &mut output, 0) };
+
+    assert_eq!(1, written);
+    assert_eq!([0x01], output);
+}
+
+#[test]
 fn test_zig_zag_codec_trait_decodes_single_byte_value() {
     let mut codec = ZigZagCodec::<i64, NonStrict>::default();
     let input = [0x01u8];
@@ -176,7 +214,8 @@ fn test_zig_zag_codec_trait_decodes_single_byte_value() {
 
 #[test]
 fn test_zig_zag_codec_handles_signed_extremes() {
-    let mut output = [0u8; ZigZagCodec::<i128, NonStrict>::MAX_UNITS_PER_VALUE];
+    let mut output =
+        [0u8; ZigZagCodec::<i128, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
     let len = unsafe {
         ZigZagCodec::<i128, NonStrict>::encode(i128::MIN, &mut output, 0)
     };
