@@ -28,14 +28,14 @@ Encode a fixed-width field and a compact integer into caller-owned buffers:
 use qubit_codec::BigEndian;
 use qubit_codec_binary::{BinaryCodec, Leb128Codec, NonStrict};
 
-let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_UNITS_PER_VALUE];
+let mut fixed = [0_u8; BinaryCodec::<u32, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE];
 let fixed_len = unsafe {
     BinaryCodec::<u32, BigEndian>::encode(0x0102_0304, &mut fixed, 0)
 };
 assert_eq!(4, fixed_len);
 assert_eq!([0x01, 0x02, 0x03, 0x04], fixed);
 
-let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_UNITS_PER_VALUE];
+let mut compact = [0_u8; Leb128Codec::<u64, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
 let compact_len = unsafe {
     Leb128Codec::<u64, NonStrict>::encode(300, &mut compact, 0)
 };

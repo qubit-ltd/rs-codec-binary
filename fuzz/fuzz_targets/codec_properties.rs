@@ -16,6 +16,7 @@ use qubit_codec::{
 use qubit_codec_binary::{
     BinaryCodec,
     Leb128Codec,
+    Leb128DecodeError,
     Leb128DecodeErrorKind,
     NonStrict,
     Strict,
@@ -29,14 +30,20 @@ macro_rules! assert_decode_policies {
     ($codec:ident, $ty:ty, $input:expr) => {{
         let non_strict = unsafe { $codec::<$ty, NonStrict>::decode($input, 0) };
         let strict = unsafe { $codec::<$ty, Strict>::decode($input, 0) };
-        assert_strict_success_is_non_strict_success(strict, non_strict);
+        assert_policy_results(
+            $input,
+            $codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE,
+            strict,
+            non_strict,
+        );
     }};
 }
 
 macro_rules! assert_leb128_roundtrip {
     ($codec:ident, $ty:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output = [0_u8; $codec::<$ty, NonStrict>::MAX_UNITS_PER_VALUE];
+        let mut output =
+            [0_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
         let written = unsafe {
             $codec::<$ty, NonStrict>::encode(expected, &mut output, 0)
         };
@@ -64,14 +71,17 @@ macro_rules! assert_leb128_roundtrip {
 macro_rules! assert_binary_roundtrip {
     ($ty:ty, $order:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output =
-            [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_UNITS_PER_VALUE + 2];
+        let mut output = [0xA5_u8;
+            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
         let written = unsafe {
             BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1)
         };
         let (actual, consumed) =
             unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
-        assert_eq!(BinaryCodec::<$ty, $order>::MAX_UNITS_PER_VALUE, written);
+        assert_eq!(
+            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE,
+            written
+        );
         assert_eq!(expected, actual);
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -82,14 +92,17 @@ macro_rules! assert_binary_roundtrip {
 macro_rules! assert_binary_float_roundtrip {
     ($ty:ty, $order:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output =
-            [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_UNITS_PER_VALUE + 2];
+        let mut output = [0xA5_u8;
+            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
         let written = unsafe {
             BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1)
         };
         let (actual, consumed) =
             unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
-        assert_eq!(BinaryCodec::<$ty, $order>::MAX_UNITS_PER_VALUE, written);
+        assert_eq!(
+            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE,
+            written
+        );
         assert_eq!(expected.to_bits(), actual.to_bits());
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -142,23 +155,128 @@ fn decode_arbitrary_input(input: &[u8]) {
     assert_decode_policies!(ZigZagCodec, i64, input);
     assert_decode_policies!(ZigZagCodec, i128, input);
     assert_decode_policies!(ZigZagCodec, isize, input);
+    assert_reference_decoders(input);
 }
 
-/// Verifies that strict acceptance implies the same non-strict value and
-/// consumed byte count.
-fn assert_strict_success_is_non_strict_success<T, E>(
-    strict: Result<(T, core::num::NonZeroUsize), E>,
-    non_strict: Result<(T, core::num::NonZeroUsize), E>,
+/// Verifies result metadata and the relationship between decoding policies.
+fn assert_policy_results<T>(
+    input: &[u8],
+    max_bytes: usize,
+    strict: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    non_strict: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+) where
+    T: Copy + core::fmt::Debug + PartialEq,
+{
+    assert_decode_result_metadata(input, max_bytes, &strict, true);
+    assert_decode_result_metadata(input, max_bytes, &non_strict, false);
+
+    match (strict, non_strict) {
+        (Ok(expected), Ok(actual)) => assert_eq!(expected, actual),
+        (Err(error), Ok((_, consumed))) => {
+            assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
+            assert_eq!(error.consumed(), Some(consumed));
+        }
+        (Err(expected), Err(actual)) => {
+            assert_ne!(Leb128DecodeErrorKind::NonCanonical, actual.kind());
+            assert_eq!(expected, actual);
+        }
+        (Ok(_), Err(error)) => {
+            panic!("non-strict decoding rejected strict-valid input: {error}")
+        }
+    }
+}
+
+/// Verifies success boundaries and detailed decoding error invariants.
+fn assert_decode_result_metadata<T>(
+    input: &[u8],
+    max_bytes: usize,
+    result: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    strict: bool,
+) {
+    match result {
+        Ok((_, consumed)) => {
+            let consumed = consumed.get();
+            assert!(consumed <= input.len().min(max_bytes));
+            assert_eq!(0, input[consumed - 1] & 0x80);
+        }
+        Err(error) => {
+            assert_eq!(0, error.start_index());
+            match error.kind() {
+                Leb128DecodeErrorKind::Incomplete => {
+                    assert!(input.len() < max_bytes);
+                    assert!(input.iter().all(|byte| byte & 0x80 != 0));
+                    assert_eq!(input.len(), error.error_index());
+                    assert_eq!(None, error.consumed());
+                    assert_eq!(Some(input.len()), error.available());
+                    assert_eq!(
+                        Some(input.len() + 1),
+                        error.required().map(|n| n.get())
+                    );
+                    assert_eq!(Some(1), error.additional().map(|n| n.get()));
+                }
+                Leb128DecodeErrorKind::Malformed
+                | Leb128DecodeErrorKind::NonCanonical => {
+                    let consumed = error
+                        .consumed()
+                        .expect("invalid input must report consumed bytes")
+                        .get();
+                    assert!(consumed <= input.len().min(max_bytes));
+                    assert_eq!(consumed - 1, error.error_index());
+                    assert_eq!(None, error.required());
+                    assert_eq!(None, error.available());
+                    assert_eq!(None, error.additional());
+                    if error.is_noncanonical() {
+                        assert!(strict);
+                        assert_eq!(0, input[consumed - 1] & 0x80);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Differentially checks the permissive 64-bit decoders against `leb128`.
+fn assert_reference_decoders(input: &[u8]) {
+    let reference_unsigned = reference_unsigned(input);
+    let unsigned = unsafe { Leb128Codec::<u64, NonStrict>::decode(input, 0) };
+    assert_matches_reference(unsigned, reference_unsigned);
+
+    let signed = unsafe { Leb128Codec::<i64, NonStrict>::decode(input, 0) };
+    assert_matches_reference(signed, reference_signed(input));
+
+    let zig_zag = unsafe { ZigZagCodec::<i64, NonStrict>::decode(input, 0) };
+    let reference = reference_unsigned.map(|(encoded, consumed)| {
+        let value = ((encoded >> 1) as i64) ^ (-((encoded & 1) as i64));
+        (value, consumed)
+    });
+    assert_matches_reference(zig_zag, reference);
+}
+
+/// Compares one codec result with an independent permissive decoder result.
+fn assert_matches_reference<T>(
+    actual: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    expected: Option<(T, usize)>,
 ) where
     T: core::fmt::Debug + PartialEq,
-    E: core::fmt::Debug,
 {
-    if let Ok((expected_value, expected_consumed)) = strict {
-        let (actual_value, actual_consumed) = non_strict
-            .expect("non-strict decoding must accept strict-valid input");
-        assert_eq!(expected_value, actual_value);
-        assert_eq!(expected_consumed, actual_consumed);
-    }
+    let actual = actual.ok().map(|(value, consumed)| (value, consumed.get()));
+    assert_eq!(expected, actual);
+}
+
+/// Decodes unsigned LEB128 with the independent reference implementation.
+fn reference_unsigned(input: &[u8]) -> Option<(u64, usize)> {
+    let mut remaining = input;
+    leb128::read::unsigned(&mut remaining)
+        .ok()
+        .map(|value| (value, input.len() - remaining.len()))
+}
+
+/// Decodes signed LEB128 with the independent reference implementation.
+fn reference_signed(input: &[u8]) -> Option<(i64, usize)> {
+    let mut remaining = input;
+    leb128::read::signed(&mut remaining)
+        .ok()
+        .map(|value| (value, input.len() - remaining.len()))
 }
 
 /// Verifies roundtrips for every LEB128 and ZigZag supported width.
