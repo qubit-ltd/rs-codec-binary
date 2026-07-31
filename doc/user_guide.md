@@ -64,9 +64,12 @@ assert_eq!(id_len, used_id.get());
 assert_eq!(delta_len, used_delta.get());
 ```
 
-The `MAX_UNITS_PER_VALUE` allocation is deliberately conservative for LEB128
+The `MAX_ENCODE_UNITS_PER_VALUE` allocation is deliberately conservative for LEB128
 and ZigZag; encode returns the actual byte count. Fixed-width codecs consume
 and write their exact scalar width.
+Use `MAX_DECODE_UNITS_PER_VALUE` for decode-side bounded buffers and type-width
+validation. The two bounds are equal for the current binary codecs but have
+independent contracts.
 
 ## LEB128 Policies and Errors
 
@@ -98,11 +101,12 @@ assert_eq!(Some(1), error.available());
 The direct codec methods do not check slice bounds. Before calling them:
 
 1. For `BinaryCodec`, make at least `MIN_UNITS_PER_VALUE` bytes readable or
-   `MAX_UNITS_PER_VALUE` bytes writable from the index.
-2. For LEB128 and ZigZag encoding, reserve `MAX_UNITS_PER_VALUE` writable
+   `MAX_ENCODE_UNITS_PER_VALUE` bytes writable from the index.
+2. For LEB128 and ZigZag encoding, reserve `MAX_ENCODE_UNITS_PER_VALUE` writable
    bytes, then retain only the returned prefix.
 3. For LEB128 and ZigZag decoding, supply at least one readable byte and,
-   where possible, all bytes currently buffered up to the type maximum.
+   where possible, all bytes currently buffered up to
+   `MAX_DECODE_UNITS_PER_VALUE`.
 4. Keep `usize` and `isize` out of persistent or cross-platform formats: their
    bounds follow the target pointer width. Prefer fixed-width integers.
 
