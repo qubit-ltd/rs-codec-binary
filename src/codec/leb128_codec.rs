@@ -311,6 +311,7 @@ macro_rules! impl_signed_leb128_codec {
             /// The caller must guarantee that
             /// `output.as_mut_ptr().add(output_index)` is valid to write
             /// [`Self::MAX_UNITS_PER_VALUE`] bytes.
+            #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
             pub unsafe fn encode(
                 value: $ty,
@@ -525,7 +526,7 @@ where
                 ));
             }
             let consumed = offset + 1;
-            if P::STRICT && !has_canonical_uleb_len(value, consumed) {
+            if P::STRICT && !is_canonical_uleb_terminal(offset, byte) {
                 return Err(noncanonical_decode_error(index, consumed));
             }
             return Ok(Some((value, consumed)));
@@ -651,6 +652,7 @@ where
     );
     let mut value = 0i128;
     let mut shift = 0u32;
+    let mut previous_byte = 0u8;
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
         let byte =
@@ -671,11 +673,14 @@ where
                 value |= (!0i128) << (shift + 7);
             }
             let consumed = offset + 1;
-            if P::STRICT && !has_canonical_sleb_len(value, consumed) {
+            if P::STRICT
+                && !is_canonical_sleb_terminal(offset, previous_byte, byte)
+            {
                 return Err(noncanonical_decode_error(index, consumed));
             }
             return Ok(Some((value, consumed)));
         }
+        previous_byte = byte;
         shift += 7;
     }
     if available < max_bytes {
@@ -783,80 +788,48 @@ fn signed_final_payload_fits(byte: u8, bits: u32, offset: usize) -> bool {
     }
 }
 
-/// Checks whether an unsigned LEB128 value used its canonical encoded length.
+/// Checks whether an unsigned LEB128 terminal byte is canonical.
 ///
 /// # Parameters
 ///
-/// - `value`: Decoded unsigned value.
-/// - `actual_len`: Number of bytes consumed from the input.
+/// - `offset`: Zero-based byte offset of the terminal byte.
+/// - `byte`: Terminal byte without a continuation flag.
 ///
 /// # Returns
 ///
-/// Returns `true` if `actual_len` is the canonical encoded length of `value`.
+/// Returns `true` when the terminal byte is necessary to encode the value.
 #[must_use]
 #[inline(always)]
-fn has_canonical_uleb_len(value: u128, actual_len: usize) -> bool {
-    canonical_uleb_len(value) == actual_len
+fn is_canonical_uleb_terminal(offset: usize, byte: u8) -> bool {
+    offset == 0 || byte & 0x7F != 0
 }
 
-/// Checks whether a signed LEB128 value used its canonical encoded length.
+/// Checks whether a signed LEB128 terminal byte is canonical.
 ///
 /// # Parameters
 ///
-/// - `value`: Decoded signed value.
-/// - `actual_len`: Number of bytes consumed from the input.
+/// - `offset`: Zero-based byte offset of the terminal byte.
+/// - `previous_byte`: The preceding continuation byte when `offset` is
+///   non-zero.
+/// - `byte`: Terminal byte without a continuation flag.
 ///
 /// # Returns
 ///
-/// Returns `true` if `actual_len` is the canonical encoded length of `value`.
+/// Returns `true` when the terminal byte is necessary to preserve the signed
+/// value represented by the preceding byte.
 #[must_use]
 #[inline(always)]
-fn has_canonical_sleb_len(value: i128, actual_len: usize) -> bool {
-    canonical_sleb_len(value) == actual_len
-}
-
-/// Computes the canonical unsigned LEB128 encoded length.
-///
-/// # Parameters
-///
-/// - `value`: Unsigned value to measure.
-///
-/// # Returns
-///
-/// Returns the number of bytes used by the canonical unsigned LEB128 encoding.
-#[must_use]
-#[inline]
-fn canonical_uleb_len(mut value: u128) -> usize {
-    let mut len = 1;
-    while value >= 0x80 {
-        value >>= 7;
-        len += 1;
+fn is_canonical_sleb_terminal(
+    offset: usize,
+    previous_byte: u8,
+    byte: u8,
+) -> bool {
+    if offset == 0 {
+        return true;
     }
-    len
-}
-
-/// Computes the canonical signed LEB128 encoded length.
-///
-/// # Parameters
-///
-/// - `value`: Signed value to measure.
-///
-/// # Returns
-///
-/// Returns the number of bytes used by the canonical signed LEB128 encoding.
-#[must_use]
-#[inline]
-fn canonical_sleb_len(mut value: i128) -> usize {
-    let mut len = 0;
-    loop {
-        let byte = (value & 0x7F) as u8;
-        let sign_bit_set = byte & 0x40 != 0;
-        value >>= 7;
-        len += 1;
-        if (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set) {
-            return len;
-        }
-    }
+    let payload = byte & 0x7F;
+    !((payload == 0 && previous_byte & 0x40 == 0)
+        || (payload == 0x7F && previous_byte & 0x40 != 0))
 }
 
 /// Encodes an unsigned integer as canonical LEB128 without bounds checks.

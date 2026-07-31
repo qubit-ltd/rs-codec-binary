@@ -121,6 +121,36 @@ fn test_leb128_codec_non_strict_accepts_redundant_values() {
 }
 
 #[test]
+fn test_leb128_codec_strictly_checks_terminal_sign_extensions() {
+    let decoded =
+        unsafe { Leb128Codec::<u16, Strict>::decode(&[0x80, 0x01], 0) }
+            .expect("canonical unsigned value should decode");
+    assert_decoded_eq((128, 2), decoded);
+
+    let error = unsafe { Leb128Codec::<u16, Strict>::decode(&[0xff, 0x00], 0) }
+        .expect_err("redundant unsigned terminal byte should fail");
+    assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
+    assert_eq!(Some(nonzero(2)), error.consumed());
+
+    let decoded =
+        unsafe { Leb128Codec::<i16, Strict>::decode(&[0xff, 0x00], 0) }
+            .expect("positive signed boundary value should decode");
+    assert_decoded_eq((127, 2), decoded);
+
+    let decoded =
+        unsafe { Leb128Codec::<i16, Strict>::decode(&[0x80, 0x7f], 0) }
+            .expect("negative signed boundary value should decode");
+    assert_decoded_eq((-128, 2), decoded);
+
+    for bytes in [[0x80, 0x00], [0xff, 0x7f]] {
+        let error = unsafe { Leb128Codec::<i16, Strict>::decode(&bytes, 0) }
+            .expect_err("redundant signed terminal byte should fail");
+        assert_eq!(Leb128DecodeErrorKind::NonCanonical, error.kind());
+        assert_eq!(Some(nonzero(2)), error.consumed());
+    }
+}
+
+#[test]
 fn test_leb128_codec_roundtrips_all_u8_and_i8_values() {
     let mut unsigned_output =
         [0u8; Leb128Codec::<u8, NonStrict>::MAX_UNITS_PER_VALUE];
