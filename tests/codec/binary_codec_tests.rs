@@ -12,27 +12,46 @@ use qubit_codec::{
     LittleEndian,
 };
 use qubit_codec_binary::BinaryCodec;
+use qubit_codec::NativeEndian;
+
+#[test]
+fn native_endian_round_trip_matches_platform_order() {
+    let value = 0x1234_5678_u32;
+    let mut output = [0_u8; BinaryCodec::<u32, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
+    let written = unsafe { BinaryCodec::<u32, NativeEndian>::encode(value, &mut output, 0) };
+    assert_eq!(4, written);
+    assert_eq!(value.to_ne_bytes(), output);
+    let (decoded, consumed) = unsafe { BinaryCodec::<u32, NativeEndian>::decode(&output, 0) };
+    assert_eq!(value, decoded);
+    assert_eq!(4, consumed.get());
+}
 
 use super::assertions_tests::assert_decoded_eq;
 
 #[test]
 fn test_binary_codec_exposes_unit_bounds() {
-    assert_eq!(1, BinaryCodec::<u8, BigEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(1, BinaryCodec::<u8, BigEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(1, BinaryCodec::<i8, LittleEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(1, BinaryCodec::<i8, LittleEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(2, BinaryCodec::<u16, BigEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(2, BinaryCodec::<u16, BigEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(4, BinaryCodec::<u32, LittleEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(4, BinaryCodec::<u32, LittleEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(8, BinaryCodec::<u64, BigEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(8, BinaryCodec::<u64, BigEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(16, BinaryCodec::<u128, LittleEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(16, BinaryCodec::<u128, LittleEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(4, BinaryCodec::<f32, BigEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(4, BinaryCodec::<f32, BigEndian>::MAX_UNITS_PER_VALUE);
-    assert_eq!(8, BinaryCodec::<f64, LittleEndian>::MIN_UNITS_PER_VALUE);
-    assert_eq!(8, BinaryCodec::<f64, LittleEndian>::MAX_UNITS_PER_VALUE);
+    macro_rules! assert_bounds {
+        ($ty:ty, $order:ty, $width:expr) => {
+            assert_eq!($width, BinaryCodec::<$ty, $order>::MIN_UNITS_PER_VALUE);
+            assert_eq!(
+                $width,
+                BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE
+            );
+            assert_eq!(
+                $width,
+                BinaryCodec::<$ty, $order>::MAX_DECODE_UNITS_PER_VALUE
+            );
+        };
+    }
+
+    assert_bounds!(u8, BigEndian, 1);
+    assert_bounds!(i8, LittleEndian, 1);
+    assert_bounds!(u16, BigEndian, 2);
+    assert_bounds!(u32, LittleEndian, 4);
+    assert_bounds!(u64, BigEndian, 8);
+    assert_bounds!(u128, LittleEndian, 16);
+    assert_bounds!(f32, BigEndian, 4);
+    assert_bounds!(f64, LittleEndian, 8);
 }
 
 #[test]
@@ -78,8 +97,8 @@ fn test_binary_codec_roundtrips_integer_extremes_for_all_fixed_width_types() {
         ($ty:ty, $value:expr) => {{
             let value: $ty = $value;
 
-            let mut output =
-                [0u8; BinaryCodec::<$ty, BigEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<$ty, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<$ty, BigEndian>::encode(value, &mut output, 0)
             };
@@ -89,8 +108,8 @@ fn test_binary_codec_roundtrips_integer_extremes_for_all_fixed_width_types() {
                 unsafe { BinaryCodec::<$ty, BigEndian>::decode(&output, 0) };
             assert_decoded_eq((value, output.len()), decoded);
 
-            let mut output =
-                [0u8; BinaryCodec::<$ty, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<$ty, LittleEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<$ty, LittleEndian>::encode(value, &mut output, 0)
             };
@@ -131,8 +150,8 @@ fn test_binary_codec_preserves_f32_bit_patterns() {
             let bits: u32 = $bits;
             let value = f32::from_bits(bits);
 
-            let mut output =
-                [0u8; BinaryCodec::<f32, BigEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<f32, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<f32, BigEndian>::encode(value, &mut output, 0)
             };
@@ -143,8 +162,8 @@ fn test_binary_codec_preserves_f32_bit_patterns() {
             assert_eq!(bits, decoded.to_bits());
             assert_eq!(output.len(), consumed.get());
 
-            let mut output =
-                [0u8; BinaryCodec::<f32, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<f32, LittleEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<f32, LittleEndian>::encode(value, &mut output, 0)
             };
@@ -170,8 +189,8 @@ fn test_binary_codec_preserves_f64_bit_patterns() {
             let bits: u64 = $bits;
             let value = f64::from_bits(bits);
 
-            let mut output =
-                [0u8; BinaryCodec::<f64, BigEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<f64, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<f64, BigEndian>::encode(value, &mut output, 0)
             };
@@ -182,8 +201,8 @@ fn test_binary_codec_preserves_f64_bit_patterns() {
             assert_eq!(bits, decoded.to_bits());
             assert_eq!(output.len(), consumed.get());
 
-            let mut output =
-                [0u8; BinaryCodec::<f64, LittleEndian>::MAX_UNITS_PER_VALUE];
+            let mut output = [0u8;
+                BinaryCodec::<f64, LittleEndian>::MAX_ENCODE_UNITS_PER_VALUE];
             let written = unsafe {
                 BinaryCodec::<f64, LittleEndian>::encode(value, &mut output, 0)
             };
@@ -213,7 +232,11 @@ fn test_binary_codec_encodes_and_decodes_through_codec_trait() {
     );
     assert_eq!(
         4,
-        <BinaryCodec<u32, BigEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<u32, BigEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
+    );
+    assert_eq!(
+        4,
+        <BinaryCodec<u32, BigEndian> as Codec>::MAX_DECODE_UNITS_PER_VALUE,
     );
 
     let written =
@@ -243,7 +266,7 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     );
     assert_eq!(
         1,
-        <BinaryCodec<u8, BigEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<u8, BigEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
     );
     assert_eq!(
         1,
@@ -251,7 +274,7 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     );
     assert_eq!(
         1,
-        <BinaryCodec<i8, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<i8, LittleEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
     );
     assert_eq!(
         2,
@@ -259,7 +282,7 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     );
     assert_eq!(
         2,
-        <BinaryCodec<u16, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<u16, LittleEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
     );
     assert_eq!(
         4,
@@ -267,7 +290,7 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     );
     assert_eq!(
         4,
-        <BinaryCodec<f32, BigEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<f32, BigEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
     );
     assert_eq!(
         8,
@@ -275,7 +298,7 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
     );
     assert_eq!(
         8,
-        <BinaryCodec<f64, LittleEndian> as Codec>::MAX_UNITS_PER_VALUE,
+        <BinaryCodec<f64, LittleEndian> as Codec>::MAX_ENCODE_UNITS_PER_VALUE,
     );
 
     assert_eq!(
