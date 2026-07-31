@@ -847,30 +847,50 @@ macro_rules! impl_native_integer_binary_codec {
     ($ty:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a native-endian value without bounds checks.
             ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is readable.
+            /// The caller must guarantee that the value-sized range is
+            /// readable.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
+            pub unsafe fn decode(
+                input: &[u8],
+                input_index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
+                let raw = unsafe {
+                    UncheckedSlice::read_ne_unaligned(input, input_index)
+                };
                 (raw, qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes a native-endian value without bounds checks.
             ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is writable.
+            /// The caller must guarantee that the value-sized range is
+            /// writable.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
-                unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value) };
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                output_index: usize,
+            ) -> usize {
+                unsafe {
+                    UncheckedSlice::write_ne_unaligned(
+                        output,
+                        output_index,
+                        value,
+                    )
+                };
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
         }
@@ -885,12 +905,24 @@ macro_rules! impl_native_integer_binary_codec {
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
-            unsafe fn decode(&mut self, input: &[u8], input_index: usize) -> Result<($ty, core::num::NonZeroUsize), qubit_codec::DecodeFailure<Self::DecodeError>> {
+            unsafe fn decode(
+                &mut self,
+                input: &[u8],
+                input_index: usize,
+            ) -> Result<
+                ($ty, core::num::NonZeroUsize),
+                qubit_codec::DecodeFailure<Self::DecodeError>,
+            > {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
             #[inline(always)]
-            unsafe fn encode(&mut self, value: &$ty, output: &mut [u8], output_index: usize) -> Result<usize, Self::EncodeError> {
+            unsafe fn encode(
+                &mut self,
+                value: &$ty,
+                output: &mut [u8],
+                output_index: usize,
+            ) -> Result<usize, Self::EncodeError> {
                 unsafe { Self::encode(*value, output, output_index) };
                 Ok(Self::MAX_ENCODE_UNITS_PER_VALUE)
             }
@@ -902,30 +934,55 @@ macro_rules! impl_native_float_binary_codec {
     ($ty:ty, $bits:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MIN_UNITS_PER_VALUE;
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
+                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a native-endian floating-point value without bounds checks.
+            /// Decodes a native-endian floating-point value without bounds
+            /// checks.
             ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is readable.
+            /// The caller must guarantee that the value-sized range is
+            /// readable.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
-                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
-                (<$ty>::from_bits(raw), qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE))
+            pub unsafe fn decode(
+                input: &[u8],
+                input_index: usize,
+            ) -> ($ty, core::num::NonZeroUsize) {
+                let raw = unsafe {
+                    UncheckedSlice::read_ne_unaligned(input, input_index)
+                };
+                (
+                    <$ty>::from_bits(raw),
+                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                )
             }
 
-            /// Encodes a native-endian floating-point value without bounds checks.
+            /// Encodes a native-endian floating-point value without bounds
+            /// checks.
             ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is writable.
+            /// The caller must guarantee that the value-sized range is
+            /// writable.
             #[inline(always)]
-            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
-                unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value.to_bits()) };
+            pub unsafe fn encode(
+                value: $ty,
+                output: &mut [u8],
+                output_index: usize,
+            ) -> usize {
+                unsafe {
+                    UncheckedSlice::write_ne_unaligned(
+                        output,
+                        output_index,
+                        value.to_bits(),
+                    )
+                };
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
         }
@@ -940,12 +997,24 @@ macro_rules! impl_native_float_binary_codec {
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
             #[inline(always)]
-            unsafe fn decode(&mut self, input: &[u8], input_index: usize) -> Result<($ty, core::num::NonZeroUsize), qubit_codec::DecodeFailure<Self::DecodeError>> {
+            unsafe fn decode(
+                &mut self,
+                input: &[u8],
+                input_index: usize,
+            ) -> Result<
+                ($ty, core::num::NonZeroUsize),
+                qubit_codec::DecodeFailure<Self::DecodeError>,
+            > {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
             #[inline(always)]
-            unsafe fn encode(&mut self, value: &$ty, output: &mut [u8], output_index: usize) -> Result<usize, Self::EncodeError> {
+            unsafe fn encode(
+                &mut self,
+                value: &$ty,
+                output: &mut [u8],
+                output_index: usize,
+            ) -> Result<usize, Self::EncodeError> {
                 unsafe { Self::encode(*value, output, output_index) };
                 Ok(Self::MAX_ENCODE_UNITS_PER_VALUE)
             }
