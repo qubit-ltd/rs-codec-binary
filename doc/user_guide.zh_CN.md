@@ -62,8 +62,10 @@ assert_eq!(id_len, used_id.get());
 assert_eq!(delta_len, used_delta.get());
 ```
 
-对 LEB128 与 ZigZag 而言，按 `MAX_UNITS_PER_VALUE` 分配是保守预留；`encode`
+对 LEB128 与 ZigZag 而言，按 `MAX_ENCODE_UNITS_PER_VALUE` 分配是保守预留；`encode`
 返回实际字节数。定长 codec 则总是读写其标量的确切宽度。
+解码侧的有界缓冲区与类型宽度校验应使用 `MAX_DECODE_UNITS_PER_VALUE`。当前 binary
+codec 的两个上限数值相同，但契约彼此独立。
 
 ## LEB128 策略与错误
 
@@ -93,11 +95,11 @@ assert_eq!(Some(1), error.available());
 直接 codec 方法不会检查 slice 边界。调用前请确保：
 
 1. 对 `BinaryCodec`，从下标起至少有 `MIN_UNITS_PER_VALUE` 可读字节，或
-   `MAX_UNITS_PER_VALUE` 可写字节。
-2. 对 LEB128 和 ZigZag 编码，预留 `MAX_UNITS_PER_VALUE` 个可写字节，再只保留
+   `MAX_ENCODE_UNITS_PER_VALUE` 可写字节。
+2. 对 LEB128 和 ZigZag 编码，预留 `MAX_ENCODE_UNITS_PER_VALUE` 个可写字节，再只保留
    返回长度所覆盖的前缀。
 3. 对 LEB128 和 ZigZag 解码，至少提供一个可读字节；可以时应提供当前已缓冲的、
-   不超过类型最大值的全部字节。
+   不超过 `MAX_DECODE_UNITS_PER_VALUE` 的全部字节。
 4. 持久化或跨平台格式不要使用 `usize`、`isize`，它们的边界依赖目标指针宽度；
    请使用固定宽度整数。
 
