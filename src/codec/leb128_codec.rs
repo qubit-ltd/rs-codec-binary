@@ -19,7 +19,6 @@ use qubit_codec::{
 use crate::{
     Leb128DecodeError,
     Leb128DecodePolicy,
-    NonStrict,
 };
 
 /// Maps detailed LEB128 decoding failures to the generic codec failure type.
@@ -43,15 +42,27 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 
 /// Type-level unchecked LEB128 codec.
 ///
-/// Encoding is always canonical; `P` only affects decoding.
+/// Encoding is always canonical; `P` only affects decoding. Encoding-only
+/// callers should conventionally use [`crate::NonStrict`] because no decoding policy
+/// is applied on that path.
 ///
 /// # Type Parameters
 ///
 /// - `T`: Integer value type to decode from LEB128 bytes and encode into
 ///   canonical LEB128 bytes.
-/// - `P`: Type-level decoding policy implementing [`Leb128DecodePolicy`]. Use
-///   [`crate::Strict`] to reject non-canonical inputs, or [`NonStrict`] to
-///   accept non-canonical inputs.
+/// - `P`: Required type-level decoding policy implementing
+///   [`Leb128DecodePolicy`]. Use [`crate::Strict`] to reject non-canonical
+///   inputs, or [`crate::NonStrict`] to accept non-canonical inputs. This parameter
+///   does not affect canonical encoding.
+///
+/// The decoding policy is intentionally required so wire-format callers make
+/// the canonicality contract explicit.
+///
+/// ```compile_fail
+/// use qubit_codec_binary::Leb128Codec;
+///
+/// let _ = Leb128Codec::<u64>::default();
+/// ```
 ///
 /// # Examples
 ///
@@ -74,7 +85,7 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 /// assert_eq!(2, consumed.get());
 /// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct Leb128Codec<T, P = NonStrict> {
+pub struct Leb128Codec<T, P> {
     marker: PhantomData<fn() -> (T, P)>,
 }
 
