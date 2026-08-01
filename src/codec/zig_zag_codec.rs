@@ -22,13 +22,28 @@ use qubit_codec::Codec;
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
 ///
+/// Encoding is always canonical; `P` only affects decoding. Encoding-only
+/// callers should conventionally use [`NonStrict`] because no decoding policy
+/// is applied on that path.
+///
 /// # Type Parameters
 ///
 /// - `T`: Signed integer value type to decode from ZigZag-encoded LEB128 bytes
 ///   and encode into ZigZag-encoded LEB128 bytes.
-/// - `P`: Type-level decoding policy implementing [`Leb128DecodePolicy`] for
-///   the underlying unsigned LEB128 payload. Use [`crate::Strict`] to reject
-///   non-canonical inputs, or [`NonStrict`] to accept non-canonical inputs.
+/// - `P`: Required type-level decoding policy implementing
+///   [`Leb128DecodePolicy`] for the underlying unsigned LEB128 payload. Use
+///   [`crate::Strict`] to reject non-canonical inputs, or [`NonStrict`] to
+///   accept non-canonical inputs. This parameter does not affect canonical
+///   encoding.
+///
+/// The decoding policy is intentionally required so wire-format callers make
+/// the canonicality contract explicit.
+///
+/// ```compile_fail
+/// use qubit_codec_binary::ZigZagCodec;
+///
+/// let _ = ZigZagCodec::<i64>::default();
+/// ```
 ///
 /// # Examples
 ///
@@ -51,7 +66,7 @@ use qubit_codec::Codec;
 /// assert_eq!(1, consumed.get());
 /// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct ZigZagCodec<T, P = NonStrict> {
+pub struct ZigZagCodec<T, P> {
     marker: PhantomData<fn() -> (T, P)>,
 }
 

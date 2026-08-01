@@ -53,7 +53,7 @@ assert_eq!(&[0xac, 0x02], &compact[..compact_len]);
 
 | 能力 | 公开 API | 边界 |
 | --- | --- | --- |
-| 定长整数与浮点数 | `BinaryCodec<T, BigEndian>` / `BinaryCodec<T, LittleEndian>` | 支持明确位宽的整数及 `f32`、`f64`；不为 `usize`、`isize` 定义持久化宽度。 |
+| 定长整数与浮点数 | `BinaryCodec<T, BigEndian>` / `BinaryCodec<T, LittleEndian>` / `BinaryCodec<T, NativeEndian>` | 支持明确位宽的整数及 `f32`、`f64`。持久化和跨平台数据应使用 big- 或 little-endian；native-endian 仅适用于平台本地数据。不为 `usize`、`isize` 定义持久化宽度。 |
 | 紧凑整数 | `Leb128Codec<T, P>` | 编码始终规范化；`Strict` 拒绝非规范输入，`NonStrict` 接受兼容输入。 |
 | 紧凑有符号整数 | `ZigZagCodec<T, P>` | 将有符号值映射为无符号 LEB128 负载。 |
 | 解码诊断 | `Leb128DecodeError` | 区分不完整、畸形和非规范输入，并提供下标及可用/所需数量。 |
@@ -61,6 +61,9 @@ assert_eq!(&[0xac, 0x02], &compact[..compact_len]);
 本库不提供 `std::io` reader/writer、通用 owned-value adapter、分帧或缓冲。共享
 trait 与字节序标记请从 `qubit-codec` 导入；需要流适配器时使用
 `qubit-io-binary`。
+
+`Leb128Codec<T, P>` 与 `ZigZagCodec<T, P>` 必须显式指定解码策略。`P`
+不会影响规范化编码；仅编码的代码应按约定使用 `NonStrict` 作为标记。
 
 ## 延伸阅读
 

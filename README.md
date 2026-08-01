@@ -56,7 +56,7 @@ crate keeps the wire-format layer small and explicit, while
 
 | Capability | Public API | Boundary |
 | --- | --- | --- |
-| Fixed-width integers and floats | `BinaryCodec<T, BigEndian>` / `BinaryCodec<T, LittleEndian>` | Supports explicit-width integer types plus `f32` and `f64`; it does not define a persistent width for `usize` or `isize`. |
+| Fixed-width integers and floats | `BinaryCodec<T, BigEndian>` / `BinaryCodec<T, LittleEndian>` / `BinaryCodec<T, NativeEndian>` | Supports explicit-width integer types plus `f32` and `f64`. Use big- or little-endian encoding for persistent and cross-platform data; native-endian encoding is only for platform-local data. It does not define a persistent width for `usize` or `isize`. |
 | Compact integers | `Leb128Codec<T, P>` | Encoding is canonical; `Strict` rejects non-canonical input and `NonStrict` accepts compatible input. |
 | Compact signed integers | `ZigZagCodec<T, P>` | Maps signed values to unsigned LEB128 payloads. |
 | Decode diagnostics | `Leb128DecodeError` | Distinguishes incomplete, malformed, and non-canonical input with indices and available/required counts. |
@@ -64,6 +64,10 @@ crate keeps the wire-format layer small and explicit, while
 This crate does not provide `std::io` readers or writers, generic owned-value
 adapters, framing, or buffering. Import shared traits and byte-order markers
 from `qubit-codec`, and use `qubit-io-binary` when stream adapters are needed.
+
+`Leb128Codec<T, P>` and `ZigZagCodec<T, P>` require an explicit decoding
+policy. `P` never affects canonical encoding; encoding-only code should use
+`NonStrict` as the conventional marker.
 
 ## Learn More
 
