@@ -30,8 +30,11 @@ use qubit_io::UncheckedSlice;
 ///
 /// - `T`: Scalar value type to decode from bytes and encode into bytes.
 /// - `O`: Type-level byte order marker. Multi-byte scalar implementations use
-///   [`BigEndian`] or [`LittleEndian`]. Single-byte scalar implementations
-///   accept any marker because byte order does not affect one-byte values.
+///   [`BigEndian`], [`LittleEndian`], or [`NativeEndian`]. Prefer big- or
+///   little-endian formats for persistent and cross-platform data;
+///   native-endian encoding is only suitable for platform-local data. Single-
+///   byte scalar implementations accept any marker because byte order does not
+///   affect one-byte values.
 ///
 /// # Examples
 ///
