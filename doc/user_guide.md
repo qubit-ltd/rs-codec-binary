@@ -21,6 +21,11 @@ application buffer -> codec<T, policy> -> value or wire bytes
 `ZigZagCodec<T, P>` represents signed values as ZigZag followed by unsigned
 LEB128. All implement `qubit_codec::Codec` with `Unit = u8`.
 
+Multi-byte `BinaryCodec` values support `BigEndian`, `LittleEndian`, and
+`NativeEndian`. Use big- or little-endian encoding for persistent or
+cross-platform data. Native-endian encoding is only suitable for data that is
+read on the same platform class that wrote it.
+
 ## Scenario: Decode a Compact Record
 
 Assume a record begins with a big-endian `u32` identifier followed by a signed
@@ -74,12 +79,16 @@ independent contracts.
 ## LEB128 Policies and Errors
 
 Encoding is always canonical. Select the decoding policy according to the wire
-contract:
+contract; every `Leb128Codec<T, P>` and `ZigZagCodec<T, P>` instantiation must
+name `P` explicitly:
 
 | Policy | Use when | Result for `80 00` as an unsigned zero |
 | --- | --- | --- |
 | `Strict` | Your format requires a unique byte representation. | `NonCanonical` error. |
 | `NonStrict` | You must accept compatible legacy or permissive input. | Decodes to `0`. |
+
+The policy does not affect encoding. Encoding-only code should conventionally
+instantiate the codec with `NonStrict`.
 
 `Leb128DecodeError` reports `Incomplete`, `Malformed`, or `NonCanonical`.
 `start_index()` identifies the attempted value, and `error_index()` identifies

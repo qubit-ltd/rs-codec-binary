@@ -20,6 +20,10 @@
 映射，再按无符号 LEB128 编码。它们都实现 `qubit_codec::Codec`，且
 `Unit = u8`。
 
+多字节 `BinaryCodec` 支持 `BigEndian`、`LittleEndian` 与 `NativeEndian`。
+持久化或跨平台数据应使用 big- 或 little-endian。native-endian 仅适合由同一
+平台类别读回的本地数据。
+
 ## 贯穿场景：解码紧凑记录
 
 假定一条记录由 big-endian `u32` 标识符和一个有符号 ZigZag LEB128 增量组成。
@@ -69,12 +73,15 @@ codec 的两个上限数值相同，但契约彼此独立。
 
 ## LEB128 策略与错误
 
-编码始终产生规范形式。应根据线格式契约选择解码策略：
+编码始终产生规范形式。应根据线格式契约选择解码策略；每个
+`Leb128Codec<T, P>` 与 `ZigZagCodec<T, P>` 实例都必须显式写出 `P`：
 
 | 策略 | 适用场景 | 将无符号零写成 `80 00` 时 |
 | --- | --- | --- |
 | `Strict` | 格式要求唯一字节表示。 | 返回 `NonCanonical` 错误。 |
 | `NonStrict` | 需要兼容旧数据或宽松输入。 | 解码为 `0`。 |
+
+策略不会影响编码。仅编码的代码应按约定使用 `NonStrict` 实例化 codec。
 
 `Leb128DecodeError` 区分 `Incomplete`、`Malformed` 与 `NonCanonical`。
 `start_index()` 是尝试解码值的起点，`error_index()` 是错误可观察的位置；输入
