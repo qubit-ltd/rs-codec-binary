@@ -19,12 +19,21 @@ use crate::Leb128DecodeErrorKind;
 /// Error reported while decoding a LEB128 integer from a byte buffer.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Leb128DecodeError {
-    kind: Leb128DecodeErrorKind,
     start_index: usize,
     error_index: usize,
-    consumed: Option<NonZeroUsize>,
-    required: Option<NonZeroUsize>,
-    available: Option<usize>,
+    details: Leb128DecodeErrorDetails,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Leb128DecodeErrorDetails {
+    Incomplete {
+        required: NonZeroUsize,
+        available: usize,
+    },
+    Invalid {
+        kind: Leb128DecodeErrorKind,
+        consumed: NonZeroUsize,
+    },
 }
 
 impl Leb128DecodeError {
@@ -55,12 +64,12 @@ impl Leb128DecodeError {
             "incomplete LEB128 required bytes must exceed available bytes",
         );
         Self {
-            kind: Leb128DecodeErrorKind::Incomplete,
             start_index,
             error_index: add_offset(start_index, available),
-            consumed: None,
-            required: Some(required),
-            available: Some(available),
+            details: Leb128DecodeErrorDetails::Incomplete {
+                required,
+                available,
+            },
         }
     }
 
@@ -86,12 +95,12 @@ impl Leb128DecodeError {
     ) -> Self {
         assert_error_index_in_consumed_span(start_index, error_index, consumed);
         Self {
-            kind: Leb128DecodeErrorKind::Malformed,
             start_index,
             error_index,
-            consumed: Some(consumed),
-            required: None,
-            available: None,
+            details: Leb128DecodeErrorDetails::Invalid {
+                kind: Leb128DecodeErrorKind::Malformed,
+                consumed,
+            },
         }
     }
 
@@ -114,19 +123,24 @@ impl Leb128DecodeError {
         consumed: NonZeroUsize,
     ) -> Self {
         Self {
-            kind: Leb128DecodeErrorKind::NonCanonical,
             start_index,
             error_index: last_consumed_index(start_index, consumed),
-            consumed: Some(consumed),
-            required: None,
-            available: None,
+            details: Leb128DecodeErrorDetails::Invalid {
+                kind: Leb128DecodeErrorKind::NonCanonical,
+                consumed,
+            },
         }
     }
 
     /// Returns the decoding error kind.
     #[must_use]
     pub const fn kind(self) -> Leb128DecodeErrorKind {
-        self.kind
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete { .. } => {
+                Leb128DecodeErrorKind::Incomplete
+            }
+            Leb128DecodeErrorDetails::Invalid { kind, .. } => kind,
+        }
     }
 
     /// Returns the absolute byte index where the attempted value starts.
@@ -156,25 +170,40 @@ impl Leb128DecodeError {
     /// input.
     #[must_use]
     pub const fn consumed(self) -> Option<NonZeroUsize> {
-        self.consumed
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete { .. } => None,
+            Leb128DecodeErrorDetails::Invalid { consumed, .. } => Some(consumed),
+        }
     }
 
     /// Returns whether this error reports an incomplete input prefix.
     #[must_use]
     pub const fn is_incomplete(self) -> bool {
-        matches!(self.kind, Leb128DecodeErrorKind::Incomplete)
+        matches!(self.details, Leb128DecodeErrorDetails::Incomplete { .. })
     }
 
     /// Returns whether this error reports malformed input.
     #[must_use]
     pub const fn is_malformed(self) -> bool {
-        matches!(self.kind, Leb128DecodeErrorKind::Malformed)
+        matches!(
+            self.details,
+            Leb128DecodeErrorDetails::Invalid {
+                kind: Leb128DecodeErrorKind::Malformed,
+                ..
+            }
+        )
     }
 
     /// Returns whether this error reports a non-canonical representation.
     #[must_use]
     pub const fn is_noncanonical(self) -> bool {
-        matches!(self.kind, Leb128DecodeErrorKind::NonCanonical)
+        matches!(
+            self.details,
+            Leb128DecodeErrorDetails::Invalid {
+                kind: Leb128DecodeErrorKind::NonCanonical,
+                ..
+            }
+        )
     }
 
     /// Returns a lower bound for bytes required to continue incomplete
@@ -189,7 +218,12 @@ impl Leb128DecodeError {
     /// length.
     #[must_use]
     pub const fn required(self) -> Option<NonZeroUsize> {
-        self.required
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete { required, .. } => {
+                Some(required)
+            }
+            Leb128DecodeErrorDetails::Invalid { .. } => None,
+        }
     }
 
     /// Returns additional bytes required to continue incomplete decoding.
@@ -200,12 +234,15 @@ impl Leb128DecodeError {
     /// The value is `required - available` and is guaranteed to be non-zero.
     #[must_use]
     pub const fn additional(self) -> Option<NonZeroUsize> {
-        match (self.required, self.available) {
-            (Some(required), Some(available)) => {
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete {
+                required,
+                available,
+            } => {
                 let additional = required.get() - available;
                 Some(qubit_codec::nz!(additional))
             }
-            _ => None,
+            Leb128DecodeErrorDetails::Invalid { .. } => None,
         }
     }
 
@@ -216,39 +253,37 @@ impl Leb128DecodeError {
     /// Returns `Some(available)` for incomplete input, or `None` otherwise.
     #[must_use]
     pub const fn available(self) -> Option<usize> {
-        self.available
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete { available, .. } => {
+                Some(available)
+            }
+            Leb128DecodeErrorDetails::Invalid { .. } => None,
+        }
     }
 }
 
 impl Display for Leb128DecodeError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-        match self.kind {
-            Leb128DecodeErrorKind::Incomplete => {
-                let required = self
-                    .required
-                    .expect("incomplete LEB128 errors always store a required byte bound");
-                let available = self
-                    .available
-                    .expect("incomplete LEB128 errors always store an available byte count");
+        match self.details {
+            Leb128DecodeErrorDetails::Incomplete {
+                required,
+                available,
+            } => {
                 write!(
                     formatter,
                     "{} at byte {}: need at least {} bytes, only {} available (next byte boundary {})",
-                    self.kind,
+                    Leb128DecodeErrorKind::Incomplete,
                     self.start_index,
                     required,
                     available,
                     self.error_index,
                 )
             }
-            Leb128DecodeErrorKind::Malformed
-            | Leb128DecodeErrorKind::NonCanonical => {
-                let consumed = self.consumed.expect(
-                    "invalid LEB128 errors always store a consumed byte count",
-                );
+            Leb128DecodeErrorDetails::Invalid { kind, consumed } => {
                 write!(
                     formatter,
                     "{} at byte {}: detected at byte {} after consuming {} bytes",
-                    self.kind, self.start_index, self.error_index, consumed,
+                    kind, self.start_index, self.error_index, consumed,
                 )
             }
         }
