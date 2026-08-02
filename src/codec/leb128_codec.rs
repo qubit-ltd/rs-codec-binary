@@ -43,8 +43,8 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 /// Type-level unchecked LEB128 codec.
 ///
 /// Encoding is always canonical; `P` only affects decoding. Encoding-only
-/// callers should conventionally use [`crate::NonStrict`] because no decoding policy
-/// is applied on that path.
+/// callers should conventionally use [`crate::NonStrict`] because no decoding
+/// policy is applied on that path.
 ///
 /// # Type Parameters
 ///
@@ -52,8 +52,8 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 ///   canonical LEB128 bytes.
 /// - `P`: Required type-level decoding policy implementing
 ///   [`Leb128DecodePolicy`]. Use [`crate::Strict`] to reject non-canonical
-///   inputs, or [`crate::NonStrict`] to accept non-canonical inputs. This parameter
-///   does not affect canonical encoding.
+///   inputs, or [`crate::NonStrict`] to accept non-canonical inputs. This
+///   parameter does not affect canonical encoding.
 ///
 /// The decoding policy is intentionally required so wire-format callers make
 /// the canonicality contract explicit.
