@@ -14,6 +14,7 @@ use qubit_codec::{
 };
 use qubit_codec_binary::{
     Leb128Codec,
+    Leb128DecodeError,
     Leb128DecodeErrorKind,
     NonStrict,
     Strict,
@@ -310,9 +311,18 @@ fn test_leb128_codec_trait_maps_decode_failures() {
         .expect_err("partial LEB128 value should request more input");
     assert_eq!(
         DecodeFailure::Incomplete {
+            source: Some(Leb128DecodeError::incomplete(
+                0,
+                nonzero(2),
+                1,
+            )),
             required_total: nonzero(2),
         },
         incomplete,
+    );
+    assert_eq!(
+        Some(&Leb128DecodeError::incomplete(0, nonzero(2), 1)),
+        incomplete.incomplete_source(),
     );
 
     let mut codec = Leb128Codec::<u16, Strict>::default();
