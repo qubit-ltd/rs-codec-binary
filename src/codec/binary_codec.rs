@@ -13,6 +13,7 @@ use core::{
 
 use qubit_codec::{
     BigEndian,
+    ByteOrderSpec,
     Codec,
     LittleEndian,
     NativeEndian,
@@ -55,12 +56,25 @@ use qubit_io::UncheckedSlice;
 /// assert_eq!(0x0102_0304, decoded);
 /// assert_eq!(4, consumed.get());
 /// ```
+///
+/// Byte-order markers are also required for single-byte codecs, even though
+/// the marker has no effect on the encoded bytes:
+///
+/// ```compile_fail
+/// use qubit_codec_binary::{BinaryCodec, Strict};
+///
+/// let mut output = [0_u8; 1];
+/// let _ = unsafe { BinaryCodec::<u8, Strict>::encode(1, &mut output, 0) };
+/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BinaryCodec<T, O> {
     marker: PhantomData<fn() -> (T, O)>,
 }
 
-impl<O> BinaryCodec<u8, O> {
+impl<O> BinaryCodec<u8, O>
+where
+    O: ByteOrderSpec,
+{
     /// Minimum number of bytes required to encode or decode this type.
     pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
@@ -134,7 +148,10 @@ impl<O> BinaryCodec<u8, O> {
     }
 }
 
-impl<O> Codec for BinaryCodec<u8, O> {
+impl<O> Codec for BinaryCodec<u8, O>
+where
+    O: ByteOrderSpec,
+{
     type Value = u8;
     type Unit = u8;
     type DecodeError = Infallible;
@@ -173,7 +190,10 @@ impl<O> Codec for BinaryCodec<u8, O> {
     }
 }
 
-impl<O> BinaryCodec<i8, O> {
+impl<O> BinaryCodec<i8, O>
+where
+    O: ByteOrderSpec,
+{
     /// Minimum number of bytes required to encode or decode this type.
     pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
@@ -247,7 +267,10 @@ impl<O> BinaryCodec<i8, O> {
     }
 }
 
-impl<O> Codec for BinaryCodec<i8, O> {
+impl<O> Codec for BinaryCodec<i8, O>
+where
+    O: ByteOrderSpec,
+{
     type Value = i8;
     type Unit = u8;
     type DecodeError = Infallible;
