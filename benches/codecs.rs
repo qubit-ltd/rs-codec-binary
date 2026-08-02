@@ -9,6 +9,7 @@
 //! Direct throughput benchmarks for the binary codec hot paths.
 
 use std::{
+    convert::Infallible,
     fmt::Debug,
     hint::black_box,
 };
@@ -355,29 +356,22 @@ where
 /// Encodes through `Codec` with exactly the reported value width writable.
 fn encode_exact_capacity<C>(values: &[C::Value]) -> u64
 where
-    C: Codec<Unit = u8> + Default,
-    C::EncodeError: Debug,
+    C: Codec<Unit = u8, EncodeError = Infallible> + Default,
 {
-    assert!(C::MAX_ENCODE_UNITS_PER_VALUE <= MAX_VARINT_BYTES);
     let mut codec = C::default();
     let mut checksum = 0_u64;
     let mut storage = [GUARD_BYTE; MAX_VARINT_BYTES + 2];
     for value in black_box(values) {
-        assert!(codec.can_encode_value(value));
         let required = codec.encode_len(black_box(value));
-        assert!(required <= C::MAX_ENCODE_UNITS_PER_VALUE);
         let output = &mut storage[1..1 + required];
         let written = unsafe {
             // SAFETY: `output` exposes exactly the width reported for the same
             // value and unchanged codec state.
             Codec::encode(&mut codec, value, output, 0)
         }
-        .expect("benchmark value should encode");
-        assert_eq!(required, written);
+        .unwrap_or_else(|error| match error {});
         checksum = checksum_encoded(checksum, output, written);
     }
-    assert_eq!(GUARD_BYTE, storage[0]);
-    assert_eq!(GUARD_BYTE, storage[MAX_VARINT_BYTES + 1]);
     checksum
 }
 
@@ -445,10 +439,12 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
+        // SAFETY: `validate_distribution_widths` only supplies canonical
+        // payloads produced by the corresponding encoder.
         let (value, consumed) = unsafe {
             Leb128Codec::<u64, P>::decode(&payload.bytes[..payload.len], 0)
-        }
-        .expect("canonical fixture should decode");
+                .unwrap_unchecked()
+        };
         checksum = mix_checksum(checksum, value);
         checksum = mix_checksum(checksum, consumed.get() as u64);
     }
@@ -462,10 +458,12 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
+        // SAFETY: `validate_distribution_widths` only supplies canonical
+        // payloads produced by the corresponding encoder.
         let (value, consumed) = unsafe {
             Leb128Codec::<i64, P>::decode(&payload.bytes[..payload.len], 0)
-        }
-        .expect("canonical fixture should decode");
+                .unwrap_unchecked()
+        };
         checksum = mix_checksum(checksum, value as u64);
         checksum = mix_checksum(checksum, consumed.get() as u64);
     }
@@ -479,10 +477,12 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
+        // SAFETY: `validate_distribution_widths` only supplies canonical
+        // payloads produced by the corresponding encoder.
         let (value, consumed) = unsafe {
             ZigZagCodec::<i64, P>::decode(&payload.bytes[..payload.len], 0)
-        }
-        .expect("canonical fixture should decode");
+                .unwrap_unchecked()
+        };
         checksum = mix_checksum(checksum, value as u64);
         checksum = mix_checksum(checksum, consumed.get() as u64);
     }
@@ -517,8 +517,10 @@ where
     let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        let error = unsafe { Leb128Codec::<u64, P>::decode(input, 0) }
-            .expect_err("error fixture should be rejected");
+        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        let error = unsafe {
+            Leb128Codec::<u64, P>::decode(input, 0).unwrap_err_unchecked()
+        };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
@@ -532,8 +534,10 @@ where
     let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        let error = unsafe { Leb128Codec::<i64, P>::decode(input, 0) }
-            .expect_err("error fixture should be rejected");
+        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        let error = unsafe {
+            Leb128Codec::<i64, P>::decode(input, 0).unwrap_err_unchecked()
+        };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
@@ -547,8 +551,10 @@ where
     let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        let error = unsafe { ZigZagCodec::<i64, P>::decode(input, 0) }
-            .expect_err("error fixture should be rejected");
+        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        let error = unsafe {
+            ZigZagCodec::<i64, P>::decode(input, 0).unwrap_err_unchecked()
+        };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
