@@ -17,6 +17,7 @@ use crate::{
     Leb128DecodePolicy,
     NonStrict,
     codec::leb128_codec::map_leb128_decode_failure,
+    codec::leb128_codec::uleb_encoded_len,
 };
 use qubit_codec::Codec;
 
@@ -219,17 +220,3 @@ impl_zig_zag_codec!(i32, u32, 31);
 impl_zig_zag_codec!(i64, u64, 63);
 impl_zig_zag_codec!(i128, u128, 127);
 impl_zig_zag_codec!(isize, usize, isize::BITS - 1);
-
-/// Computes the canonical unsigned LEB128 byte width for a ZigZag payload.
-#[must_use]
-#[inline(always)]
-fn uleb_encoded_len(mut value: u128) -> usize {
-    let mut len = 0;
-    loop {
-        value >>= 7;
-        len += 1;
-        if value == 0 {
-            return len;
-        }
-    }
-}
