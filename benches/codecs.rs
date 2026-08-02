@@ -7,6 +7,11 @@
 // =============================================================================
 
 //! Direct throughput benchmarks for the binary codec hot paths.
+//!
+//! The mixed-width groups mirror the production field schemas used by
+//! `rs-io-binary`. Their `unchecked` variants pass one whole buffer with a
+//! runtime offset, while `safe_slices` recreates an exact checked slice for
+//! every field before calling the same codec helper.
 
 use std::{
     convert::Infallible,
@@ -15,6 +20,7 @@ use std::{
 };
 
 use criterion::{
+    BatchSize,
     BenchmarkId,
     Criterion,
     Throughput,
@@ -39,8 +45,14 @@ use qubit_codec_binary::{
 /// Number of values processed by each benchmark iteration.
 const BATCH_SIZE: usize = 1_024;
 
+/// Number of fields in each mixed-width benchmark fixture.
+const MIXED_FIELD_COUNT: usize = 16_384;
+
 /// Maximum encoded width of each 64-bit varint family benchmarked here.
 const MAX_VARINT_BYTES: usize = 10;
+
+/// Maximum encoded width among the mixed unsigned LEB128 field types.
+const MAX_MIXED_ULEB_BYTES: usize = 19;
 
 /// Sentinel used to validate exact-capacity writes before timing them.
 const GUARD_BYTE: u8 = 0xa5;
@@ -574,6 +586,325 @@ fn encode_binary_values(values: &[u64]) -> u64 {
     checksum
 }
 
+/// A deterministic mixed fixed-width unsigned binary field.
+#[derive(Clone, Copy)]
+enum MixedBinaryField {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    U128(u128),
+}
+
+/// Builds a mixed fixed-width fixture with randomly selected field types.
+fn build_mixed_binary_fields() -> Vec<MixedBinaryField> {
+    let mut state = 0x5EED_CAFE_1234_5678;
+    (0..MIXED_FIELD_COUNT)
+        .map(|_| match next_state(&mut state) % 5 {
+            0 => MixedBinaryField::U8(next_state(&mut state) as u8),
+            1 => MixedBinaryField::U16(next_state(&mut state) as u16),
+            2 => MixedBinaryField::U32(next_state(&mut state) as u32),
+            3 => MixedBinaryField::U64(next_state(&mut state)),
+            _ => {
+                let high = u128::from(next_state(&mut state));
+                let low = u128::from(next_state(&mut state));
+                MixedBinaryField::U128((high << 64) | low)
+            }
+        })
+        .collect()
+}
+
+/// Returns the fixed encoded width of one mixed binary field.
+fn mixed_binary_width(field: &MixedBinaryField) -> usize {
+    match field {
+        MixedBinaryField::U8(_) => {
+            BinaryCodec::<u8, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE
+        }
+        MixedBinaryField::U16(_) => {
+            BinaryCodec::<u16, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE
+        }
+        MixedBinaryField::U32(_) => {
+            BinaryCodec::<u32, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE
+        }
+        MixedBinaryField::U64(_) => {
+            BinaryCodec::<u64, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE
+        }
+        MixedBinaryField::U128(_) => {
+            BinaryCodec::<u128, BigEndian>::MAX_ENCODE_UNITS_PER_VALUE
+        }
+    }
+}
+
+/// Returns the total encoded width of a mixed binary fixture.
+fn mixed_binary_storage_len(fields: &[MixedBinaryField]) -> usize {
+    fields.iter().map(mixed_binary_width).sum()
+}
+
+/// Checksums a complete output buffer after a mixed encode operation.
+#[inline(always)]
+fn checksum_buffer(bytes: &[u8]) -> u64 {
+    let mut checksum = mix_checksum(0, bytes.len() as u64);
+    for &byte in black_box(bytes) {
+        checksum = mix_checksum(checksum, u64::from(byte));
+    }
+    checksum
+}
+
+/// Encodes mixed fixed-width fields without recreating a checked slice.
+fn encode_mixed_binary_unchecked(
+    fields: &[MixedBinaryField],
+    output: &mut [u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let mut offset = 0_usize;
+    for field in fields {
+        let width = mixed_binary_width(field);
+        let output_index = black_box(offset);
+        match field {
+            MixedBinaryField::U8(value) => {
+                let written = unsafe {
+                    BinaryCodec::<u8, BigEndian>::encode(*value, output, output_index)
+                };
+                debug_assert_eq!(written, width);
+            }
+            MixedBinaryField::U16(value) => {
+                let written = unsafe {
+                    BinaryCodec::<u16, BigEndian>::encode(*value, output, output_index)
+                };
+                debug_assert_eq!(written, width);
+            }
+            MixedBinaryField::U32(value) => {
+                let written = unsafe {
+                    BinaryCodec::<u32, BigEndian>::encode(*value, output, output_index)
+                };
+                debug_assert_eq!(written, width);
+            }
+            MixedBinaryField::U64(value) => {
+                let written = unsafe {
+                    BinaryCodec::<u64, BigEndian>::encode(*value, output, output_index)
+                };
+                debug_assert_eq!(written, width);
+            }
+            MixedBinaryField::U128(value) => {
+                let written = unsafe {
+                    BinaryCodec::<u128, BigEndian>::encode(*value, output, output_index)
+                };
+                debug_assert_eq!(written, width);
+            }
+        }
+        offset += width;
+    }
+    debug_assert_eq!(offset, output.len());
+    checksum_buffer(output)
+}
+
+/// Encodes mixed fixed-width fields through a checked slice per field.
+fn encode_mixed_binary_safe_slices(
+    fields: &[MixedBinaryField],
+    output: &mut [u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let mut offset = 0_usize;
+    for field in fields {
+        let width = mixed_binary_width(field);
+        let output_index = black_box(offset);
+        let window = &mut output[output_index..output_index + width];
+        match field {
+            MixedBinaryField::U8(value) => unsafe {
+                BinaryCodec::<u8, BigEndian>::encode(*value, window, 0);
+            },
+            MixedBinaryField::U16(value) => unsafe {
+                BinaryCodec::<u16, BigEndian>::encode(*value, window, 0);
+            },
+            MixedBinaryField::U32(value) => unsafe {
+                BinaryCodec::<u32, BigEndian>::encode(*value, window, 0);
+            },
+            MixedBinaryField::U64(value) => unsafe {
+                BinaryCodec::<u64, BigEndian>::encode(*value, window, 0);
+            },
+            MixedBinaryField::U128(value) => unsafe {
+                BinaryCodec::<u128, BigEndian>::encode(*value, window, 0);
+            },
+        }
+        offset += width;
+    }
+    debug_assert_eq!(offset, output.len());
+    checksum_buffer(output)
+}
+
+/// Decodes mixed fixed-width fields without recreating a checked slice.
+fn decode_mixed_binary_unchecked(
+    fields: &[MixedBinaryField],
+    input: &[u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let input = black_box(input);
+    let mut offset = 0_usize;
+    let mut checksum = 0_u64;
+    for field in fields {
+        let width = mixed_binary_width(field);
+        let input_index = black_box(offset);
+        match field {
+            MixedBinaryField::U8(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u8, BigEndian>::decode(input, input_index)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U16(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u16, BigEndian>::decode(input, input_index)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U32(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u32, BigEndian>::decode(input, input_index)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U64(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u64, BigEndian>::decode(input, input_index)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, value);
+            }
+            MixedBinaryField::U128(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u128, BigEndian>::decode(input, input_index)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, value as u64);
+            }
+        }
+        offset += width;
+    }
+    debug_assert_eq!(offset, input.len());
+    checksum
+}
+
+/// Decodes mixed fixed-width fields through a checked slice per field.
+fn decode_mixed_binary_safe_slices(
+    fields: &[MixedBinaryField],
+    input: &[u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let input = black_box(input);
+    let mut offset = 0_usize;
+    let mut checksum = 0_u64;
+    for field in fields {
+        let width = mixed_binary_width(field);
+        let input_index = black_box(offset);
+        let window = &input[input_index..input_index + width];
+        match field {
+            MixedBinaryField::U8(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u8, BigEndian>::decode(window, 0)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U16(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u16, BigEndian>::decode(window, 0)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U32(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u32, BigEndian>::decode(window, 0)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, u64::from(value));
+            }
+            MixedBinaryField::U64(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u64, BigEndian>::decode(window, 0)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, value);
+            }
+            MixedBinaryField::U128(_) => {
+                let (value, consumed) = unsafe {
+                    BinaryCodec::<u128, BigEndian>::decode(window, 0)
+                };
+                debug_assert_eq!(consumed.get(), width);
+                checksum = mix_checksum(checksum, value as u64);
+            }
+        }
+        offset += width;
+    }
+    debug_assert_eq!(offset, input.len());
+    checksum
+}
+
+/// Benchmarks mixed fixed-width binary fields with and without checked slices.
+fn bench_mixed_binary(c: &mut Criterion) {
+    let fields = build_mixed_binary_fields();
+    let storage_len = mixed_binary_storage_len(&fields);
+    let mut unchecked_encoded = vec![0_u8; storage_len];
+    let mut safe_encoded = vec![0_u8; storage_len];
+    let unchecked_checksum =
+        encode_mixed_binary_unchecked(&fields, &mut unchecked_encoded);
+    let safe_checksum =
+        encode_mixed_binary_safe_slices(&fields, &mut safe_encoded);
+    assert_eq!(unchecked_encoded, safe_encoded);
+    assert_eq!(unchecked_checksum, safe_checksum);
+    assert_eq!(
+        decode_mixed_binary_unchecked(&fields, &unchecked_encoded),
+        decode_mixed_binary_safe_slices(&fields, &safe_encoded),
+    );
+
+    let mut group = c.benchmark_group("mixed_binary_codec");
+    group.throughput(Throughput::Bytes(storage_len as u64));
+    group.bench_function("encode_unchecked", |bencher| {
+        bencher.iter_batched(
+            || vec![0_u8; storage_len],
+            |mut output| {
+                black_box(encode_mixed_binary_unchecked(
+                    &fields,
+                    &mut output,
+                ));
+            },
+            BatchSize::LargeInput,
+        );
+    });
+    group.bench_function("encode_safe_slices", |bencher| {
+        bencher.iter_batched(
+            || vec![0_u8; storage_len],
+            |mut output| {
+                black_box(encode_mixed_binary_safe_slices(
+                    &fields,
+                    &mut output,
+                ));
+            },
+            BatchSize::LargeInput,
+        );
+    });
+    group.bench_function("decode_unchecked", |bencher| {
+        bencher.iter(|| {
+            black_box(decode_mixed_binary_unchecked(
+                &fields,
+                &unchecked_encoded,
+            ))
+        });
+    });
+    group.bench_function("decode_safe_slices", |bencher| {
+        bencher.iter(|| {
+            black_box(decode_mixed_binary_safe_slices(
+                &fields,
+                &safe_encoded,
+            ))
+        });
+    });
+    group.finish();
+}
+
 /// Benchmarks direct fixed-width big-endian integer encoding and decoding.
 fn bench_binary(c: &mut Criterion) {
     let values = unsigned_values(Distribution::Uniform);
@@ -597,6 +928,374 @@ fn bench_binary(c: &mut Criterion) {
     });
     group.bench_function("u64_big_endian_encode", |bencher| {
         bencher.iter(|| black_box(encode_binary_values(&values)));
+    });
+    group.finish();
+}
+
+/// A deterministic mixed unsigned LEB128 field schema.
+#[derive(Clone, Copy)]
+enum MixedUlebField {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    Usize(usize),
+    U128(u128),
+}
+
+/// Encoded bytes and per-field widths for one mixed LEB128 fixture.
+struct MixedUlebFixture {
+    fields: Vec<MixedUlebField>,
+    widths: Vec<usize>,
+    encoded: Vec<u8>,
+}
+
+/// Builds a mixed unsigned LEB128 fixture with random field types and widths.
+fn build_mixed_uleb_fixture() -> MixedUlebFixture {
+    let mut state = 0xCAFE_BABE_1234_5678;
+    let fields = (0..MIXED_FIELD_COUNT)
+        .map(|_| match next_state(&mut state) % 6 {
+            0 => MixedUlebField::U8(next_state(&mut state) as u8),
+            1 => MixedUlebField::U16(next_state(&mut state) as u16),
+            2 => MixedUlebField::U32(next_state(&mut state) as u32),
+            3 => MixedUlebField::U64(next_state(&mut state)),
+            4 => MixedUlebField::Usize(next_state(&mut state) as usize),
+            _ => {
+                let high = u128::from(next_state(&mut state));
+                let low = u128::from(next_state(&mut state));
+                MixedUlebField::U128((high << 64) | low)
+            }
+        })
+        .collect::<Vec<_>>();
+    let widths = fields.iter().map(mixed_uleb_width).collect::<Vec<_>>();
+    assert!(
+        widths
+            .iter()
+            .all(|&width| (1..=MAX_MIXED_ULEB_BYTES).contains(&width))
+    );
+    let storage_len = widths.iter().sum();
+    let mut encoded = vec![0_u8; storage_len];
+    encode_mixed_uleb_unchecked(&fields, &widths, &mut encoded);
+    MixedUlebFixture {
+        fields,
+        widths,
+        encoded,
+    }
+}
+
+/// Returns the canonical encoded width of one mixed unsigned LEB128 field.
+fn mixed_uleb_width(field: &MixedUlebField) -> usize {
+    match field {
+        MixedUlebField::U8(value) => {
+            Leb128Codec::<u8, NonStrict>::default().encode_len(value)
+        }
+        MixedUlebField::U16(value) => {
+            Leb128Codec::<u16, NonStrict>::default().encode_len(value)
+        }
+        MixedUlebField::U32(value) => {
+            Leb128Codec::<u32, NonStrict>::default().encode_len(value)
+        }
+        MixedUlebField::U64(value) => {
+            Leb128Codec::<u64, NonStrict>::default().encode_len(value)
+        }
+        MixedUlebField::Usize(value) => {
+            Leb128Codec::<usize, NonStrict>::default().encode_len(value)
+        }
+        MixedUlebField::U128(value) => {
+            Leb128Codec::<u128, NonStrict>::default().encode_len(value)
+        }
+    }
+}
+
+/// Encodes mixed LEB128 fields without recreating a checked slice.
+fn encode_mixed_uleb_unchecked(
+    fields: &[MixedUlebField],
+    widths: &[usize],
+    output: &mut [u8],
+) -> u64 {
+    assert_eq!(fields.len(), widths.len());
+    let fields = black_box(fields);
+    let widths = black_box(widths);
+    let mut offset = 0_usize;
+    for index in 0..fields.len() {
+        let field = &fields[index];
+        let width = black_box(widths[index]);
+        let output_index = black_box(offset);
+        let written = match field {
+            MixedUlebField::U8(value) => unsafe {
+                Leb128Codec::<u8, NonStrict>::encode(*value, output, output_index)
+            },
+            MixedUlebField::U16(value) => unsafe {
+                Leb128Codec::<u16, NonStrict>::encode(*value, output, output_index)
+            },
+            MixedUlebField::U32(value) => unsafe {
+                Leb128Codec::<u32, NonStrict>::encode(*value, output, output_index)
+            },
+            MixedUlebField::U64(value) => unsafe {
+                Leb128Codec::<u64, NonStrict>::encode(*value, output, output_index)
+            },
+            MixedUlebField::Usize(value) => unsafe {
+                Leb128Codec::<usize, NonStrict>::encode(*value, output, output_index)
+            },
+            MixedUlebField::U128(value) => unsafe {
+                Leb128Codec::<u128, NonStrict>::encode(*value, output, output_index)
+            },
+        };
+        debug_assert_eq!(written, width);
+        offset += width;
+    }
+    debug_assert_eq!(offset, output.len());
+    checksum_buffer(output)
+}
+
+/// Encodes mixed LEB128 fields through a checked slice per field.
+fn encode_mixed_uleb_safe_slices(
+    fields: &[MixedUlebField],
+    widths: &[usize],
+    output: &mut [u8],
+) -> u64 {
+    assert_eq!(fields.len(), widths.len());
+    let fields = black_box(fields);
+    let widths = black_box(widths);
+    let mut offset = 0_usize;
+    for index in 0..fields.len() {
+        let field = &fields[index];
+        let width = black_box(widths[index]);
+        let output_index = black_box(offset);
+        let window = &mut output[output_index..output_index + width];
+        match field {
+            MixedUlebField::U8(value) => unsafe {
+                let _ = Leb128Codec::<u8, NonStrict>::encode(*value, window, 0);
+            },
+            MixedUlebField::U16(value) => unsafe {
+                let _ = Leb128Codec::<u16, NonStrict>::encode(*value, window, 0);
+            },
+            MixedUlebField::U32(value) => unsafe {
+                let _ = Leb128Codec::<u32, NonStrict>::encode(*value, window, 0);
+            },
+            MixedUlebField::U64(value) => unsafe {
+                let _ = Leb128Codec::<u64, NonStrict>::encode(*value, window, 0);
+            },
+            MixedUlebField::Usize(value) => unsafe {
+                let _ = Leb128Codec::<usize, NonStrict>::encode(*value, window, 0);
+            },
+            MixedUlebField::U128(value) => unsafe {
+                let _ = Leb128Codec::<u128, NonStrict>::encode(*value, window, 0);
+            },
+        }
+        offset += width;
+    }
+    debug_assert_eq!(offset, output.len());
+    checksum_buffer(output)
+}
+
+/// Decodes mixed LEB128 fields without recreating a checked slice.
+fn decode_mixed_uleb_unchecked(
+    fields: &[MixedUlebField],
+    input: &[u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let input = black_box(input);
+    let mut offset = 0_usize;
+    let mut checksum = 0_u64;
+    for field in fields {
+        let input_index = black_box(offset);
+        match field {
+            MixedUlebField::U8(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u8, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U16(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u16, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U32(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u32, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U64(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u64, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value);
+                offset += consumed.get();
+            }
+            MixedUlebField::Usize(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<usize, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value as u64);
+                offset += consumed.get();
+            }
+            MixedUlebField::U128(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u128, NonStrict>::decode(input, input_index)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value as u64);
+                offset += consumed.get();
+            }
+        }
+    }
+    debug_assert_eq!(offset, input.len());
+    checksum
+}
+
+/// Decodes mixed LEB128 fields through a checked remaining-input slice per
+/// field.
+fn decode_mixed_uleb_safe_slices(
+    fields: &[MixedUlebField],
+    input: &[u8],
+) -> u64 {
+    let fields = black_box(fields);
+    let input = black_box(input);
+    let mut offset = 0_usize;
+    let mut checksum = 0_u64;
+    for field in fields {
+        let input_index = black_box(offset);
+        let window = &input[input_index..];
+        match field {
+            MixedUlebField::U8(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u8, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U16(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u16, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U32(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u32, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, u64::from(value));
+                offset += consumed.get();
+            }
+            MixedUlebField::U64(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u64, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value);
+                offset += consumed.get();
+            }
+            MixedUlebField::Usize(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<usize, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value as u64);
+                offset += consumed.get();
+            }
+            MixedUlebField::U128(_) => {
+                let (value, consumed) = unsafe {
+                    Leb128Codec::<u128, NonStrict>::decode(window, 0)
+                        .unwrap_unchecked()
+                };
+                checksum = mix_checksum(checksum, value as u64);
+                offset += consumed.get();
+            }
+        }
+    }
+    debug_assert_eq!(offset, input.len());
+    checksum
+}
+
+/// Benchmarks mixed unsigned LEB128 fields with and without checked slices.
+fn bench_mixed_uleb(c: &mut Criterion) {
+    let fixture = build_mixed_uleb_fixture();
+    let storage_len = fixture.encoded.len();
+    let mut unchecked_encoded = vec![0_u8; storage_len];
+    let mut safe_encoded = vec![0_u8; storage_len];
+    let unchecked_checksum = encode_mixed_uleb_unchecked(
+        &fixture.fields,
+        &fixture.widths,
+        &mut unchecked_encoded,
+    );
+    let safe_checksum = encode_mixed_uleb_safe_slices(
+        &fixture.fields,
+        &fixture.widths,
+        &mut safe_encoded,
+    );
+    assert_eq!(unchecked_encoded, safe_encoded);
+    assert_eq!(unchecked_checksum, safe_checksum);
+    assert_eq!(unchecked_encoded, fixture.encoded);
+    assert_eq!(
+        decode_mixed_uleb_unchecked(
+            &fixture.fields,
+            &fixture.encoded,
+        ),
+        decode_mixed_uleb_safe_slices(
+            &fixture.fields,
+            &fixture.encoded,
+        ),
+    );
+
+    let mut group = c.benchmark_group("mixed_uleb128_codec");
+    group.throughput(Throughput::Bytes(storage_len as u64));
+    group.bench_function("encode_unchecked", |bencher| {
+        bencher.iter_batched(
+            || vec![0_u8; storage_len],
+            |mut output| {
+                black_box(encode_mixed_uleb_unchecked(
+                    &fixture.fields,
+                    &fixture.widths,
+                    &mut output,
+                ));
+            },
+            BatchSize::LargeInput,
+        );
+    });
+    group.bench_function("encode_safe_slices", |bencher| {
+        bencher.iter_batched(
+            || vec![0_u8; storage_len],
+            |mut output| {
+                black_box(encode_mixed_uleb_safe_slices(
+                    &fixture.fields,
+                    &fixture.widths,
+                    &mut output,
+                ));
+            },
+            BatchSize::LargeInput,
+        );
+    });
+    group.bench_function("decode_unchecked", |bencher| {
+        bencher.iter(|| {
+            black_box(decode_mixed_uleb_unchecked(
+                &fixture.fields,
+                &fixture.encoded,
+            ))
+        });
+    });
+    group.bench_function("decode_safe_slices", |bencher| {
+        bencher.iter(|| {
+            black_box(decode_mixed_uleb_safe_slices(
+                &fixture.fields,
+                &fixture.encoded,
+            ))
+        });
     });
     group.finish();
 }
@@ -880,6 +1579,8 @@ fn bench_decode_errors(c: &mut Criterion) {
 criterion_group!(
     codec_benches,
     bench_binary,
+    bench_mixed_binary,
+    bench_mixed_uleb,
     bench_leb128,
     bench_zig_zag,
     bench_decode_errors,
