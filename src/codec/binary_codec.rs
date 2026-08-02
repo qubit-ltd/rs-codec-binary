@@ -861,9 +861,18 @@ macro_rules! impl_native_integer_binary_codec {
 
             /// Decodes a native-endian value without bounds checks.
             ///
+            /// # Parameters
+            ///
+            /// - `input`: Byte slice containing the encoded value.
+            /// - `input_index`: Absolute byte index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded value and the fixed number of bytes read.
+            ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is
-            /// readable.
+            /// `input_index..input_index + size_of::<$ty>()` must be a valid
+            /// readable range within `input`.
             #[must_use]
             #[inline(always)]
             pub unsafe fn decode(
@@ -878,9 +887,19 @@ macro_rules! impl_native_integer_binary_codec {
 
             /// Encodes a native-endian value without bounds checks.
             ///
+            /// # Parameters
+            ///
+            /// - `value`: Value to encode.
+            /// - `output`: Destination byte slice.
+            /// - `output_index`: Absolute byte index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the fixed number of bytes written.
+            ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is
-            /// writable.
+            /// `output_index..output_index + size_of::<$ty>()` must be a valid
+            /// writable range within `output`.
             #[inline(always)]
             pub unsafe fn encode(
                 value: $ty,
@@ -949,9 +968,18 @@ macro_rules! impl_native_float_binary_codec {
             /// Decodes a native-endian floating-point value without bounds
             /// checks.
             ///
+            /// # Parameters
+            ///
+            /// - `input`: Byte slice containing the encoded value.
+            /// - `input_index`: Absolute byte index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded floating-point value and fixed byte count.
+            ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is
-            /// readable.
+            /// `input_index..input_index + size_of::<$ty>()` must be a valid
+            /// readable range within `input`.
             #[must_use]
             #[inline(always)]
             pub unsafe fn decode(
@@ -970,9 +998,19 @@ macro_rules! impl_native_float_binary_codec {
             /// Encodes a native-endian floating-point value without bounds
             /// checks.
             ///
+            /// # Parameters
+            ///
+            /// - `value`: Floating-point value to encode.
+            /// - `output`: Destination byte slice.
+            /// - `output_index`: Absolute byte index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the fixed number of bytes written.
+            ///
             /// # Safety
-            /// The caller must guarantee that the value-sized range is
-            /// writable.
+            /// `output_index..output_index + size_of::<$ty>()` must be a valid
+            /// writable range within `output`.
             #[inline(always)]
             pub unsafe fn encode(
                 value: $ty,
