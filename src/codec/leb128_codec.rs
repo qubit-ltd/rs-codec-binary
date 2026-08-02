@@ -902,7 +902,7 @@ unsafe fn write_uleb_unchecked(
 /// Computes the canonical unsigned LEB128 byte width for `value`.
 #[must_use]
 #[inline(always)]
-fn uleb_encoded_len(mut value: u128) -> usize {
+pub(in crate::codec) fn uleb_encoded_len(mut value: u128) -> usize {
     let mut len = 0;
     loop {
         value >>= 7;

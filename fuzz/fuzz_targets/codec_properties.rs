@@ -12,6 +12,7 @@ use libfuzzer_sys::fuzz_target;
 use qubit_codec::{
     BigEndian,
     LittleEndian,
+    NativeEndian,
 };
 use qubit_codec_binary::{
     BinaryCodec,
@@ -304,19 +305,39 @@ fn assert_leb128_roundtrips(bits: u128) {
 /// Verifies binary codec roundtrips at non-zero offsets for every wire type.
 fn assert_binary_roundtrips(bits: u128) {
     assert_binary_roundtrip!(u8, BigEndian, bits as u8);
+    assert_binary_roundtrip!(u8, NativeEndian, bits as u8);
     assert_binary_roundtrip!(i8, LittleEndian, bits as i8);
+    assert_binary_roundtrip!(i8, NativeEndian, bits as i8);
     assert_binary_roundtrip!(u16, BigEndian, bits as u16);
+    assert_binary_roundtrip!(u16, NativeEndian, bits as u16);
     assert_binary_roundtrip!(u32, LittleEndian, bits as u32);
+    assert_binary_roundtrip!(u32, NativeEndian, bits as u32);
     assert_binary_roundtrip!(u64, BigEndian, bits as u64);
+    assert_binary_roundtrip!(u64, NativeEndian, bits as u64);
     assert_binary_roundtrip!(u128, LittleEndian, bits);
+    assert_binary_roundtrip!(u128, NativeEndian, bits);
     assert_binary_roundtrip!(i16, LittleEndian, bits as i16);
+    assert_binary_roundtrip!(i16, NativeEndian, bits as i16);
     assert_binary_roundtrip!(i32, BigEndian, bits as i32);
+    assert_binary_roundtrip!(i32, NativeEndian, bits as i32);
     assert_binary_roundtrip!(i64, LittleEndian, bits as i64);
+    assert_binary_roundtrip!(i64, NativeEndian, bits as i64);
     assert_binary_roundtrip!(i128, BigEndian, bits as i128);
+    assert_binary_roundtrip!(i128, NativeEndian, bits as i128);
     assert_binary_float_roundtrip!(f32, BigEndian, f32::from_bits(bits as u32));
+    assert_binary_float_roundtrip!(
+        f32,
+        NativeEndian,
+        f32::from_bits(bits as u32)
+    );
     assert_binary_float_roundtrip!(
         f64,
         LittleEndian,
+        f64::from_bits(bits as u64)
+    );
+    assert_binary_float_roundtrip!(
+        f64,
+        NativeEndian,
         f64::from_bits(bits as u64)
     );
 }
