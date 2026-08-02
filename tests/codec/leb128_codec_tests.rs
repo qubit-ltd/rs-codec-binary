@@ -310,14 +310,10 @@ fn test_leb128_codec_trait_maps_decode_failures() {
     let incomplete = unsafe { Codec::decode(&mut codec, &[0xac], 0) }
         .expect_err("partial LEB128 value should request more input");
     assert_eq!(
-        DecodeFailure::Incomplete {
-            source: Some(Leb128DecodeError::incomplete(
-                0,
-                nonzero(2),
-                1,
-            )),
-            required_total: nonzero(2),
-        },
+        DecodeFailure::incomplete_with_source(
+            Leb128DecodeError::incomplete(0, nonzero(2), 1),
+            nonzero(2),
+        ),
         incomplete,
     );
     assert_eq!(
@@ -329,7 +325,7 @@ fn test_leb128_codec_trait_maps_decode_failures() {
     let invalid = unsafe { Codec::decode(&mut codec, &[0x80, 0x00], 0) }
         .expect_err("non-canonical LEB128 value should be invalid");
     match invalid {
-        DecodeFailure::Invalid { source, consumed } => {
+        DecodeFailure::Invalid { source, consumed, .. } => {
             assert_eq!(Leb128DecodeErrorKind::NonCanonical, source.kind());
             assert_eq!(Some(nonzero(2)), consumed);
         }
