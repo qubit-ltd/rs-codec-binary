@@ -31,7 +31,7 @@ pub(in crate::codec) fn map_leb128_decode_failure(
     error: Leb128DecodeError,
 ) -> DecodeFailure<Leb128DecodeError> {
     if let Some(required) = error.required() {
-        DecodeFailure::incomplete(required)
+        DecodeFailure::incomplete_with_source(error, required)
     } else {
         let consumed = error.consumed().expect(
             "invalid LEB128 decode errors always report consumed bytes",
