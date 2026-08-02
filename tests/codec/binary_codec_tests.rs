@@ -30,6 +30,58 @@ fn native_endian_round_trip_matches_platform_order() {
     assert_eq!(4, consumed.get());
 }
 
+#[test]
+fn native_endian_round_trip_covers_all_supported_scalar_types() {
+    macro_rules! assert_integer {
+        ($ty:ty, $value:expr) => {{
+            let value: $ty = $value;
+            let mut output = [0_u8;
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<$ty, NativeEndian>::encode(value, &mut output, 0)
+            };
+            assert_eq!(value.to_ne_bytes(), output);
+            assert_eq!(output.len(), written);
+
+            let (decoded, consumed) =
+                unsafe { BinaryCodec::<$ty, NativeEndian>::decode(&output, 0) };
+            assert_eq!(value, decoded);
+            assert_eq!(written, consumed.get());
+        }};
+    }
+
+    macro_rules! assert_float {
+        ($ty:ty, $value:expr) => {{
+            let value: $ty = $value;
+            let mut output = [0_u8;
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
+            let written = unsafe {
+                BinaryCodec::<$ty, NativeEndian>::encode(value, &mut output, 0)
+            };
+            assert_eq!(value.to_bits().to_ne_bytes(), output);
+            assert_eq!(output.len(), written);
+
+            let (decoded, consumed) =
+                unsafe { BinaryCodec::<$ty, NativeEndian>::decode(&output, 0) };
+            assert_eq!(value.to_bits(), decoded.to_bits());
+            assert_eq!(written, consumed.get());
+        }};
+    }
+
+    assert_integer!(u8, 0xa5);
+    assert_integer!(i8, -37);
+    assert_integer!(u16, 0xa5b6);
+    assert_integer!(u32, 0xa5b6_c7d8);
+    assert_integer!(u64, 0xa5b6_c7d8_e9fa_0b1c);
+    assert_integer!(u128, 0xa5b6_c7d8_e9fa_0b1c_2d3e_4f50_6172_8394);
+    assert_integer!(i16, -0x1234);
+    assert_integer!(i32, -0x1234_5678);
+    assert_integer!(i64, -0x1234_5678_9abc_def0);
+    assert_integer!(i128, -0x1234_5678_9abc_def0_1234_5678_9abc_def0);
+    assert_float!(f32, f32::from_bits(0x7fc0_0123));
+    assert_float!(f64, f64::from_bits(0x7ff8_0000_0000_0123));
+}
+
 use super::assertions_tests::assert_decoded_eq;
 
 #[test]
