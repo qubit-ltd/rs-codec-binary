@@ -37,7 +37,7 @@ entering the unsafe layer; the decoder supplies a complete record slice.
 ```toml
 [dependencies]
 qubit-codec-binary = "0.3"
-qubit-codec = "0.11"
+qubit-codec = "0.10"
 ```
 
 Import byte-order markers and the shared `Codec` trait from `qubit-codec`.

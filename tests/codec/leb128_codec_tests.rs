@@ -325,7 +325,9 @@ fn test_leb128_codec_trait_maps_decode_failures() {
     let invalid = unsafe { Codec::decode(&mut codec, &[0x80, 0x00], 0) }
         .expect_err("non-canonical LEB128 value should be invalid");
     match invalid {
-        DecodeFailure::Invalid { source, consumed, .. } => {
+        DecodeFailure::Invalid {
+            source, consumed, ..
+        } => {
             assert_eq!(Leb128DecodeErrorKind::NonCanonical, source.kind());
             assert_eq!(Some(nonzero(2)), consumed);
         }
