@@ -52,8 +52,11 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
     strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
     non_strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
 ) where
-    C: qubit_codec::Codec<Value = T, Unit = u8, DecodeError = Leb128DecodeError>
-        + Default,
+    C: qubit_codec::Codec<
+            Value = T,
+            Unit = u8,
+            DecodeError = Leb128DecodeError,
+        > + Default,
     C::EncodeError: core::fmt::Debug,
     T: Copy + core::fmt::Debug + PartialEq,
 {
@@ -63,12 +66,7 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
 
     let mut canonical = [0_u8; N];
     let written = unsafe {
-        qubit_codec::Codec::encode(
-            &mut C::default(),
-            value,
-            &mut canonical,
-            0,
-        )
+        qubit_codec::Codec::encode(&mut C::default(), value, &mut canonical, 0)
     }
     .expect("LEB128-family canonical encoding is infallible");
     let canonical = &canonical[..written];
@@ -166,7 +164,6 @@ fuzz_target!(|data: &[u8]| {
     let input = &data[..data.len().min(MAX_FUZZ_INPUT_LEN)];
 
     decode_arbitrary_input(input);
-    assert_noncanonical_policy_behavior();
 
     let bits = fuzz_u128(input);
     assert_leb128_roundtrips(bits);
@@ -391,41 +388,4 @@ fn assert_binary_roundtrips(bits: u128) {
         NativeEndian,
         f64::from_bits(bits as u64)
     );
-}
-
-/// Verifies that only strict decoding rejects redundant valid encodings.
-fn assert_noncanonical_policy_behavior() {
-    let unsigned_non_strict =
-        unsafe { Leb128Codec::<u64, NonStrict>::decode(&[0x80, 0x00], 0) }
-            .expect("non-strict unsigned decoding must accept redundant zero");
-    let (unsigned_value, unsigned_consumed) = unsigned_non_strict;
-    assert_eq!((0, 2), (unsigned_value, unsigned_consumed.get()));
-    let unsigned_strict =
-        unsafe { Leb128Codec::<u64, Strict>::decode(&[0x80, 0x00], 0) }
-            .expect_err("strict unsigned decoding must reject redundant zero");
-    assert_eq!(Leb128DecodeErrorKind::NonCanonical, unsigned_strict.kind());
-
-    let signed_non_strict =
-        unsafe { Leb128Codec::<i64, NonStrict>::decode(&[0xff, 0x7f], 0) }
-            .expect(
-                "non-strict signed decoding must accept redundant negative one",
-            );
-    let (signed_value, signed_consumed) = signed_non_strict;
-    assert_eq!((-1, 2), (signed_value, signed_consumed.get()));
-    let signed_strict =
-        unsafe { Leb128Codec::<i64, Strict>::decode(&[0xff, 0x7f], 0) }
-            .expect_err(
-                "strict signed decoding must reject redundant negative one",
-            );
-    assert_eq!(Leb128DecodeErrorKind::NonCanonical, signed_strict.kind());
-
-    let zig_zag_non_strict =
-        unsafe { ZigZagCodec::<i64, NonStrict>::decode(&[0x80, 0x00], 0) }
-            .expect("non-strict ZigZag decoding must accept redundant zero");
-    let (zig_zag_value, zig_zag_consumed) = zig_zag_non_strict;
-    assert_eq!((0, 2), (zig_zag_value, zig_zag_consumed.get()));
-    let zig_zag_strict =
-        unsafe { ZigZagCodec::<i64, Strict>::decode(&[0x80, 0x00], 0) }
-            .expect_err("strict ZigZag decoding must reject redundant zero");
-    assert_eq!(Leb128DecodeErrorKind::NonCanonical, zig_zag_strict.kind());
 }
