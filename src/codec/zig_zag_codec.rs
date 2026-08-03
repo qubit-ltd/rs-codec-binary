@@ -68,6 +68,7 @@ use qubit_codec::Codec;
 /// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ZigZagCodec<T, P> {
+    /// Associates the value and decode-policy types without storing either.
     marker: PhantomData<fn() -> (T, P)>,
 }
 

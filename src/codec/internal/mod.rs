@@ -8,4 +8,5 @@
 
 //! Private implementation details for the binary codec module.
 
+pub(super) mod leb128_decode_error_details;
 pub(super) mod sealed;
