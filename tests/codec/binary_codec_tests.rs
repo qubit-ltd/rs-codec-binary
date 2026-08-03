@@ -417,20 +417,22 @@ fn test_binary_codec_native_endian_trait_covers_all_supported_scalar_types() {
             let value: $ty = $value;
             let mut codec = BinaryCodec::<$ty, NativeEndian>::default();
             let mut output = [0xaa_u8;
-                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE
+                    + 2];
 
-            let written = unsafe {
-                Codec::encode(&mut codec, &value, &mut output, 1)
-            }
-            .expect("native-endian integer encoding should be infallible");
+            let written =
+                unsafe { Codec::encode(&mut codec, &value, &mut output, 1) }
+                    .expect(
+                        "native-endian integer encoding should be infallible",
+                    );
             assert_eq!(value.to_ne_bytes(), output[1..=written]);
             assert_eq!(output[0], 0xaa);
             assert_eq!(output[written + 1], 0xaa);
 
-            let (decoded, consumed) = unsafe {
-                Codec::decode(&mut codec, &output, 1)
-            }
-            .expect("native-endian integer decoding should be infallible");
+            let (decoded, consumed) =
+                unsafe { Codec::decode(&mut codec, &output, 1) }.expect(
+                    "native-endian integer decoding should be infallible",
+                );
             assert_eq!(value, decoded);
             assert_eq!(written, consumed.get());
         }};
@@ -441,20 +443,22 @@ fn test_binary_codec_native_endian_trait_covers_all_supported_scalar_types() {
             let value: $ty = $value;
             let mut codec = BinaryCodec::<$ty, NativeEndian>::default();
             let mut output = [0xaa_u8;
-                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE
+                    + 2];
 
-            let written = unsafe {
-                Codec::encode(&mut codec, &value, &mut output, 1)
-            }
-            .expect("native-endian float encoding should be infallible");
+            let written =
+                unsafe { Codec::encode(&mut codec, &value, &mut output, 1) }
+                    .expect(
+                        "native-endian float encoding should be infallible",
+                    );
             assert_eq!(value.to_bits().to_ne_bytes(), output[1..=written]);
             assert_eq!(output[0], 0xaa);
             assert_eq!(output[written + 1], 0xaa);
 
-            let (decoded, consumed) = unsafe {
-                Codec::decode(&mut codec, &output, 1)
-            }
-            .expect("native-endian float decoding should be infallible");
+            let (decoded, consumed) =
+                unsafe { Codec::decode(&mut codec, &output, 1) }.expect(
+                    "native-endian float decoding should be infallible",
+                );
             assert_eq!(value.to_bits(), decoded.to_bits());
             assert_eq!(written, consumed.get());
         }};

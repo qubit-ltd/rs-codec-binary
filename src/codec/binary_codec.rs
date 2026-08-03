@@ -325,8 +325,8 @@ macro_rules! impl_integer_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `input_index` without bounds
-            /// checks.
+            /// Decodes a value from `input` starting at `input_index` without
+            /// bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -463,8 +463,8 @@ macro_rules! impl_integer_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `input_index` without bounds
-            /// checks.
+            /// Decodes a value from `input` starting at `input_index` without
+            /// bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -605,8 +605,8 @@ macro_rules! impl_float_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `input_index` without bounds
-            /// checks.
+            /// Decodes a value from `input` starting at `input_index` without
+            /// bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
@@ -743,8 +743,8 @@ macro_rules! impl_float_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `input_index` without bounds
-            /// checks.
+            /// Decodes a value from `input` starting at `input_index` without
+            /// bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
             /// caller has already validated the buffer length externally.
