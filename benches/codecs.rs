@@ -1023,7 +1023,7 @@ fn encode_mixed_uleb_unchecked(
     widths: &[usize],
     output: &mut [u8],
 ) -> u64 {
-    assert_eq!(fields.len(), widths.len());
+    debug_assert_eq!(fields.len(), widths.len());
     let fields = black_box(fields);
     let widths = black_box(widths);
     let mut offset = 0_usize;
@@ -1088,7 +1088,7 @@ fn encode_mixed_uleb_safe_slices(
     widths: &[usize],
     output: &mut [u8],
 ) -> u64 {
-    assert_eq!(fields.len(), widths.len());
+    debug_assert_eq!(fields.len(), widths.len());
     let fields = black_box(fields);
     let widths = black_box(widths);
     let mut offset = 0_usize;
