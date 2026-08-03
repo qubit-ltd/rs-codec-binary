@@ -90,6 +90,10 @@ name `P` explicitly:
 The policy does not affect encoding. Encoding-only code should conventionally
 instantiate the codec with `NonStrict`.
 
+`NonStrict` accepts non-canonical representations only within the target
+integer's declared maximum width. Longer unterminated or over-width payloads
+remain malformed rather than being accepted as arbitrarily long encodings.
+
 `Leb128DecodeError` reports `Incomplete`, `Malformed`, or `NonCanonical`.
 `start_index()` identifies the attempted value, and `error_index()` identifies
 where failure became observable. For incomplete data, use `required()`,

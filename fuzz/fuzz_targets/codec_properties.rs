@@ -31,6 +31,11 @@ macro_rules! assert_decode_policies {
     ($codec:ident, $ty:ty, $input:expr) => {{
         let non_strict = unsafe { $codec::<$ty, NonStrict>::decode($input, 0) };
         let strict = unsafe { $codec::<$ty, Strict>::decode($input, 0) };
+        assert_strict_matches_canonical_encoding::<
+            $codec<$ty, NonStrict>,
+            $ty,
+            { $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE },
+        >($input, &strict, &non_strict);
         assert_policy_results(
             $input,
             $codec::<$ty, NonStrict>::MAX_DECODE_UNITS_PER_VALUE,
@@ -38,6 +43,52 @@ macro_rules! assert_decode_policies {
             non_strict,
         );
     }};
+}
+
+/// Verifies Strict decoding against an independently regenerated canonical
+/// representation of every NonStrict-successful input.
+fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
+    input: &[u8],
+    strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    non_strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+) where
+    C: qubit_codec::Codec<Value = T, Unit = u8, DecodeError = Leb128DecodeError>
+        + Default,
+    C::EncodeError: core::fmt::Debug,
+    T: Copy + core::fmt::Debug + PartialEq,
+{
+    let Ok((value, consumed)) = non_strict else {
+        return;
+    };
+
+    let mut canonical = [0_u8; N];
+    let written = unsafe {
+        qubit_codec::Codec::encode(
+            &mut C::default(),
+            value,
+            &mut canonical,
+            0,
+        )
+    }
+    .expect("LEB128-family canonical encoding is infallible");
+    let canonical = &canonical[..written];
+    let encoded_prefix = &input[..consumed.get()];
+
+    match strict {
+        Ok((strict_value, strict_consumed)) => {
+            assert_eq!(*strict_value, *value);
+            assert_eq!(strict_consumed, consumed);
+            assert_eq!(encoded_prefix, canonical);
+        }
+        Err(error) if error.is_noncanonical() => {
+            assert_ne!(encoded_prefix, canonical);
+        }
+        Err(error) => {
+            panic!(
+                "Strict rejected a NonStrict-successful canonicality candidate as {error:?}"
+            );
+        }
+    }
 }
 
 macro_rules! assert_leb128_roundtrip {
