@@ -15,6 +15,6 @@ pub struct NonStrict;
 impl super::internal::sealed::Sealed for NonStrict {}
 
 impl Leb128DecodePolicy for NonStrict {
-    /// Whether this policy accepts non-canonical encodings.
+    /// Whether this policy rejects non-canonical encodings.
     const STRICT: bool = false;
 }
