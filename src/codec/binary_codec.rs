@@ -68,6 +68,7 @@ use qubit_io::UncheckedSlice;
 /// ```
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BinaryCodec<T, O> {
+    /// Associates the value and byte-order types without storing either one.
     marker: PhantomData<fn() -> (T, O)>,
 }
 
@@ -324,7 +325,7 @@ macro_rules! impl_integer_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
+            /// Decodes a value from `input` starting at `input_index` without bounds
             /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -366,7 +367,7 @@ macro_rules! impl_integer_binary_codec {
                 )
             }
 
-            /// Encodes `value` into `output` starting at `index`
+            /// Encodes `value` into `output` starting at `output_index`
             /// without bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -462,7 +463,7 @@ macro_rules! impl_integer_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
+            /// Decodes a value from `input` starting at `input_index` without bounds
             /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -504,7 +505,7 @@ macro_rules! impl_integer_binary_codec {
                 )
             }
 
-            /// Encodes `value` into `output` starting at `index`
+            /// Encodes `value` into `output` starting at `output_index`
             /// without bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -604,7 +605,7 @@ macro_rules! impl_float_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
+            /// Decodes a value from `input` starting at `input_index` without bounds
             /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -646,7 +647,7 @@ macro_rules! impl_float_binary_codec {
                 )
             }
 
-            /// Encodes `value` into `output` starting at `index`
+            /// Encodes `value` into `output` starting at `output_index`
             /// without bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -742,7 +743,7 @@ macro_rules! impl_float_binary_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
+            /// Decodes a value from `input` starting at `input_index` without bounds
             /// checks.
             ///
             /// This function is intended for hot binary codec paths where the
@@ -784,7 +785,7 @@ macro_rules! impl_float_binary_codec {
                 )
             }
 
-            /// Encodes `value` into `output` starting at `index`
+            /// Encodes `value` into `output` starting at `output_index`
             /// without bounds checks.
             ///
             /// This function is intended for hot binary codec paths where the

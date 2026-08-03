@@ -86,6 +86,7 @@ pub(in crate::codec) fn map_leb128_decode_failure(
 /// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Leb128Codec<T, P> {
+    /// Associates the value and decode-policy types without storing either.
     marker: PhantomData<fn() -> (T, P)>,
 }
 
@@ -269,7 +270,7 @@ macro_rules! impl_signed_leb128_codec {
             pub const MAX_DECODE_UNITS_PER_VALUE: usize =
                 <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
-            /// Decodes a value from `input` starting at `index` without bounds
+            /// Decodes a value from `input` starting at `input_index` without bounds
             /// checks.
             ///
             /// # Parameters
@@ -316,7 +317,7 @@ macro_rules! impl_signed_leb128_codec {
                 Ok((value as $ty, consumed))
             }
 
-            /// Encodes `value` into `output` starting at `index` without bounds
+            /// Encodes `value` into `output` starting at `output_index` without bounds
             /// checks.
             ///
             /// # Parameters
