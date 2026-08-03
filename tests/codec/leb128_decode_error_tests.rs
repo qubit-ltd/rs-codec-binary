@@ -21,6 +21,8 @@ fn test_incomplete_stores_start_error_required_available_and_additional_units()
 
     assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
     assert!(error.is_incomplete());
+    assert!(!error.is_malformed());
+    assert!(!error.is_noncanonical());
     assert_eq!(5, error.start_index());
     assert_eq!(7, error.error_index());
     assert_eq!(None, error.consumed());
@@ -64,7 +66,11 @@ fn test_invalid_errors_store_start_error_and_consumed_units() {
         Leb128DecodeError::noncanonical(9, noncanonical_consumed);
 
     assert!(malformed.is_malformed());
+    assert!(!malformed.is_incomplete());
+    assert!(!malformed.is_noncanonical());
     assert!(noncanonical.is_noncanonical());
+    assert!(!noncanonical.is_incomplete());
+    assert!(!noncanonical.is_malformed());
     assert_eq!(5, malformed.start_index());
     assert_eq!(7, malformed.error_index());
     assert_eq!(9, noncanonical.start_index());
@@ -97,4 +103,9 @@ fn test_malformed_rejects_error_index_outside_consumed_span() {
 
     assert!(before_start.is_err());
     assert!(after_consumed.is_err());
+
+    let overflow = std::panic::catch_unwind(|| {
+        Leb128DecodeError::malformed(usize::MAX, usize::MAX, consumed)
+    });
+    assert!(overflow.is_err());
 }
