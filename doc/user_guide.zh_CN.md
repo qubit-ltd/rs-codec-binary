@@ -83,6 +83,9 @@ codec 的两个上限数值相同，但契约彼此独立。
 
 策略不会影响编码。仅编码的代码应按约定使用 `NonStrict` 实例化 codec。
 
+`NonStrict` 只接受目标整数声明的最大宽度以内的非规范表示。超过该宽度的
+未终止或过宽负载仍会被视为畸形输入，不会接受任意长度的编码。
+
 `Leb128DecodeError` 区分 `Incomplete`、`Malformed` 与 `NonCanonical`。
 `start_index()` 是尝试解码值的起点，`error_index()` 是错误可观察的位置；输入
 不完整时，可使用 `required()`、`available()` 和 `additional()` 决定如何补充缓冲。
