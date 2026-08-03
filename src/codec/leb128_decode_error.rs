@@ -172,7 +172,9 @@ impl Leb128DecodeError {
     pub const fn consumed(self) -> Option<NonZeroUsize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { .. } => None,
-            Leb128DecodeErrorDetails::Invalid { consumed, .. } => Some(consumed),
+            Leb128DecodeErrorDetails::Invalid { consumed, .. } => {
+                Some(consumed)
+            }
         }
     }
 
