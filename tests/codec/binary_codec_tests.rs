@@ -15,7 +15,7 @@ use qubit_codec::{
 use qubit_codec_binary::BinaryCodec;
 
 #[test]
-fn native_endian_round_trip_matches_platform_order() {
+fn test_native_endian_round_trip_matches_platform_order() {
     let value = 0x1234_5678_u32;
     let mut output =
         [0_u8; BinaryCodec::<u32, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE];
@@ -31,7 +31,7 @@ fn native_endian_round_trip_matches_platform_order() {
 }
 
 #[test]
-fn native_endian_round_trip_covers_all_supported_scalar_types() {
+fn test_native_endian_round_trip_covers_all_supported_scalar_types() {
     macro_rules! assert_integer {
         ($ty:ty, $value:expr) => {{
             let value: $ty = $value;
@@ -408,6 +408,70 @@ fn test_binary_codec_trait_covers_byte_and_little_endian_groups() {
             .expect("little-endian float decoding should be infallible");
     assert_eq!(-25.25, decoded);
     assert_eq!(8, consumed.get());
+}
+
+#[test]
+fn test_binary_codec_native_endian_trait_covers_all_supported_scalar_types() {
+    macro_rules! assert_integer {
+        ($ty:ty, $value:expr) => {{
+            let value: $ty = $value;
+            let mut codec = BinaryCodec::<$ty, NativeEndian>::default();
+            let mut output = [0xaa_u8;
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+
+            let written = unsafe {
+                Codec::encode(&mut codec, &value, &mut output, 1)
+            }
+            .expect("native-endian integer encoding should be infallible");
+            assert_eq!(value.to_ne_bytes(), output[1..=written]);
+            assert_eq!(output[0], 0xaa);
+            assert_eq!(output[written + 1], 0xaa);
+
+            let (decoded, consumed) = unsafe {
+                Codec::decode(&mut codec, &output, 1)
+            }
+            .expect("native-endian integer decoding should be infallible");
+            assert_eq!(value, decoded);
+            assert_eq!(written, consumed.get());
+        }};
+    }
+
+    macro_rules! assert_float {
+        ($ty:ty, $value:expr) => {{
+            let value: $ty = $value;
+            let mut codec = BinaryCodec::<$ty, NativeEndian>::default();
+            let mut output = [0xaa_u8;
+                BinaryCodec::<$ty, NativeEndian>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+
+            let written = unsafe {
+                Codec::encode(&mut codec, &value, &mut output, 1)
+            }
+            .expect("native-endian float encoding should be infallible");
+            assert_eq!(value.to_bits().to_ne_bytes(), output[1..=written]);
+            assert_eq!(output[0], 0xaa);
+            assert_eq!(output[written + 1], 0xaa);
+
+            let (decoded, consumed) = unsafe {
+                Codec::decode(&mut codec, &output, 1)
+            }
+            .expect("native-endian float decoding should be infallible");
+            assert_eq!(value.to_bits(), decoded.to_bits());
+            assert_eq!(written, consumed.get());
+        }};
+    }
+
+    assert_integer!(u8, 0xa5);
+    assert_integer!(i8, -37);
+    assert_integer!(u16, 0xa5b6);
+    assert_integer!(i16, -0x1234);
+    assert_integer!(u32, 0xa5b6_c7d8);
+    assert_integer!(i32, -0x1234_5678);
+    assert_integer!(u64, 0xa5b6_c7d8_e9fa_0b1c);
+    assert_integer!(i64, -0x1234_5678_9abc_def0);
+    assert_integer!(u128, 0xa5b6_c7d8_e9fa_0b1c_2d3e_4f50_6172_8394);
+    assert_integer!(i128, -0x1234_5678_9abc_def0_1234_5678_9abc_def0);
+    assert_float!(f32, f32::from_bits(0x7fc0_0123));
+    assert_float!(f64, f64::from_bits(0x7ff8_0000_0000_0123));
 }
 
 #[test]
