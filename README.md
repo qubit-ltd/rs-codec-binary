@@ -69,6 +69,10 @@ from `qubit-codec`, and use `qubit-io-binary` when stream adapters are needed.
 policy. `P` never affects canonical encoding; encoding-only code should use
 `NonStrict` as the conventional marker.
 
+`NonStrict` accepts non-canonical representations only within the target
+integer's declared maximum width. Longer unterminated or over-width payloads
+remain malformed rather than being accepted as arbitrarily long encodings.
+
 ## Learn More
 
 - [User guide](doc/user_guide.md)
