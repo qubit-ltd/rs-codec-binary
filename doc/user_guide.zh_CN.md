@@ -34,10 +34,30 @@
 ```toml
 [dependencies]
 qubit-codec-binary = "0.3"
-qubit-codec = "0.10"
+qubit-codec = "0.11"
 ```
 
-字节序标记与共享 `Codec` trait 请从 `qubit-codec` 导入。
+字节序标记与共享 `Codec` trait 请从 `qubit-codec` 导入。普通的单值转换建议使用
+检查型的 `CodecValueEncoder` 与 `CodecValueDecoder` adapter：
+
+```rust
+use qubit_codec::{
+    CodecValueDecoder,
+    CodecValueEncoder,
+    ValueDecoder,
+    ValueEncoder,
+};
+use qubit_codec_binary::{Leb128Codec, NonStrict};
+
+let mut encoder =
+    CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
+let encoded = encoder.encode(&300).expect("u64 始终可以编码");
+
+let mut decoder =
+    CodecValueDecoder::new(Leb128Codec::<u64, NonStrict>::default());
+let decoded = decoder.decode(&encoded).expect("编码结果有效");
+assert_eq!(300, decoded);
+```
 
 ## 核心流程
 
@@ -113,9 +133,9 @@ assert_eq!(Some(1), error.available());
 4. 持久化或跨平台格式不要使用 `usize`、`isize`，它们的边界依赖目标指针宽度；
    请使用固定宽度整数。
 
-来自不可信缓冲区的数据应先经过检查型协议 reader/writer 再调用这些方法。需要面向
-stream 的二进制 adapter 时使用 `qubit-io-binary`；本库不管理缓冲，也不映射到
-`std::io::Error`。
+来自不可信缓冲区的数据应先使用上面的检查型 adapter，或先经过检查型协议
+reader/writer。需要面向 stream 的二进制 adapter 时使用 `qubit-io-binary`；本库不
+管理缓冲，也不映射到 `std::io::Error`。
 
 ## 延伸阅读
 
