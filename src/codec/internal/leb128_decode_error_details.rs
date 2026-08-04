@@ -6,6 +6,8 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
+// qubit-style: allow source-test-pair
+
 use core::num::NonZeroUsize;
 
 use crate::Leb128DecodeErrorKind;
