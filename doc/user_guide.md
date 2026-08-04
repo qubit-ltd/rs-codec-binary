@@ -37,10 +37,31 @@ entering the unsafe layer; the decoder supplies a complete record slice.
 ```toml
 [dependencies]
 qubit-codec-binary = "0.3"
-qubit-codec = "0.10"
+qubit-codec = "0.11"
 ```
 
 Import byte-order markers and the shared `Codec` trait from `qubit-codec`.
+For ordinary one-value conversion, import `CodecValueEncoder` and
+`CodecValueDecoder` as checked adapters:
+
+```rust
+use qubit_codec::{
+    CodecValueDecoder,
+    CodecValueEncoder,
+    ValueDecoder,
+    ValueEncoder,
+};
+use qubit_codec_binary::{Leb128Codec, NonStrict};
+
+let mut encoder =
+    CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
+let encoded = encoder.encode(&300).expect("u64 is always encodable");
+
+let mut decoder =
+    CodecValueDecoder::new(Leb128Codec::<u64, NonStrict>::default());
+let decoded = decoder.decode(&encoded).expect("encoded value is valid");
+assert_eq!(300, decoded);
+```
 
 ## Core Workflow
 
@@ -123,9 +144,9 @@ The direct codec methods do not check slice bounds. Before calling them:
 4. Keep `usize` and `isize` out of persistent or cross-platform formats: their
    bounds follow the target pointer width. Prefer fixed-width integers.
 
-Wrap these calls in a checked protocol reader or writer when input comes from
-untrusted buffers. Use `qubit-io-binary` for stream-oriented binary adapters;
-this crate neither owns buffering nor maps errors to `std::io::Error`.
+Use the checked adapters above, or a checked protocol reader/writer, when input
+comes from untrusted buffers. Use `qubit-io-binary` for stream-oriented binary
+adapters; this crate neither owns buffering nor maps errors to `std::io::Error`.
 
 ## Further Reading
 
