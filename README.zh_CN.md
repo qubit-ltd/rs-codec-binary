@@ -16,7 +16,7 @@
 ```toml
 [dependencies]
 qubit-codec-binary = "0.3"
-qubit-codec = "0.10"
+qubit-codec = "0.11"
 ```
 
 ## 快速开始
@@ -41,8 +41,31 @@ let compact_len = unsafe {
 assert_eq!(&[0xac, 0x02], &compact[..compact_len]);
 ```
 
+普通的单值转换建议优先使用 `qubit-codec` 提供的检查型 adapter；它们管理临时
+缓冲区，并把 unsafe 边界封装在 adapter 内部：
+
+```rust
+use qubit_codec::{
+    CodecValueDecoder,
+    CodecValueEncoder,
+    ValueDecoder,
+    ValueEncoder,
+};
+use qubit_codec_binary::{Leb128Codec, NonStrict};
+
+let mut encoder =
+    CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
+let encoded = encoder.encode(&300).expect("u64 始终可以编码");
+
+let mut decoder =
+    CodecValueDecoder::new(Leb128Codec::<u64, NonStrict>::default());
+let decoded = decoder.decode(&encoded).expect("编码结果有效");
+assert_eq!(300, decoded);
+```
+
 底层 `encode` 与 `decode` 方法是 `unsafe`：调用前必须满足文档规定的可读或
-可写容量条件。
+可写容量条件。只有当外围协议代码已经建立这些边界，或经过测量确认热路径确有
+需要时，才应直接调用它们。
 
 ## 为什么需要这个项目
 

@@ -17,7 +17,7 @@ reader or writer in the codec layer.
 ```toml
 [dependencies]
 qubit-codec-binary = "0.3"
-qubit-codec = "0.10"
+qubit-codec = "0.11"
 ```
 
 ## Quick Start
@@ -42,8 +42,33 @@ let compact_len = unsafe {
 assert_eq!(&[0xac, 0x02], &compact[..compact_len]);
 ```
 
+For ordinary one-value conversion, prefer the checked adapters from
+`qubit-codec`; they own the temporary buffer and keep the unsafe boundary
+inside the adapter:
+
+```rust
+use qubit_codec::{
+    CodecValueDecoder,
+    CodecValueEncoder,
+    ValueDecoder,
+    ValueEncoder,
+};
+use qubit_codec_binary::{Leb128Codec, NonStrict};
+
+let mut encoder =
+    CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
+let encoded = encoder.encode(&300).expect("u64 is always encodable");
+
+let mut decoder =
+    CodecValueDecoder::new(Leb128Codec::<u64, NonStrict>::default());
+let decoded = decoder.decode(&encoded).expect("encoded value is valid");
+assert_eq!(300, decoded);
+```
+
 The low-level `encode` and `decode` methods are `unsafe`: the caller must
 ensure the documented readable or writable capacity before calling them.
+Use them directly only when the surrounding protocol code already establishes
+those bounds or when a measured hot path justifies the unchecked boundary.
 
 ## Why This Project Exists
 
