@@ -34,8 +34,8 @@ use qubit_io::UncheckedSlice;
 ///   [`BigEndian`], [`LittleEndian`], or [`NativeEndian`]. Prefer big- or
 ///   little-endian formats for persistent and cross-platform data;
 ///   native-endian encoding is only suitable for platform-local data. Single-
-///   byte scalar implementations accept any marker because byte order does not
-///   affect one-byte values.
+///   byte scalar implementations accept any [`ByteOrderSpec`] marker because
+///   byte order does not affect one-byte values.
 ///
 /// # Examples
 ///
