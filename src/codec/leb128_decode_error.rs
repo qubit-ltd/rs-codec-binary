@@ -266,7 +266,7 @@ impl Leb128DecodeError {
                 available,
             } => {
                 let additional = required.get() - available;
-                Some(qubit_codec::nz!(additional))
+                Some(qubit_utils::nonzero!(additional))
             }
             Leb128DecodeErrorDetails::Invalid { .. } => None,
         }

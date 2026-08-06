@@ -478,7 +478,7 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_codec::nz!(consumed);
+            let consumed = qubit_utils::nonzero!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
@@ -488,7 +488,7 @@ where
             );
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_codec::nz!(available + 1);
+            let required = qubit_utils::nonzero!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -540,7 +540,7 @@ where
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
         let byte =
-            unsafe { qubit_io::UncheckedSlice::read(input, index + offset) };
+            unsafe { qubit_utils::UncheckedSlice::read(input, index + offset) };
         let payload = u128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -621,7 +621,7 @@ where
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_codec::nz!(consumed);
+            let consumed = qubit_utils::nonzero!(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
@@ -631,7 +631,7 @@ where
             );
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_codec::nz!(available + 1);
+            let required = qubit_utils::nonzero!(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -684,7 +684,7 @@ where
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
         let byte =
-            unsafe { qubit_io::UncheckedSlice::read(input, index + offset) };
+            unsafe { qubit_utils::UncheckedSlice::read(input, index + offset) };
         let payload = i128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
@@ -742,7 +742,7 @@ fn malformed_decode_error(
     debug_assert!(consumed > 0, "malformed LEB128 errors must consume bytes");
     // SAFETY: All malformed call sites pass either `offset + 1` or `max_bytes`,
     // both of which are non-zero for supported LEB128 codecs.
-    let consumed = qubit_codec::nz!(consumed);
+    let consumed = qubit_utils::nonzero!(consumed);
     Leb128DecodeError::malformed(start_index, error_index, consumed)
 }
 
@@ -768,7 +768,7 @@ fn noncanonical_decode_error(
     );
     // SAFETY: Non-canonical errors are detected only after reading at least one
     // terminating byte.
-    let consumed = qubit_codec::nz!(consumed);
+    let consumed = qubit_utils::nonzero!(consumed);
     Leb128DecodeError::noncanonical(index, consumed)
 }
 
@@ -891,7 +891,7 @@ unsafe fn write_uleb_unchecked(
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            qubit_io::UncheckedSlice::write(output, index + offset, byte);
+            qubit_utils::UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if value == 0 {
@@ -948,7 +948,7 @@ unsafe fn write_sleb_unchecked(
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            qubit_io::UncheckedSlice::write(output, index + offset, byte);
+            qubit_utils::UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if done {

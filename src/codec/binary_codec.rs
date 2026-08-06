@@ -18,7 +18,7 @@ use qubit_codec::{
     LittleEndian,
     NativeEndian,
 };
-use qubit_io::UncheckedSlice;
+use qubit_utils::UncheckedSlice;
 
 /// Type-level unchecked binary codec for one scalar type and one byte order.
 ///
@@ -113,8 +113,8 @@ where
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
-            unsafe { qubit_io::UncheckedSlice::read(input, input_index) },
-            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+            unsafe { qubit_utils::UncheckedSlice::read(input, input_index) },
+            qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -143,7 +143,7 @@ where
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            qubit_io::UncheckedSlice::write(output, output_index, value);
+            qubit_utils::UncheckedSlice::write(output, output_index, value);
         }
         Self::MAX_ENCODE_UNITS_PER_VALUE
     }
@@ -233,7 +233,7 @@ where
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { UncheckedSlice::read(input, input_index) } as i8,
-            qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+            qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -262,7 +262,11 @@ where
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
-            qubit_io::UncheckedSlice::write(output, output_index, value as u8);
+            qubit_utils::UncheckedSlice::write(
+                output,
+                output_index,
+                value as u8,
+            );
         }
         Self::MAX_ENCODE_UNITS_PER_VALUE
     }
@@ -363,7 +367,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -501,7 +505,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -643,7 +647,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -781,7 +785,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -906,7 +910,7 @@ macro_rules! impl_native_integer_binary_codec {
                 let raw = unsafe {
                     UncheckedSlice::read_ne_unaligned(input, input_index)
                 };
-                (raw, qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE))
+                (raw, qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes a native-endian value without bounds checks.
@@ -1015,7 +1019,7 @@ macro_rules! impl_native_float_binary_codec {
                 };
                 (
                     <$ty>::from_bits(raw),
-                    qubit_codec::nz!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
