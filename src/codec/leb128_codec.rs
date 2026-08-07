@@ -276,7 +276,7 @@ macro_rules! impl_signed_leb128_codec {
             /// # Parameters
             ///
             /// - `input`: Source byte buffer.
-            /// - `index`: Start index in `input`.
+            /// - `input_index`: Start index in `input`.
             ///
             /// # Returns
             ///
