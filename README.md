@@ -16,7 +16,7 @@ reader or writer in the codec layer.
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.3"
+qubit-codec-binary = "0.4"
 qubit-codec = "0.12"
 ```
 
