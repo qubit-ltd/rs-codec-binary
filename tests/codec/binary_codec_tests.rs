@@ -147,6 +147,60 @@ fn test_binary_codec_writes_to_explicit_index_unchecked() {
     assert_eq!([0xaa, 0x78, 0x56, 0x34, 0x12, 0xbb], output);
 }
 
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_big_endian_decode_checks_readable_width() {
+    unsafe {
+        let _ = BinaryCodec::<u32, BigEndian>::decode(&[0; 3], 0);
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_little_endian_encode_checks_writable_width() {
+    unsafe {
+        BinaryCodec::<u32, LittleEndian>::encode(0, &mut [0; 3], 0);
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_big_endian_float_decode_checks_readable_width() {
+    unsafe {
+        let _ = BinaryCodec::<f32, BigEndian>::decode(&[0; 3], 0);
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_little_endian_float_encode_checks_writable_width() {
+    unsafe {
+        BinaryCodec::<f64, LittleEndian>::encode(0.0, &mut [0; 7], 0);
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_native_endian_decode_checks_readable_width() {
+    unsafe {
+        let _ = BinaryCodec::<u64, NativeEndian>::decode(&[0; 7], 0);
+    }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic]
+fn test_binary_codec_native_endian_float_encode_checks_writable_width() {
+    unsafe {
+        BinaryCodec::<f64, NativeEndian>::encode(0.0, &mut [0; 7], 0);
+    }
+}
+
 #[test]
 fn test_binary_codec_roundtrips_integer_extremes_for_all_fixed_width_types() {
     macro_rules! assert_extreme_roundtrip {
