@@ -114,7 +114,7 @@ where
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { qubit_utils::UncheckedSlice::read(input, input_index) },
-            qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+            qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -233,7 +233,7 @@ where
         // SAFETY: The caller guarantees that the indexed byte is readable.
         (
             unsafe { UncheckedSlice::read(input, input_index) } as i8,
-            qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+            qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
         )
     }
 
@@ -367,7 +367,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_be(raw),
-                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -505,7 +505,7 @@ macro_rules! impl_integer_binary_codec {
 
                 (
                     <$ty>::from_le(raw),
-                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -647,7 +647,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
-                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -785,7 +785,7 @@ macro_rules! impl_float_binary_codec {
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
-                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
@@ -910,7 +910,7 @@ macro_rules! impl_native_integer_binary_codec {
                 let raw = unsafe {
                     UncheckedSlice::read_ne_unaligned(input, input_index)
                 };
-                (raw, qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE))
+                (raw, qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE))
             }
 
             /// Encodes a native-endian value without bounds checks.
@@ -1019,7 +1019,7 @@ macro_rules! impl_native_float_binary_codec {
                 };
                 (
                     <$ty>::from_bits(raw),
-                    qubit_utils::nonzero!(Self::MIN_UNITS_PER_VALUE),
+                    qubit_utils::nonzero(Self::MIN_UNITS_PER_VALUE),
                 )
             }
 
