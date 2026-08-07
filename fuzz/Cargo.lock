@@ -97,7 +97,6 @@ name = "qubit-codec-binary"
 version = "0.3.1"
 dependencies = [
  "qubit-codec",
- "qubit-io",
  "qubit-utils",
  "thiserror",
 ]
@@ -110,13 +109,6 @@ dependencies = [
  "libfuzzer-sys",
  "qubit-codec",
  "qubit-codec-binary",
-]
-
-[[package]]
-name = "qubit-io"
-version = "0.15.0"
-dependencies = [
- "qubit-utils",
 ]
 
 [[package]]
