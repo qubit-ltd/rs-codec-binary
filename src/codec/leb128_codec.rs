@@ -6,20 +6,16 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{
-    convert::Infallible,
-    marker::PhantomData,
-};
+use core::convert::Infallible;
+use core::marker::PhantomData;
 
-use qubit_codec::{
-    Codec,
-    DecodeFailure,
-};
+use qubit_codec::Codec;
+use qubit_codec::DecodeFailure;
+use qubit_utils::UncheckedSlice;
+use qubit_utils::nonzero;
 
-use crate::{
-    Leb128DecodeError,
-    Leb128DecodePolicy,
-};
+use crate::Leb128DecodeError;
+use crate::Leb128DecodePolicy;
 
 /// Maps detailed LEB128 decoding failures to the generic codec failure type.
 ///
@@ -33,9 +29,9 @@ pub(in crate::codec) fn map_leb128_decode_failure(
     if let Some(required) = error.required() {
         DecodeFailure::incomplete_with_source(error, required)
     } else {
-        let consumed = error.consumed().expect(
-            "invalid LEB128 decode errors always report consumed bytes",
-        );
+        let consumed = error
+            .consumed()
+            .expect("invalid LEB128 decode errors always report consumed bytes");
         DecodeFailure::invalid(error, consumed)
     }
 }
@@ -97,8 +93,7 @@ macro_rules! impl_unsigned_leb128_codec {
             P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
             pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
@@ -137,10 +132,7 @@ macro_rules! impl_unsigned_leb128_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this
                 // type.
@@ -177,16 +169,10 @@ macro_rules! impl_unsigned_leb128_codec {
             /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for the
                 // canonical representation of this value.
-                unsafe {
-                    write_uleb_unchecked(output, output_index, value as u128)
-                }
+                unsafe { write_uleb_unchecked(output, output_index, value as u128) }
             }
         }
 
@@ -200,10 +186,8 @@ macro_rules! impl_unsigned_leb128_codec {
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = 1;
-            const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
-            const MAX_DECODE_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_ENCODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_DECODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
             fn encode_len(&self, value: &$ty) -> usize {
@@ -215,19 +199,12 @@ macro_rules! impl_unsigned_leb128_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                qubit_codec::DecodeFailure<Self::DecodeError>,
-            > {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
-                unsafe { Self::decode(input, input_index) }
-                    .map_err(map_leb128_decode_failure)
+                unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
             #[inline(always)]
@@ -238,14 +215,11 @@ macro_rules! impl_unsigned_leb128_codec {
                 output_index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 let required = self.encode_len(value);
-                debug_assert!(
-                    output.len().saturating_sub(output_index) >= required
-                );
+                debug_assert!(output.len().saturating_sub(output_index) >= required);
 
                 // SAFETY: The `Codec::encode` contract provides either the
                 // exact canonical width or this type's maximum width.
-                let written =
-                    unsafe { Self::encode(*value, output, output_index) };
+                let written = unsafe { Self::encode(*value, output, output_index) };
                 Ok(written)
             }
         }
@@ -259,8 +233,7 @@ macro_rules! impl_signed_leb128_codec {
             P: Leb128DecodePolicy,
         {
             /// Minimum number of bytes that can represent a complete value.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
             pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
@@ -299,10 +272,7 @@ macro_rules! impl_signed_leb128_codec {
                 input: &[u8],
                 input_index: usize,
             ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this
                 // type.
@@ -339,16 +309,10 @@ macro_rules! impl_signed_leb128_codec {
             /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for the
                 // canonical representation of this value.
-                unsafe {
-                    write_sleb_unchecked(output, output_index, value as i128)
-                }
+                unsafe { write_sleb_unchecked(output, output_index, value as i128) }
             }
         }
 
@@ -362,10 +326,8 @@ macro_rules! impl_signed_leb128_codec {
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = 1;
-            const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
-            const MAX_DECODE_UNITS_PER_VALUE: usize =
-                (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_ENCODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
+            const MAX_DECODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
             #[inline(always)]
             fn encode_len(&self, value: &$ty) -> usize {
@@ -377,19 +339,12 @@ macro_rules! impl_signed_leb128_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                qubit_codec::DecodeFailure<Self::DecodeError>,
-            > {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
-                unsafe { Self::decode(input, input_index) }
-                    .map_err(map_leb128_decode_failure)
+                unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
             #[inline(always)]
@@ -400,14 +355,11 @@ macro_rules! impl_signed_leb128_codec {
                 output_index: usize,
             ) -> Result<usize, Self::EncodeError> {
                 let required = self.encode_len(value);
-                debug_assert!(
-                    output.len().saturating_sub(output_index) >= required
-                );
+                debug_assert!(output.len().saturating_sub(output_index) >= required);
 
                 // SAFETY: The `Codec::encode` contract provides either the
                 // exact canonical width or this type's maximum width.
-                let written =
-                    unsafe { Self::encode(*value, output, output_index) };
+                let written = unsafe { Self::encode(*value, output, output_index) };
                 Ok(written)
             }
         }
@@ -469,26 +421,19 @@ where
     let available = input.len().saturating_sub(index).min(max_bytes);
     // SAFETY: The caller guarantees that the currently available bytes are
     // readable from `index`.
-    match unsafe {
-        read_uleb_prefix_unchecked::<P>(
-            input, index, bits, max_bytes, available,
-        )
-    } {
+    match unsafe { read_uleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
         Ok(Some((value, consumed))) => {
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_utils::nonzero(consumed);
+            let consumed = nonzero(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
-            debug_assert!(
-                available < usize::MAX,
-                "available byte count overflowed"
-            );
+            debug_assert!(available < usize::MAX, "available byte count overflowed");
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_utils::nonzero(available + 1);
+            let required = nonzero(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -539,19 +484,12 @@ where
     let mut shift = 0u32;
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte =
-            unsafe { qubit_utils::UncheckedSlice::read(input, index + offset) };
+        let byte = unsafe { UncheckedSlice::read(input, index + offset) };
         let payload = u128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
-            if offset == max_bytes - 1
-                && !unsigned_final_payload_fits(byte, bits, offset)
-            {
-                return Err(malformed_decode_error(
-                    index,
-                    index + offset,
-                    offset + 1,
-                ));
+            if offset == max_bytes - 1 && !unsigned_final_payload_fits(byte, bits, offset) {
+                return Err(malformed_decode_error(index, index + offset, offset + 1));
             }
             let consumed = offset + 1;
             if P::STRICT && !is_canonical_uleb_terminal(offset, byte) {
@@ -612,26 +550,19 @@ where
     let available = input.len().saturating_sub(index).min(max_bytes);
     // SAFETY: The caller guarantees that the currently available bytes are
     // readable from `index`.
-    match unsafe {
-        read_sleb_prefix_unchecked::<P>(
-            input, index, bits, max_bytes, available,
-        )
-    } {
+    match unsafe { read_sleb_prefix_unchecked::<P>(input, index, bits, max_bytes, available) } {
         Ok(Some((value, consumed))) => {
             debug_assert!(consumed > 0);
             // SAFETY: Prefix readers only return `Some` after consuming at
             // least one terminating byte.
-            let consumed = qubit_utils::nonzero(consumed);
+            let consumed = nonzero(consumed);
             Ok((value, consumed))
         }
         Ok(None) => {
-            debug_assert!(
-                available < usize::MAX,
-                "available byte count overflowed"
-            );
+            debug_assert!(available < usize::MAX, "available byte count overflowed");
             // SAFETY: Adding one to the available byte count produces a
             // non-zero retry lower bound.
-            let required = qubit_utils::nonzero(available + 1);
+            let required = nonzero(available + 1);
             Err(Leb128DecodeError::incomplete(index, required, available))
         }
         Err(error) => Err(error),
@@ -683,27 +614,18 @@ where
     let mut previous_byte = 0u8;
     for offset in 0..available {
         // SAFETY: The caller guarantees enough readable bytes for this loop.
-        let byte =
-            unsafe { qubit_utils::UncheckedSlice::read(input, index + offset) };
+        let byte = unsafe { UncheckedSlice::read(input, index + offset) };
         let payload = i128::from(byte & 0x7F);
         value |= payload << shift;
         if byte & 0x80 == 0 {
-            if offset == max_bytes - 1
-                && !signed_final_payload_fits(byte, bits, offset)
-            {
-                return Err(malformed_decode_error(
-                    index,
-                    index + offset,
-                    offset + 1,
-                ));
+            if offset == max_bytes - 1 && !signed_final_payload_fits(byte, bits, offset) {
+                return Err(malformed_decode_error(index, index + offset, offset + 1));
             }
             if byte & 0x40 != 0 && shift + 7 < i128::BITS {
                 value |= (!0i128) << (shift + 7);
             }
             let consumed = offset + 1;
-            if P::STRICT
-                && !is_canonical_sleb_terminal(offset, previous_byte, byte)
-            {
+            if P::STRICT && !is_canonical_sleb_terminal(offset, previous_byte, byte) {
                 return Err(noncanonical_decode_error(index, consumed));
             }
             return Ok(Some((value, consumed)));
@@ -742,7 +664,7 @@ fn malformed_decode_error(
     debug_assert!(consumed > 0, "malformed LEB128 errors must consume bytes");
     // SAFETY: All malformed call sites pass either `offset + 1` or `max_bytes`,
     // both of which are non-zero for supported LEB128 codecs.
-    let consumed = qubit_utils::nonzero(consumed);
+    let consumed = nonzero(consumed);
     Leb128DecodeError::malformed(start_index, error_index, consumed)
 }
 
@@ -758,17 +680,14 @@ fn malformed_decode_error(
 ///
 /// Returns the error carrying the byte count to consume.
 #[cold]
-fn noncanonical_decode_error(
-    index: usize,
-    consumed: usize,
-) -> Leb128DecodeError {
+fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError {
     debug_assert!(
         consumed > 0,
         "non-canonical LEB128 errors must consume bytes"
     );
     // SAFETY: Non-canonical errors are detected only after reading at least one
     // terminating byte.
-    let consumed = qubit_utils::nonzero(consumed);
+    let consumed = nonzero(consumed);
     Leb128DecodeError::noncanonical(index, consumed)
 }
 
@@ -847,17 +766,12 @@ fn is_canonical_uleb_terminal(offset: usize, byte: u8) -> bool {
 /// value represented by the preceding byte.
 #[must_use]
 #[inline(always)]
-fn is_canonical_sleb_terminal(
-    offset: usize,
-    previous_byte: u8,
-    byte: u8,
-) -> bool {
+fn is_canonical_sleb_terminal(offset: usize, previous_byte: u8, byte: u8) -> bool {
     if offset == 0 {
         return true;
     }
     let payload = byte & 0x7F;
-    !((payload == 0 && previous_byte & 0x40 == 0)
-        || (payload == 0x7F && previous_byte & 0x40 != 0))
+    !((payload == 0 && previous_byte & 0x40 == 0) || (payload == 0x7F && previous_byte & 0x40 != 0))
 }
 
 /// Encodes an unsigned integer as canonical LEB128 without bounds checks.
@@ -876,11 +790,7 @@ fn is_canonical_sleb_terminal(
 ///
 /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid to
 /// write the full canonical LEB128 representation of `value`.
-unsafe fn write_uleb_unchecked(
-    output: &mut [u8],
-    index: usize,
-    mut value: u128,
-) -> usize {
+unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128) -> usize {
     let mut offset = 0;
     loop {
         let mut byte = (value & 0x7F) as u8;
@@ -891,7 +801,7 @@ unsafe fn write_uleb_unchecked(
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            qubit_utils::UncheckedSlice::write(output, index + offset, byte);
+            UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if value == 0 {
@@ -930,25 +840,20 @@ pub(in crate::codec) fn uleb_encoded_len(mut value: u128) -> usize {
 ///
 /// The caller must guarantee that `output.as_mut_ptr().add(index)` is valid to
 /// write the full canonical LEB128 representation of `value`.
-unsafe fn write_sleb_unchecked(
-    output: &mut [u8],
-    index: usize,
-    mut value: i128,
-) -> usize {
+unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128) -> usize {
     let mut offset = 0;
     loop {
         let mut byte = (value & 0x7F) as u8;
         let sign_bit_set = byte & 0x40 != 0;
         value >>= 7;
-        let done =
-            (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set);
+        let done = (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set);
         if !done {
             byte |= 0x80;
         }
         // SAFETY: The caller guarantees enough writable bytes for the encoded
         // value.
         unsafe {
-            qubit_utils::UncheckedSlice::write(output, index + offset, byte);
+            UncheckedSlice::write(output, index + offset, byte);
         }
         offset += 1;
         if done {
@@ -966,8 +871,7 @@ fn sleb_encoded_len(mut value: i128) -> usize {
         let byte = (value & 0x7F) as u8;
         let sign_bit_set = byte & 0x40 != 0;
         value >>= 7;
-        let done =
-            (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set);
+        let done = (value == 0 && !sign_bit_set) || (value == -1 && sign_bit_set);
         len += 1;
         if done {
             return len;

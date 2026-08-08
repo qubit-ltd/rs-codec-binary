@@ -16,13 +16,11 @@
 
 mod codec;
 
-pub use codec::{
-    BinaryCodec,
-    Leb128Codec,
-    Leb128DecodeError,
-    Leb128DecodeErrorKind,
-    Leb128DecodePolicy,
-    NonStrict,
-    Strict,
-    ZigZagCodec,
-};
+pub use codec::BinaryCodec;
+pub use codec::Leb128Codec;
+pub use codec::Leb128DecodeError;
+pub use codec::Leb128DecodeErrorKind;
+pub use codec::Leb128DecodePolicy;
+pub use codec::NonStrict;
+pub use codec::Strict;
+pub use codec::ZigZagCodec;

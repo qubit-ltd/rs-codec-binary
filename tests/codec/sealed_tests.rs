@@ -6,11 +6,9 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use qubit_codec_binary::{
-    Leb128DecodePolicy,
-    NonStrict,
-    Strict,
-};
+use qubit_codec_binary::Leb128DecodePolicy;
+use qubit_codec_binary::NonStrict;
+use qubit_codec_binary::Strict;
 
 /// Requires a type implementing the crate's LEB128 policy contract.
 fn require_sealed_policy<P>()
