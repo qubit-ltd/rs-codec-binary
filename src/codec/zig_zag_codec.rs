@@ -6,20 +6,18 @@
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
 
-use core::{
-    convert::Infallible,
-    marker::PhantomData,
-};
+use core::convert::Infallible;
+use core::marker::PhantomData;
 
-use crate::{
-    Leb128Codec,
-    Leb128DecodeError,
-    Leb128DecodePolicy,
-    NonStrict,
-    codec::leb128_codec::map_leb128_decode_failure,
-    codec::leb128_codec::uleb_encoded_len,
-};
 use qubit_codec::Codec;
+use qubit_codec::DecodeFailure;
+
+use crate::Leb128Codec;
+use crate::Leb128DecodeError;
+use crate::Leb128DecodePolicy;
+use crate::NonStrict;
+use crate::codec::leb128_codec::map_leb128_decode_failure;
+use crate::codec::leb128_codec::uleb_encoded_len;
 
 /// Type-level unchecked ZigZag + unsigned LEB128 codec.
 ///
@@ -185,10 +183,7 @@ macro_rules! impl_zig_zag_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($signed, core::num::NonZeroUsize),
-                qubit_codec::DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($signed, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode`

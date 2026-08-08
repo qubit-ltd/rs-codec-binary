@@ -9,20 +9,16 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use qubit_codec::{
-    BigEndian,
-    LittleEndian,
-    NativeEndian,
-};
-use qubit_codec_binary::{
-    BinaryCodec,
-    Leb128Codec,
-    Leb128DecodeError,
-    Leb128DecodeErrorKind,
-    NonStrict,
-    Strict,
-    ZigZagCodec,
-};
+use qubit_codec::BigEndian;
+use qubit_codec::LittleEndian;
+use qubit_codec::NativeEndian;
+use qubit_codec_binary::BinaryCodec;
+use qubit_codec_binary::Leb128Codec;
+use qubit_codec_binary::Leb128DecodeError;
+use qubit_codec_binary::Leb128DecodeErrorKind;
+use qubit_codec_binary::NonStrict;
+use qubit_codec_binary::Strict;
+use qubit_codec_binary::ZigZagCodec;
 
 /// Bounds each invocation independently of the fuzzer configuration.
 const MAX_FUZZ_INPUT_LEN: usize = 19;
