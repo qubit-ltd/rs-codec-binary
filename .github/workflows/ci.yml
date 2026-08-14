@@ -17,5 +17,5 @@ jobs:
   rust-ci:
     uses: qubit-ltd/rs-ci/.github/workflows/rust-ci.yml@main
     with:
-      cargo_fuzz_max_len: "19"
+      coverage_enforce_thresholds: "1"
     secrets: inherit
