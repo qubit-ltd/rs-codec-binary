@@ -2,7 +2,7 @@
 
 [中文](user_guide.zh_CN.md) · [README](../README.md) · [API reference](https://docs.rs/qubit-codec-binary)
 
-This guide applies to `qubit-codec-binary` 0.4. It is for Rust developers
+This guide applies to `qubit-codec-binary` 0.5. It is for Rust developers
 implementing byte-buffer protocols or file formats that need fixed-width and
 LEB128 fields while retaining ownership of buffering and I/O.
 
@@ -36,7 +36,7 @@ entering the unsafe layer; the decoder supplies a complete record slice.
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.4"
+qubit-codec-binary = "0.5"
 qubit-codec = "0.12"
 ```
 
