@@ -78,12 +78,10 @@ where
     pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
     /// Maximum number of bytes emitted when encoding this type.
-    pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-        <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+    pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
     /// Maximum number of bytes consumed when decoding this type.
-    pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-        <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+    pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
     /// Decodes a value from `input` starting at `input_index` without bounds
     /// checks.
@@ -103,10 +101,7 @@ where
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(
-        input: &[u8],
-        input_index: usize,
-    ) -> (u8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(input: &[u8], input_index: usize) -> (u8, core::num::NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -130,14 +125,8 @@ where
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode(
-        value: u8,
-        output: &mut [u8],
-        output_index: usize,
-    ) -> usize {
-        debug_assert!(
-            output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()
-        );
+    pub unsafe fn encode(value: u8, output: &mut [u8], output_index: usize) -> usize {
+        debug_assert!(output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
@@ -166,8 +155,7 @@ where
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(u8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>>
-    {
+    ) -> Result<(u8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }
@@ -195,12 +183,10 @@ where
     pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
     /// Maximum number of bytes emitted when encoding this type.
-    pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-        <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+    pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
     /// Maximum number of bytes consumed when decoding this type.
-    pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-        <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+    pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
     /// Decodes a value from `input` starting at `input_index` without bounds
     /// checks.
@@ -220,10 +206,7 @@ where
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
     #[inline(always)]
-    pub unsafe fn decode(
-        input: &[u8],
-        input_index: usize,
-    ) -> (i8, core::num::NonZeroUsize) {
+    pub unsafe fn decode(input: &[u8], input_index: usize) -> (i8, core::num::NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -247,14 +230,8 @@ where
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes.
     #[inline(always)]
-    pub unsafe fn encode(
-        value: i8,
-        output: &mut [u8],
-        output_index: usize,
-    ) -> usize {
-        debug_assert!(
-            output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()
-        );
+    pub unsafe fn encode(value: i8, output: &mut [u8], output_index: usize) -> usize {
+        debug_assert!(output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len());
 
         // SAFETY: The caller guarantees that the indexed byte is writable.
         unsafe {
@@ -283,8 +260,7 @@ where
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(i8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>>
-    {
+    ) -> Result<(i8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }
@@ -308,16 +284,13 @@ macro_rules! impl_integer_binary_codec {
     ($ty:ty, $len:expr) => {
         impl BinaryCodec<$ty, BigEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -340,25 +313,17 @@ macro_rules! impl_integer_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `input_index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
+            ///   for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
 
                 (<$ty>::from_be(raw), nonzero(Self::MIN_UNITS_PER_VALUE))
             }
@@ -379,20 +344,12 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// The caller must guarantee that:
             ///
-            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <=
-            ///   output.len()`
+            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
                 let raw = value.to_be();
 
@@ -400,11 +357,7 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$ty>(
-                        output,
-                        output_index,
-                        raw,
-                    );
+                    UncheckedSlice::write_ne_unaligned::<$ty>(output, output_index, raw);
                 }
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
@@ -426,10 +379,7 @@ macro_rules! impl_integer_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
@@ -453,16 +403,13 @@ macro_rules! impl_integer_binary_codec {
 
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -485,25 +432,17 @@ macro_rules! impl_integer_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `input_index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
+            ///   for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
 
                 (<$ty>::from_le(raw), nonzero(Self::MIN_UNITS_PER_VALUE))
             }
@@ -524,20 +463,12 @@ macro_rules! impl_integer_binary_codec {
             ///
             /// The caller must guarantee that:
             ///
-            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <=
-            ///   output.len()`
+            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
                 let raw = value.to_le();
 
@@ -545,11 +476,7 @@ macro_rules! impl_integer_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$ty>(
-                        output,
-                        output_index,
-                        raw,
-                    );
+                    UncheckedSlice::write_ne_unaligned::<$ty>(output, output_index, raw);
                 }
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
@@ -571,10 +498,7 @@ macro_rules! impl_integer_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
@@ -602,16 +526,13 @@ macro_rules! impl_float_binary_codec {
     ($ty:ty, $bits:ty, $len:expr) => {
         impl BinaryCodec<$ty, BigEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -634,25 +555,17 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `input_index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
+            ///   for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_be(raw)),
@@ -676,20 +589,12 @@ macro_rules! impl_float_binary_codec {
             ///
             /// The caller must guarantee that:
             ///
-            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <=
-            ///   output.len()`
+            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
                 let raw = value.to_bits().to_be();
 
@@ -697,11 +602,7 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$bits>(
-                        output,
-                        output_index,
-                        raw,
-                    );
+                    UncheckedSlice::write_ne_unaligned::<$bits>(output, output_index, raw);
                 }
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
@@ -723,10 +624,7 @@ macro_rules! impl_float_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
@@ -750,16 +648,13 @@ macro_rules! impl_float_binary_codec {
 
         impl BinaryCodec<$ty, LittleEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -782,25 +677,17 @@ macro_rules! impl_float_binary_codec {
             /// The caller must guarantee that:
             ///
             /// - `input_index + Self::MIN_UNITS_PER_VALUE <= input.len()`
-            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]`
-            ///   is valid for reading.
+            /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
+            ///   for reading.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
                 // The caller guarantees that the readable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned load.
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
 
                 (
                     <$ty>::from_bits(<$bits>::from_le(raw)),
@@ -824,20 +711,12 @@ macro_rules! impl_float_binary_codec {
             ///
             /// The caller must guarantee that:
             ///
-            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <=
-            ///   output.len()`
+            /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
                 let raw = value.to_bits().to_le();
 
@@ -845,11 +724,7 @@ macro_rules! impl_float_binary_codec {
                 // The caller guarantees that the writable range is fully
                 // in-bounds. This unaligned helper handles byte-aligned store.
                 unsafe {
-                    UncheckedSlice::write_ne_unaligned::<$bits>(
-                        output,
-                        output_index,
-                        raw,
-                    );
+                    UncheckedSlice::write_ne_unaligned::<$bits>(output, output_index, raw);
                 }
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
@@ -871,10 +746,7 @@ macro_rules! impl_float_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
@@ -902,14 +774,11 @@ macro_rules! impl_native_integer_binary_codec {
     ($ty:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a native-endian value without bounds checks.
             ///
@@ -927,18 +796,10 @@ macro_rules! impl_native_integer_binary_codec {
             /// readable range within `input`.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
                 (raw, nonzero(Self::MIN_UNITS_PER_VALUE))
             }
 
@@ -958,23 +819,10 @@ macro_rules! impl_native_integer_binary_codec {
             /// `output_index..output_index + size_of::<$ty>()` must be a valid
             /// writable range within `output`.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
-                unsafe {
-                    UncheckedSlice::write_ne_unaligned(
-                        output,
-                        output_index,
-                        value,
-                    )
-                };
+                unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value) };
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
         }
@@ -993,10 +841,7 @@ macro_rules! impl_native_integer_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
@@ -1018,14 +863,11 @@ macro_rules! impl_native_float_binary_codec {
     ($ty:ty, $bits:ty, $len:expr) => {
         impl BinaryCodec<$ty, NativeEndian> {
             /// Minimum number of bytes required to encode or decode this type.
-            pub const MIN_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MIN_UNITS_PER_VALUE;
+            pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a native-endian floating-point value without bounds
             /// checks.
@@ -1044,18 +886,10 @@ macro_rules! impl_native_float_binary_codec {
             /// readable range within `input`.
             #[must_use]
             #[inline(always)]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> ($ty, core::num::NonZeroUsize) {
-                debug_assert!(
-                    input.len().saturating_sub(input_index)
-                        >= Self::MIN_UNITS_PER_VALUE
-                );
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+                debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
-                let raw = unsafe {
-                    UncheckedSlice::read_ne_unaligned(input, input_index)
-                };
+                let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
                 (<$ty>::from_bits(raw), nonzero(Self::MIN_UNITS_PER_VALUE))
             }
 
@@ -1076,23 +910,10 @@ macro_rules! impl_native_float_binary_codec {
             /// `output_index..output_index + size_of::<$ty>()` must be a valid
             /// writable range within `output`.
             #[inline(always)]
-            pub unsafe fn encode(
-                value: $ty,
-                output: &mut [u8],
-                output_index: usize,
-            ) -> usize {
-                debug_assert!(
-                    output.len().saturating_sub(output_index)
-                        >= Self::MAX_ENCODE_UNITS_PER_VALUE
-                );
+            pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
+                debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
-                unsafe {
-                    UncheckedSlice::write_ne_unaligned(
-                        output,
-                        output_index,
-                        value.to_bits(),
-                    )
-                };
+                unsafe { UncheckedSlice::write_ne_unaligned(output, output_index, value.to_bits()) };
                 Self::MAX_ENCODE_UNITS_PER_VALUE
             }
         }
@@ -1111,10 +932,7 @@ macro_rules! impl_native_float_binary_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<
-                ($ty, core::num::NonZeroUsize),
-                DecodeFailure<Self::DecodeError>,
-            > {
+            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 

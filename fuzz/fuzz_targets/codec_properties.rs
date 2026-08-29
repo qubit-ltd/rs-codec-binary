@@ -48,11 +48,7 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
     strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
     non_strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
 ) where
-    C: qubit_codec::Codec<
-            Value = T,
-            Unit = u8,
-            DecodeError = Leb128DecodeError,
-        > + Default,
+    C: qubit_codec::Codec<Value = T, Unit = u8, DecodeError = Leb128DecodeError> + Default,
     C::EncodeError: core::fmt::Debug,
     T: Copy + core::fmt::Debug + PartialEq,
 {
@@ -61,10 +57,8 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
     };
 
     let mut canonical = [0_u8; N];
-    let written = unsafe {
-        qubit_codec::Codec::encode(&mut C::default(), value, &mut canonical, 0)
-    }
-    .expect("LEB128-family canonical encoding is infallible");
+    let written = unsafe { qubit_codec::Codec::encode(&mut C::default(), value, &mut canonical, 0) }
+        .expect("LEB128-family canonical encoding is infallible");
     let canonical = &canonical[..written];
     let encoded_prefix = &input[..consumed.get()];
 
@@ -78,9 +72,7 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
             assert_ne!(encoded_prefix, canonical);
         }
         Err(error) => {
-            panic!(
-                "Strict rejected a NonStrict-successful canonicality candidate as {error:?}"
-            );
+            panic!("Strict rejected a NonStrict-successful canonicality candidate as {error:?}");
         }
     }
 }
@@ -88,46 +80,27 @@ fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
 macro_rules! assert_leb128_roundtrip {
     ($codec:ident, $ty:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output =
-            [0_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
-        let written = unsafe {
-            $codec::<$ty, NonStrict>::encode(expected, &mut output, 0)
-        };
-        let strict = unsafe {
-            $codec::<$ty, Strict>::decode(&output[..written], 0)
-        }
-        .expect("canonical LEB128-family encoding must pass strict decoding");
-        let non_strict = unsafe {
-            $codec::<$ty, NonStrict>::decode(&output[..written], 0)
-        }
-        .expect(
-            "canonical LEB128-family encoding must pass non-strict decoding",
-        );
+        let mut output = [0_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
+        let written = unsafe { $codec::<$ty, NonStrict>::encode(expected, &mut output, 0) };
+        let strict = unsafe { $codec::<$ty, Strict>::decode(&output[..written], 0) }
+            .expect("canonical LEB128-family encoding must pass strict decoding");
+        let non_strict = unsafe { $codec::<$ty, NonStrict>::decode(&output[..written], 0) }
+            .expect("canonical LEB128-family encoding must pass non-strict decoding");
 
         let (strict_value, strict_consumed) = strict;
         let (non_strict_value, non_strict_consumed) = non_strict;
         assert_eq!((expected, written), (strict_value, strict_consumed.get()));
-        assert_eq!(
-            (expected, written),
-            (non_strict_value, non_strict_consumed.get())
-        );
+        assert_eq!((expected, written), (non_strict_value, non_strict_consumed.get()));
     }};
 }
 
 macro_rules! assert_binary_roundtrip {
     ($ty:ty, $order:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output = [0xA5_u8;
-            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
-        let written = unsafe {
-            BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1)
-        };
-        let (actual, consumed) =
-            unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
-        assert_eq!(
-            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE,
-            written
-        );
+        let mut output = [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+        let written = unsafe { BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1) };
+        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
+        assert_eq!(BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE, written);
         assert_eq!(expected, actual);
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -138,17 +111,10 @@ macro_rules! assert_binary_roundtrip {
 macro_rules! assert_binary_float_roundtrip {
     ($ty:ty, $order:ty, $value:expr) => {{
         let expected: $ty = $value;
-        let mut output = [0xA5_u8;
-            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
-        let written = unsafe {
-            BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1)
-        };
-        let (actual, consumed) =
-            unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
-        assert_eq!(
-            BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE,
-            written
-        );
+        let mut output = [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+        let written = unsafe { BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1) };
+        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
+        assert_eq!(BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE, written);
         assert_eq!(expected.to_bits(), actual.to_bits());
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -253,14 +219,10 @@ fn assert_decode_result_metadata<T>(
                     assert_eq!(input.len(), error.error_index());
                     assert_eq!(None, error.consumed());
                     assert_eq!(Some(input.len()), error.available());
-                    assert_eq!(
-                        Some(input.len() + 1),
-                        error.required().map(|n| n.get())
-                    );
+                    assert_eq!(Some(input.len() + 1), error.required().map(|n| n.get()));
                     assert_eq!(Some(1), error.additional().map(|n| n.get()));
                 }
-                Leb128DecodeErrorKind::Malformed
-                | Leb128DecodeErrorKind::NonCanonical => {
+                Leb128DecodeErrorKind::Malformed | Leb128DecodeErrorKind::NonCanonical => {
                     let consumed = error
                         .consumed()
                         .expect("invalid input must report consumed bytes")
@@ -369,19 +331,7 @@ fn assert_binary_roundtrips(bits: u128) {
     assert_binary_roundtrip!(i128, BigEndian, bits as i128);
     assert_binary_roundtrip!(i128, NativeEndian, bits as i128);
     assert_binary_float_roundtrip!(f32, BigEndian, f32::from_bits(bits as u32));
-    assert_binary_float_roundtrip!(
-        f32,
-        NativeEndian,
-        f32::from_bits(bits as u32)
-    );
-    assert_binary_float_roundtrip!(
-        f64,
-        LittleEndian,
-        f64::from_bits(bits as u64)
-    );
-    assert_binary_float_roundtrip!(
-        f64,
-        NativeEndian,
-        f64::from_bits(bits as u64)
-    );
+    assert_binary_float_roundtrip!(f32, NativeEndian, f32::from_bits(bits as u32));
+    assert_binary_float_roundtrip!(f64, LittleEndian, f64::from_bits(bits as u64));
+    assert_binary_float_roundtrip!(f64, NativeEndian, f64::from_bits(bits as u64));
 }
