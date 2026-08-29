@@ -80,12 +80,10 @@ macro_rules! impl_zig_zag_codec {
             pub const MIN_UNITS_PER_VALUE: usize = <Self as Codec>::MIN_UNITS_PER_VALUE;
 
             /// Maximum number of bytes emitted when encoding this type.
-            pub const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
+            pub const MAX_ENCODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_ENCODE_UNITS_PER_VALUE;
 
             /// Maximum number of bytes consumed when decoding this type.
-            pub const MAX_DECODE_UNITS_PER_VALUE: usize =
-                <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
+            pub const MAX_DECODE_UNITS_PER_VALUE: usize = <Self as Codec>::MAX_DECODE_UNITS_PER_VALUE;
 
             /// Decodes a value from `input` starting at `input_index` without
             /// bounds checks.
@@ -119,8 +117,7 @@ macro_rules! impl_zig_zag_codec {
 
                 // SAFETY: The caller guarantees enough readable bytes for this
                 // type.
-                let (encoded, consumed) =
-                    unsafe { Leb128Codec::<$unsigned, P>::decode(input, input_index)? };
+                let (encoded, consumed) = unsafe { Leb128Codec::<$unsigned, P>::decode(input, input_index)? };
                 let value = ((encoded >> 1) as $signed) ^ (-((encoded & 1) as $signed));
                 Ok((value, consumed))
             }
@@ -151,9 +148,7 @@ macro_rules! impl_zig_zag_codec {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for the
                 // canonical representation of this value.
-                unsafe {
-                    Leb128Codec::<$unsigned, NonStrict>::encode(encoded, output, output_index)
-                }
+                unsafe { Leb128Codec::<$unsigned, NonStrict>::encode(encoded, output, output_index) }
             }
         }
 
@@ -167,10 +162,8 @@ macro_rules! impl_zig_zag_codec {
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = 1;
-            const MAX_ENCODE_UNITS_PER_VALUE: usize =
-                Leb128Codec::<$unsigned, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE;
-            const MAX_DECODE_UNITS_PER_VALUE: usize =
-                Leb128Codec::<$unsigned, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
+            const MAX_ENCODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE;
+            const MAX_DECODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
 
             #[inline(always)]
             fn encode_len(&self, value: &$signed) -> usize {

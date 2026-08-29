@@ -44,11 +44,7 @@ impl Leb128DecodeError {
     ///
     /// Panics when `required <= available`, or when the one-past-available
     /// error boundary overflows `usize`.
-    pub const fn incomplete(
-        start_index: usize,
-        required: NonZeroUsize,
-        available: usize,
-    ) -> Self {
+    pub const fn incomplete(start_index: usize, required: NonZeroUsize, available: usize) -> Self {
         assert!(
             required.get() > available,
             "incomplete LEB128 required bytes must exceed available bytes",
@@ -56,10 +52,7 @@ impl Leb128DecodeError {
         Self {
             start_index,
             error_index: add_offset(start_index, available),
-            details: Leb128DecodeErrorDetails::Incomplete {
-                required,
-                available,
-            },
+            details: Leb128DecodeErrorDetails::Incomplete { required, available },
         }
     }
 
@@ -79,11 +72,7 @@ impl Leb128DecodeError {
     ///
     /// Panics when the consumed span end overflows `usize`, or when
     /// `error_index` is outside the consumed span.
-    pub const fn malformed(
-        start_index: usize,
-        error_index: usize,
-        consumed: NonZeroUsize,
-    ) -> Self {
+    pub const fn malformed(start_index: usize, error_index: usize, consumed: NonZeroUsize) -> Self {
         assert_error_index_in_consumed_span(start_index, error_index, consumed);
         Self {
             start_index,
@@ -109,10 +98,7 @@ impl Leb128DecodeError {
     /// # Panics
     ///
     /// Panics when the last consumed byte index overflows `usize`.
-    pub const fn noncanonical(
-        start_index: usize,
-        consumed: NonZeroUsize,
-    ) -> Self {
+    pub const fn noncanonical(start_index: usize, consumed: NonZeroUsize) -> Self {
         Self {
             start_index,
             error_index: last_consumed_index(start_index, consumed),
@@ -133,9 +119,7 @@ impl Leb128DecodeError {
     #[inline(always)]
     pub const fn kind(self) -> Leb128DecodeErrorKind {
         match self.details {
-            Leb128DecodeErrorDetails::Incomplete { .. } => {
-                Leb128DecodeErrorKind::Incomplete
-            }
+            Leb128DecodeErrorDetails::Incomplete { .. } => Leb128DecodeErrorKind::Incomplete,
             Leb128DecodeErrorDetails::Invalid { kind, .. } => kind,
         }
     }
@@ -176,9 +160,7 @@ impl Leb128DecodeError {
     pub const fn consumed(self) -> Option<NonZeroUsize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { .. } => None,
-            Leb128DecodeErrorDetails::Invalid { consumed, .. } => {
-                Some(consumed)
-            }
+            Leb128DecodeErrorDetails::Invalid { consumed, .. } => Some(consumed),
         }
     }
 
@@ -242,9 +224,7 @@ impl Leb128DecodeError {
     #[inline(always)]
     pub const fn required(self) -> Option<NonZeroUsize> {
         match self.details {
-            Leb128DecodeErrorDetails::Incomplete { required, .. } => {
-                Some(required)
-            }
+            Leb128DecodeErrorDetails::Incomplete { required, .. } => Some(required),
             Leb128DecodeErrorDetails::Invalid { .. } => None,
         }
     }
@@ -259,10 +239,7 @@ impl Leb128DecodeError {
     #[inline(always)]
     pub const fn additional(self) -> Option<NonZeroUsize> {
         match self.details {
-            Leb128DecodeErrorDetails::Incomplete {
-                required,
-                available,
-            } => {
+            Leb128DecodeErrorDetails::Incomplete { required, available } => {
                 let additional = required.get() - available;
                 Some(nonzero(additional))
             }
@@ -279,9 +256,7 @@ impl Leb128DecodeError {
     #[inline(always)]
     pub const fn available(self) -> Option<usize> {
         match self.details {
-            Leb128DecodeErrorDetails::Incomplete { available, .. } => {
-                Some(available)
-            }
+            Leb128DecodeErrorDetails::Incomplete { available, .. } => Some(available),
             Leb128DecodeErrorDetails::Invalid { .. } => None,
         }
     }
@@ -290,10 +265,7 @@ impl Leb128DecodeError {
 impl Display for Leb128DecodeError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self.details {
-            Leb128DecodeErrorDetails::Incomplete {
-                required,
-                available,
-            } => {
+            Leb128DecodeErrorDetails::Incomplete { required, available } => {
                 write!(
                     formatter,
                     "{} at byte {}: need at least {} bytes, only {} available (next byte boundary {})",
@@ -352,10 +324,7 @@ const fn add_offset(index: usize, offset: usize) -> usize {
 /// # Panics
 ///
 /// Panics when the index overflows `usize`.
-const fn last_consumed_index(
-    start_index: usize,
-    consumed: NonZeroUsize,
-) -> usize {
+const fn last_consumed_index(start_index: usize, consumed: NonZeroUsize) -> usize {
     add_offset(start_index, consumed.get() - 1)
 }
 
@@ -371,11 +340,7 @@ const fn last_consumed_index(
 ///
 /// Panics when `error_index` is before `start_index` or after the last consumed
 /// byte.
-const fn assert_error_index_in_consumed_span(
-    start_index: usize,
-    error_index: usize,
-    consumed: NonZeroUsize,
-) {
+const fn assert_error_index_in_consumed_span(start_index: usize, error_index: usize, consumed: NonZeroUsize) {
     let last_index = last_consumed_index(start_index, consumed);
     assert!(
         error_index >= start_index,
