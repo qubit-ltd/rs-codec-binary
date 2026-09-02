@@ -2,7 +2,7 @@
 
 [English](user_guide.md) · [README](../README.zh_CN.md) · [API 文档](https://docs.rs/qubit-codec-binary)
 
-本文适用于 `qubit-codec-binary` 0.5，面向实现字节缓冲区协议或文件格式的 Rust
+本文适用于 `qubit-codec-binary` 0.6，面向实现字节缓冲区协议或文件格式的 Rust
 开发者：既需要定长字段和 LEB128，又需要自行掌控缓冲与 I/O。
 
 ## 概念模型
@@ -33,7 +33,7 @@
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.5"
+qubit-codec-binary = "0.6"
 qubit-codec = "0.12"
 ```
 
