@@ -24,7 +24,7 @@
 持久化或跨平台数据应使用 big- 或 little-endian。native-endian 仅适合由同一
 平台类别读回的本地数据。
 
-## 贯穿场景：解码紧凑记录
+## 实战场景：解码紧凑记录
 
 假定一条记录由 big-endian `u32` 标识符和一个有符号 ZigZag LEB128 增量组成。
 编码端在进入 unsafe 层前预留各 codec 声明的最大空间；解码端提供完整记录 slice。
