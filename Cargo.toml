@@ -32,7 +32,7 @@ miri = true
 sanitizers = ["address"]
 
 [dependencies]
-thiserror = "2.0"
+thiserror = "^2.0"
 qubit-utils = "0.3"
 qubit-codec = "0.15"
 
