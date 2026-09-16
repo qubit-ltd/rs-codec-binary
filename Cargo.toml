@@ -37,7 +37,7 @@ qubit-utils = "0.3"
 qubit-codec = "0.15"
 
 [dev-dependencies]
-criterion = { version = "0.8", default-features = false }
+criterion = { version = "^0.8", default-features = false }
 
 [[bench]]
 name = "codecs"
