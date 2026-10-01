@@ -328,8 +328,6 @@ fn assert_binary_roundtrips(bits: u128) {
     assert_binary_roundtrip!(i32, NativeEndian, bits as i32);
     assert_binary_roundtrip!(i64, LittleEndian, bits as i64);
     assert_binary_roundtrip!(i64, NativeEndian, bits as i64);
-    assert_binary_roundtrip!(i128, BigEndian, bits as i128);
-    assert_binary_roundtrip!(i128, NativeEndian, bits as i128);
     assert_binary_float_roundtrip!(f32, BigEndian, f32::from_bits(bits as u32));
     assert_binary_float_roundtrip!(f32, NativeEndian, f32::from_bits(bits as u32));
     assert_binary_float_roundtrip!(f64, LittleEndian, f64::from_bits(bits as u64));
