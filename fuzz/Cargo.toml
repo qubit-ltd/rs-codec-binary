@@ -20,3 +20,5 @@ path = "fuzz_targets/codec_properties.rs"
 test = false
 doc = false
 bench = false
+
+[workspace]
