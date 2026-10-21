@@ -14,6 +14,15 @@ use super::internal::sealed::Sealed;
 /// two built-in canonicality modes represented by [`crate::Strict`] and
 /// [`crate::NonStrict`].
 ///
+/// # Examples
+///
+/// ```
+/// use qubit_codec_binary::{Leb128DecodePolicy, NonStrict, Strict};
+///
+/// assert!(Strict::STRICT);
+/// assert!(!NonStrict::STRICT);
+/// ```
+///
 /// ```compile_fail
 /// use qubit_codec_binary::Leb128DecodePolicy;
 ///

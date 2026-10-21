@@ -16,6 +16,22 @@ use super::internal::leb128_decode_error_details::Leb128DecodeErrorDetails;
 use crate::Leb128DecodeErrorKind;
 
 /// Error reported while decoding a LEB128 integer from a byte buffer.
+///
+/// # Examples
+///
+/// ```
+/// use core::num::NonZeroUsize;
+/// use qubit_codec_binary::Leb128DecodeError;
+///
+/// let error = Leb128DecodeError::incomplete(
+///     4,
+///     NonZeroUsize::new(3).expect("three is non-zero"),
+///     1,
+/// );
+/// assert_eq!(error.start_index(), 4);
+/// assert_eq!(error.required().map(NonZeroUsize::get), Some(3));
+/// assert_eq!(error.additional().map(NonZeroUsize::get), Some(2));
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Leb128DecodeError {
     /// Absolute byte index where the attempted value starts.

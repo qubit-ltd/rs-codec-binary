@@ -8,6 +8,16 @@
 use thiserror::Error;
 
 /// Classifies failures detected while decoding LEB128 integers.
+///
+/// # Examples
+///
+/// ```
+/// use qubit_codec_binary::Leb128DecodeErrorKind;
+///
+/// let kind = Leb128DecodeErrorKind::NonCanonical;
+/// assert_eq!(kind.to_string(), "non-canonical LEB128 integer");
+/// ```
+#[must_use]
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum Leb128DecodeErrorKind {
     /// The input ended before a terminating LEB128 byte was available.
