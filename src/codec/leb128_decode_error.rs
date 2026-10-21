@@ -115,8 +115,7 @@ impl Leb128DecodeError {
     ///
     /// Returns [`Leb128DecodeErrorKind::Incomplete`] for an incomplete prefix,
     /// or the specific invalid-input kind for a rejected payload.
-    #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn kind(self) -> Leb128DecodeErrorKind {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { .. } => Leb128DecodeErrorKind::Incomplete,
@@ -130,7 +129,7 @@ impl Leb128DecodeError {
     ///
     /// Returns the byte offset at which decoding began.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn start_index(self) -> usize {
         self.start_index
     }
@@ -144,7 +143,7 @@ impl Leb128DecodeError {
     /// be required, so it may be equal to the input length visible to the
     /// caller.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn error_index(self) -> usize {
         self.error_index
     }
@@ -156,7 +155,7 @@ impl Leb128DecodeError {
     /// Returns `Some(consumed)` for invalid input, or `None` for incomplete
     /// input.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn consumed(self) -> Option<NonZeroUsize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { .. } => None,
@@ -170,7 +169,7 @@ impl Leb128DecodeError {
     ///
     /// Returns `true` only for an incomplete input prefix.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn is_incomplete(self) -> bool {
         matches!(self.details, Leb128DecodeErrorDetails::Incomplete { .. })
     }
@@ -181,7 +180,7 @@ impl Leb128DecodeError {
     ///
     /// Returns `true` only for a malformed payload.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn is_malformed(self) -> bool {
         matches!(
             self.details,
@@ -199,7 +198,7 @@ impl Leb128DecodeError {
     /// Returns `true` only for a non-canonical payload rejected by strict
     /// decoding.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn is_noncanonical(self) -> bool {
         matches!(
             self.details,
@@ -221,7 +220,7 @@ impl Leb128DecodeError {
     /// it does not guarantee that the value will be complete at exactly that
     /// length.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn required(self) -> Option<NonZeroUsize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { required, .. } => Some(required),
@@ -236,7 +235,7 @@ impl Leb128DecodeError {
     /// Returns `Some(additional)` for incomplete input, or `None` otherwise.
     /// The value is `required - available` and is guaranteed to be non-zero.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn additional(self) -> Option<NonZeroUsize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { required, available } => {
@@ -253,7 +252,7 @@ impl Leb128DecodeError {
     ///
     /// Returns `Some(available)` for incomplete input, or `None` otherwise.
     #[must_use]
-    #[inline(always)]
+    #[inline]
     pub const fn available(self) -> Option<usize> {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { available, .. } => Some(available),

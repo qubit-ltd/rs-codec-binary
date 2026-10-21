@@ -12,6 +12,8 @@ use qubit_codec::LittleEndian;
 use qubit_codec::NativeEndian;
 use qubit_codec_binary::BinaryCodec;
 
+use super::assertions_tests::assert_decoded_eq;
+
 #[test]
 fn test_native_endian_round_trip_matches_platform_order() {
     let value = 0x1234_5678_u32;
@@ -67,8 +69,6 @@ fn test_native_endian_round_trip_covers_all_supported_scalar_types() {
     assert_float!(f32, f32::from_bits(0x7fc0_0123));
     assert_float!(f64, f64::from_bits(0x7ff8_0000_0000_0123));
 }
-
-use super::assertions_tests::assert_decoded_eq;
 
 #[test]
 fn test_binary_codec_exposes_unit_bounds() {

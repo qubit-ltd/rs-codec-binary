@@ -108,7 +108,7 @@ macro_rules! impl_zig_zag_codec {
             /// The caller must guarantee that `input_index` is a valid boundary
             /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
             /// from `input_index`.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn decode(
                 input: &[u8],
                 input_index: usize,
@@ -143,7 +143,7 @@ macro_rules! impl_zig_zag_codec {
             /// this requirement; for a known value, the exact
             /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $signed, output: &mut [u8], output_index: usize) -> usize {
                 let encoded = ((value as $unsigned) << 1) ^ ((value >> $shift) as $unsigned);
                 // SAFETY: The caller guarantees enough writable bytes for the
@@ -165,13 +165,13 @@ macro_rules! impl_zig_zag_codec {
             const MAX_ENCODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE;
             const MAX_DECODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
 
-            #[inline(always)]
+            #[inline]
             fn encode_len(&self, value: &$signed) -> usize {
                 let encoded = ((*value as $unsigned) << 1) ^ ((*value >> $shift) as $unsigned);
                 uleb_encoded_len(encoded as u128)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
@@ -184,7 +184,7 @@ macro_rules! impl_zig_zag_codec {
                 unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$signed,

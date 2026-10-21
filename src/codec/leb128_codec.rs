@@ -22,7 +22,7 @@ use crate::Leb128DecodePolicy;
 /// Incomplete input preserves its minimum total byte requirement. Malformed
 /// and non-canonical input retains the original error and its consumed byte
 /// count so callers can advance past the invalid payload.
-#[inline(always)]
+#[inline]
 pub(in crate::codec) fn map_leb128_decode_failure(error: Leb128DecodeError) -> DecodeFailure<Leb128DecodeError> {
     if let Some(required) = error.required() {
         DecodeFailure::incomplete_with_source(error, required)
@@ -123,7 +123,7 @@ macro_rules! impl_unsigned_leb128_codec {
             /// The caller must guarantee that `input_index` is a valid boundary
             /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
             /// from `input_index`.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn decode(
                 input: &[u8],
                 input_index: usize,
@@ -159,7 +159,7 @@ macro_rules! impl_unsigned_leb128_codec {
             /// this requirement; for a known value, the exact
             /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for the
                 // canonical representation of this value.
@@ -180,12 +180,12 @@ macro_rules! impl_unsigned_leb128_codec {
             const MAX_ENCODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
             const MAX_DECODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
-            #[inline(always)]
+            #[inline]
             fn encode_len(&self, value: &$ty) -> usize {
                 uleb_encoded_len(*value as u128)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
@@ -198,7 +198,7 @@ macro_rules! impl_unsigned_leb128_codec {
                 unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -256,7 +256,7 @@ macro_rules! impl_signed_leb128_codec {
             /// The caller must guarantee that `input_index` is a valid boundary
             /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
             /// from `input_index`.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn decode(
                 input: &[u8],
                 input_index: usize,
@@ -292,7 +292,7 @@ macro_rules! impl_signed_leb128_codec {
             /// this requirement; for a known value, the exact
             /// [`Codec::encode_len`] is sufficient.
             #[must_use = "the returned byte count determines the encoded payload range"]
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 // SAFETY: The caller guarantees enough writable bytes for the
                 // canonical representation of this value.
@@ -313,12 +313,12 @@ macro_rules! impl_signed_leb128_codec {
             const MAX_ENCODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
             const MAX_DECODE_UNITS_PER_VALUE: usize = (<$ty>::BITS as usize).div_ceil(7);
 
-            #[inline(always)]
+            #[inline]
             fn encode_len(&self, value: &$ty) -> usize {
                 sleb_encoded_len(*value as i128)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
@@ -331,7 +331,7 @@ macro_rules! impl_signed_leb128_codec {
                 unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -666,7 +666,7 @@ fn noncanonical_decode_error(index: usize, consumed: usize) -> Leb128DecodeError
 ///
 /// Returns `true` if the unused payload bits are all zero.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn unsigned_final_payload_fits(byte: u8, bits: u32, offset: usize) -> bool {
     let used_bits = bits - offset as u32 * 7;
     byte >> used_bits == 0
@@ -684,7 +684,7 @@ fn unsigned_final_payload_fits(byte: u8, bits: u32, offset: usize) -> bool {
 ///
 /// Returns `true` if the unused payload bits are a valid sign extension.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn signed_final_payload_fits(byte: u8, bits: u32, offset: usize) -> bool {
     let used_bits = bits - offset as u32 * 7;
     let payload = byte & 0x7F;
@@ -709,7 +709,7 @@ fn signed_final_payload_fits(byte: u8, bits: u32, offset: usize) -> bool {
 ///
 /// Returns `true` when the terminal byte is necessary to encode the value.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn is_canonical_uleb_terminal(offset: usize, byte: u8) -> bool {
     offset == 0 || byte & 0x7F != 0
 }
@@ -728,7 +728,7 @@ fn is_canonical_uleb_terminal(offset: usize, byte: u8) -> bool {
 /// Returns `true` when the terminal byte is necessary to preserve the signed
 /// value represented by the preceding byte.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn is_canonical_sleb_terminal(offset: usize, previous_byte: u8, byte: u8) -> bool {
     if offset == 0 {
         return true;
@@ -775,7 +775,7 @@ unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128)
 
 /// Computes the canonical unsigned LEB128 byte width for `value`.
 #[must_use]
-#[inline(always)]
+#[inline]
 pub(in crate::codec) fn uleb_encoded_len(mut value: u128) -> usize {
     let mut len = 0;
     loop {
@@ -827,7 +827,7 @@ unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128)
 
 /// Computes the canonical signed LEB128 byte width for `value`.
 #[must_use]
-#[inline(always)]
+#[inline]
 fn sleb_encoded_len(mut value: i128) -> usize {
     let mut len = 0;
     loop {

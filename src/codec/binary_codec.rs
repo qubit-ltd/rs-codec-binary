@@ -8,6 +8,7 @@
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
+use core::num::NonZeroUsize;
 
 use qubit_codec::BigEndian;
 use qubit_codec::ByteOrderSpec;
@@ -100,8 +101,8 @@ where
     /// The caller must guarantee that `input.as_ptr().add(input_index)` is
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
-    #[inline(always)]
-    pub unsafe fn decode(input: &[u8], input_index: usize) -> (u8, core::num::NonZeroUsize) {
+    #[inline]
+    pub unsafe fn decode(input: &[u8], input_index: usize) -> (u8, NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -124,7 +125,7 @@ where
     ///
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes.
-    #[inline(always)]
+    #[inline]
     pub unsafe fn encode(value: u8, output: &mut [u8], output_index: usize) -> usize {
         debug_assert!(output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len());
 
@@ -150,17 +151,17 @@ where
 
     const MAX_DECODE_UNITS_PER_VALUE: usize = 1;
 
-    #[inline(always)]
+    #[inline]
     unsafe fn decode(
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(u8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+    ) -> Result<(u8, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn encode(
         &mut self,
         value: &u8,
@@ -205,8 +206,8 @@ where
     /// The caller must guarantee that `input.as_ptr().add(input_index)` is
     /// valid to read [`Self::MIN_UNITS_PER_VALUE`] bytes.
     #[must_use]
-    #[inline(always)]
-    pub unsafe fn decode(input: &[u8], input_index: usize) -> (i8, core::num::NonZeroUsize) {
+    #[inline]
+    pub unsafe fn decode(input: &[u8], input_index: usize) -> (i8, NonZeroUsize) {
         debug_assert!(input_index + Self::MIN_UNITS_PER_VALUE <= input.len());
 
         // SAFETY: The caller guarantees that the indexed byte is readable.
@@ -229,7 +230,7 @@ where
     ///
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
     /// is valid to write [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes.
-    #[inline(always)]
+    #[inline]
     pub unsafe fn encode(value: i8, output: &mut [u8], output_index: usize) -> usize {
         debug_assert!(output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len());
 
@@ -255,17 +256,17 @@ where
 
     const MAX_DECODE_UNITS_PER_VALUE: usize = 1;
 
-    #[inline(always)]
+    #[inline]
     unsafe fn decode(
         &mut self,
         input: &[u8],
         input_index: usize,
-    ) -> Result<(i8, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+    ) -> Result<(i8, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
         // SAFETY: The caller upholds the `Codec::decode` contract.
         Ok(unsafe { Self::decode(input, input_index) })
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn encode(
         &mut self,
         value: &i8,
@@ -316,8 +317,8 @@ macro_rules! impl_integer_binary_codec {
             /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
             ///   for reading.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
@@ -347,7 +348,7 @@ macro_rules! impl_integer_binary_codec {
             /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -374,18 +375,18 @@ macro_rules! impl_integer_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -435,8 +436,8 @@ macro_rules! impl_integer_binary_codec {
             /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
             ///   for reading.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
@@ -466,7 +467,7 @@ macro_rules! impl_integer_binary_codec {
             /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -493,18 +494,18 @@ macro_rules! impl_integer_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -558,8 +559,8 @@ macro_rules! impl_float_binary_codec {
             /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
             ///   for reading.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
@@ -592,7 +593,7 @@ macro_rules! impl_float_binary_codec {
             /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -619,18 +620,18 @@ macro_rules! impl_float_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -680,8 +681,8 @@ macro_rules! impl_float_binary_codec {
             /// - `input[input_index..input_index + Self::MIN_UNITS_PER_VALUE]` is valid
             ///   for reading.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY:
@@ -714,7 +715,7 @@ macro_rules! impl_float_binary_codec {
             /// - `output_index + Self::MAX_ENCODE_UNITS_PER_VALUE <= output.len()`
             /// - `output[output_index..output_index +
             ///   Self::MAX_ENCODE_UNITS_PER_VALUE]` is valid for writing.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -741,18 +742,18 @@ macro_rules! impl_float_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 // SAFETY: The caller upholds the `Codec::decode`
                 // contract.
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -795,8 +796,8 @@ macro_rules! impl_native_integer_binary_codec {
             /// `input_index..input_index + size_of::<$ty>()` must be a valid
             /// readable range within `input`.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
@@ -818,7 +819,7 @@ macro_rules! impl_native_integer_binary_codec {
             /// # Safety
             /// `output_index..output_index + size_of::<$ty>()` must be a valid
             /// writable range within `output`.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -836,16 +837,16 @@ macro_rules! impl_native_integer_binary_codec {
             const MAX_ENCODE_UNITS_PER_VALUE: usize = $len;
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
@@ -885,8 +886,8 @@ macro_rules! impl_native_float_binary_codec {
             /// `input_index..input_index + size_of::<$ty>()` must be a valid
             /// readable range within `input`.
             #[must_use]
-            #[inline(always)]
-            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, core::num::NonZeroUsize) {
+            #[inline]
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 let raw = unsafe { UncheckedSlice::read_ne_unaligned(input, input_index) };
@@ -909,7 +910,7 @@ macro_rules! impl_native_float_binary_codec {
             /// # Safety
             /// `output_index..output_index + size_of::<$ty>()` must be a valid
             /// writable range within `output`.
-            #[inline(always)]
+            #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
 
@@ -927,16 +928,16 @@ macro_rules! impl_native_float_binary_codec {
             const MAX_ENCODE_UNITS_PER_VALUE: usize = $len;
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
-            #[inline(always)]
+            #[inline]
             unsafe fn decode(
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn encode(
                 &mut self,
                 value: &$ty,
