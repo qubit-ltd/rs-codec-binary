@@ -8,6 +8,7 @@
 
 use core::convert::Infallible;
 use core::marker::PhantomData;
+use core::num::NonZeroUsize;
 
 use qubit_codec::Codec;
 use qubit_codec::DecodeFailure;
@@ -124,10 +125,7 @@ macro_rules! impl_unsigned_leb128_codec {
             /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
             /// from `input_index`.
             #[inline]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> Result<($ty, NonZeroUsize), Leb128DecodeError> {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this
@@ -190,7 +188,7 @@ macro_rules! impl_unsigned_leb128_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode`
@@ -257,10 +255,7 @@ macro_rules! impl_signed_leb128_codec {
             /// and at least [`Self::MIN_UNITS_PER_VALUE`] byte is readable
             /// from `input_index`.
             #[inline]
-            pub unsafe fn decode(
-                input: &[u8],
-                input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), Leb128DecodeError> {
+            pub unsafe fn decode(input: &[u8], input_index: usize) -> Result<($ty, NonZeroUsize), Leb128DecodeError> {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller guarantees enough readable bytes for this
@@ -323,7 +318,7 @@ macro_rules! impl_signed_leb128_codec {
                 &mut self,
                 input: &[u8],
                 input_index: usize,
-            ) -> Result<($ty, core::num::NonZeroUsize), DecodeFailure<Self::DecodeError>> {
+            ) -> Result<($ty, NonZeroUsize), DecodeFailure<Self::DecodeError>> {
                 debug_assert!(input.len().saturating_sub(input_index) >= Self::MIN_UNITS_PER_VALUE);
 
                 // SAFETY: The caller upholds the `Codec::decode`
@@ -396,7 +391,7 @@ unsafe fn read_uleb_unchecked<P>(
     index: usize,
     bits: u32,
     max_bytes: usize,
-) -> Result<(u128, core::num::NonZeroUsize), Leb128DecodeError>
+) -> Result<(u128, NonZeroUsize), Leb128DecodeError>
 where
     P: Leb128DecodePolicy,
 {
@@ -518,7 +513,7 @@ unsafe fn read_sleb_unchecked<P>(
     index: usize,
     bits: u32,
     max_bytes: usize,
-) -> Result<(i128, core::num::NonZeroUsize), Leb128DecodeError>
+) -> Result<(i128, NonZeroUsize), Leb128DecodeError>
 where
     P: Leb128DecodePolicy,
 {
