@@ -9,9 +9,9 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-leb128 = "0.2"
-libfuzzer-sys = "0.4"
-qubit-codec = "0.16"
+leb128 = "^0.2"
+libfuzzer-sys = "^0.4"
+qubit-codec = "^0.16"
 qubit-codec-binary = { path = ".." }
 
 [[bin]]
