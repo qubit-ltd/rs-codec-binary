@@ -70,6 +70,10 @@ pub struct ZigZagCodec<T, P> {
     marker: PhantomData<fn() -> (T, P)>,
 }
 
+/// Implements the ZigZag codec for one signed and unsigned integer pair.
+///
+/// The expansion defines the unchecked helpers and the [`Codec`] implementation
+/// while keeping their arithmetic tied to the integer type's bit width.
 macro_rules! impl_zig_zag_codec {
     ($signed:ty, $unsigned:ty, $shift:expr) => {
         impl<P> ZigZagCodec<$signed, P>

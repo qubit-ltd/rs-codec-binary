@@ -32,6 +32,7 @@ use crate::Leb128DecodeErrorKind;
 /// assert_eq!(error.required().map(NonZeroUsize::get), Some(3));
 /// assert_eq!(error.additional().map(NonZeroUsize::get), Some(2));
 /// ```
+#[must_use]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Leb128DecodeError {
     /// Absolute byte index where the attempted value starts.
