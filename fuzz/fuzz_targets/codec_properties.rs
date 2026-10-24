@@ -10,6 +10,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use qubit_codec::BigEndian;
+use qubit_codec::Codec;
 use qubit_codec::LittleEndian;
 use qubit_codec::NativeEndian;
 use qubit_codec_binary::BinaryCodec;
@@ -82,6 +83,25 @@ macro_rules! assert_leb128_roundtrip {
         let expected: $ty = $value;
         let mut output = [0_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
         let written = unsafe { $codec::<$ty, NonStrict>::encode(expected, &mut output, 0) };
+        let mut codec = $codec::<$ty, NonStrict>::default();
+        let required = codec.encode_len(&expected);
+        assert_eq!(written, required);
+        assert!((1..=$codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE).contains(&required));
+        assert_eq!($codec::<$ty, Strict>::default().encode_len(&expected), required);
+        let mut trait_output = [0_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE];
+        // SAFETY: The buffer exposes the declared maximum encode capacity.
+        let trait_written = unsafe { Codec::encode(&mut codec, &expected, &mut trait_output, 0) }
+            .expect("scalar encoding is infallible");
+        assert_eq!(written, trait_written);
+        assert_eq!(&output[..written], &trait_output[..trait_written]);
+        let mut storage = [0xa5_u8; $codec::<$ty, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+        // SAFETY: Both maximum-capacity encodings established this exact width.
+        let exact_written = unsafe { Codec::encode(&mut codec, &expected, &mut storage[1..1 + required], 0) }
+            .expect("scalar encoding is infallible");
+        assert_eq!(written, exact_written);
+        assert_eq!(&output[..written], &storage[1..1 + required]);
+        assert_eq!(0xa5, storage[0]);
+        assert_eq!(0xa5, storage[required + 1]);
         let strict = unsafe { $codec::<$ty, Strict>::decode(&output[..written], 0) }
             .expect("canonical LEB128-family encoding must pass strict decoding");
         let non_strict = unsafe { $codec::<$ty, NonStrict>::decode(&output[..written], 0) }
