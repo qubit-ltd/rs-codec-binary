@@ -34,7 +34,7 @@
 ```toml
 [dependencies]
 qubit-codec-binary = "0.6"
-qubit-codec = "0.12"
+qubit-codec = "0.17"
 ```
 
 字节序标记与共享 `Codec` trait 请从 `qubit-codec` 导入。普通的单值转换建议使用
