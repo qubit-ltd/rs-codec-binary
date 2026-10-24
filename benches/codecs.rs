@@ -817,23 +817,51 @@ struct MixedUlebFixture {
     encoded: Vec<u8>,
 }
 
-/// Builds a mixed unsigned LEB128 fixture with random field types and widths.
+/// Builds a reproducible mixed fixture with balanced field types and shuffled
+/// order.
 fn build_mixed_uleb_fixture() -> MixedUlebFixture {
-    let mut state = 0xCAFE_BABE_1234_5678;
-    let fields = (0..MIXED_FIELD_COUNT)
-        .map(|_| match next_state(&mut state) % 6 {
-            0 => MixedUlebField::U8(next_state(&mut state) as u8),
-            1 => MixedUlebField::U16(next_state(&mut state) as u16),
-            2 => MixedUlebField::U32(next_state(&mut state) as u32),
-            3 => MixedUlebField::U64(next_state(&mut state)),
-            4 => MixedUlebField::Usize(next_state(&mut state) as usize),
+    let mut value_state = 0xCAFE_BABE_1234_5678;
+    let mut fields = (0..MIXED_FIELD_COUNT)
+        .map(|index| match index % 6 {
+            0 => MixedUlebField::U8(next_state(&mut value_state) as u8),
+            1 => MixedUlebField::U16(next_state(&mut value_state) as u16),
+            2 => MixedUlebField::U32(next_state(&mut value_state) as u32),
+            3 => MixedUlebField::U64(next_state(&mut value_state)),
+            4 => MixedUlebField::Usize(next_state(&mut value_state) as usize),
             _ => {
-                let high = u128::from(next_state(&mut state));
-                let low = u128::from(next_state(&mut state));
+                let high = u128::from(next_state(&mut value_state));
+                let low = u128::from(next_state(&mut value_state));
                 MixedUlebField::U128((high << 64) | low)
             }
         })
         .collect::<Vec<_>>();
+    let mut order_state = 0x1234_5678_CAFE_BABE;
+    for index in (1..fields.len()).rev() {
+        let other = (next_state(&mut order_state) % (index as u64 + 1)) as usize;
+        fields.swap(index, other);
+    }
+    let mut counts = [0_usize; 6];
+    for field in &fields {
+        let kind = match field {
+            MixedUlebField::U8(_) => 0,
+            MixedUlebField::U16(_) => 1,
+            MixedUlebField::U32(_) => 2,
+            MixedUlebField::U64(_) => 3,
+            MixedUlebField::Usize(_) => 4,
+            MixedUlebField::U128(_) => 5,
+        };
+        counts[kind] += 1;
+    }
+    let smallest = counts.iter().copied().min().unwrap_or(0);
+    let largest = counts.iter().copied().max().unwrap_or(0);
+    assert!(
+        smallest > 0,
+        "every mixed ULEB128 field type must be represented: {counts:?}"
+    );
+    assert!(
+        largest - smallest <= 1,
+        "mixed ULEB128 field types must be balanced: {counts:?}"
+    );
     let widths = fields.iter().map(mixed_uleb_width).collect::<Vec<_>>();
     assert!(widths.iter().all(|&width| (1..=MAX_MIXED_ULEB_BYTES).contains(&width)));
     let storage_len = widths.iter().sum();
