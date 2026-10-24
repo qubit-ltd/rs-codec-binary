@@ -472,11 +472,10 @@ fn decode_unsigned_errors<P>(input: &[u8]) -> u64
 where
     P: Leb128DecodePolicy,
 {
-    let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
         // SAFETY: callers pass a fixture known to be rejected by this codec.
-        let error = unsafe { Leb128Codec::<u64, P>::decode(input, 0).unwrap_err_unchecked() };
+        let error = unsafe { Leb128Codec::<u64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
@@ -487,11 +486,10 @@ fn decode_signed_leb128_errors<P>(input: &[u8]) -> u64
 where
     P: Leb128DecodePolicy,
 {
-    let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
         // SAFETY: callers pass a fixture known to be rejected by this codec.
-        let error = unsafe { Leb128Codec::<i64, P>::decode(input, 0).unwrap_err_unchecked() };
+        let error = unsafe { Leb128Codec::<i64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
@@ -502,11 +500,10 @@ fn decode_zig_zag_errors<P>(input: &[u8]) -> u64
 where
     P: Leb128DecodePolicy,
 {
-    let input = black_box(input);
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
         // SAFETY: callers pass a fixture known to be rejected by this codec.
-        let error = unsafe { ZigZagCodec::<i64, P>::decode(input, 0).unwrap_err_unchecked() };
+        let error = unsafe { ZigZagCodec::<i64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
     checksum
@@ -679,6 +676,7 @@ fn decode_mixed_binary_unchecked(fields: &[MixedBinaryField], input: &[u8]) -> u
                 let (value, consumed) = unsafe { BinaryCodec::<u128, BigEndian>::decode(input, input_index) };
                 debug_assert_eq!(consumed.get(), width);
                 checksum = mix_checksum(checksum, value as u64);
+                checksum = mix_checksum(checksum, (value >> 64) as u64);
             }
         }
         offset += width;
@@ -722,6 +720,7 @@ fn decode_mixed_binary_safe_slices(fields: &[MixedBinaryField], input: &[u8]) ->
                 let (value, consumed) = unsafe { BinaryCodec::<u128, BigEndian>::decode(window, 0) };
                 debug_assert_eq!(consumed.get(), width);
                 checksum = mix_checksum(checksum, value as u64);
+                checksum = mix_checksum(checksum, (value >> 64) as u64);
             }
         }
         offset += width;
@@ -787,7 +786,8 @@ fn bench_binary(c: &mut Criterion) {
                 unsafe {
                     BinaryCodec::<u64, BigEndian>::encode(value, &mut bytes, 0);
                 }
-                let (decoded, _) = unsafe { BinaryCodec::<u64, BigEndian>::decode(&bytes, 0) };
+                let encoded = black_box(bytes.as_slice());
+                let (decoded, _) = unsafe { BinaryCodec::<u64, BigEndian>::decode(encoded, 0) };
                 checksum = mix_checksum(checksum, decoded);
             }
             black_box(checksum)
@@ -1001,6 +1001,7 @@ fn decode_mixed_uleb_unchecked(fields: &[MixedUlebField], input: &[u8]) -> u64 {
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u128, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
+                checksum = mix_checksum(checksum, (value >> 64) as u64);
                 offset += consumed.get();
             }
         }
@@ -1049,6 +1050,7 @@ fn decode_mixed_uleb_safe_slices(fields: &[MixedUlebField], input: &[u8]) -> u64
             MixedUlebField::U128(_) => {
                 let (value, consumed) = unsafe { Leb128Codec::<u128, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
+                checksum = mix_checksum(checksum, (value >> 64) as u64);
                 offset += consumed.get();
             }
         }
