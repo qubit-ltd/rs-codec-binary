@@ -59,6 +59,11 @@ let decoded = decoder.decode(&encoded).expect("编码结果有效");
 assert_eq!(300, decoded);
 ```
 
+`CodecValueDecoder::decode` 要求输入 slice 恰好包含一个值。空 slice 会报告输入不完整；
+解出一个值后仍有剩余字节，则会报告尾随输入。定长字段应先按已知宽度切出对应 slice，
+再交给 adapter。变长字段应由协议提供值边界，或使用能够跟踪边界的协议读取器或流式
+读取器。这个 adapter 不会返回已消费前缀，也不提供下一个字段的偏移量。
+
 ## 核心流程
 
 ```rust
@@ -106,7 +111,8 @@ codec 的两个上限数值相同，但契约彼此独立。
 `NonStrict` 只接受目标整数声明的最大宽度以内的非规范表示。超过该宽度的
 未终止或过宽负载仍会被视为畸形输入，不会接受任意长度的编码。
 
-`Leb128DecodeError` 区分 `Incomplete`、`Malformed` 与 `NonCanonical`。
+下面的 `Leb128DecodeError` 示例走的是直接 codec 路径。它会区分
+`Incomplete`、`Malformed` 与 `NonCanonical`：
 `start_index()` 是尝试解码值的起点，`error_index()` 是错误可观察的位置；输入
 不完整时，可使用 `required()`、`available()` 和 `additional()` 决定如何补充缓冲。
 
@@ -119,6 +125,49 @@ assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
 assert_eq!(Some(2), error.required().map(|count| count.get()));
 assert_eq!(Some(1), error.available());
 ```
+
+检查型单值路径返回 `TranscodeDecodeError<Leb128DecodeError>`。空输入或尾随字节等框架
+错误可通过 `failure_ref()` 读取；codec 自身的领域错误可通过 `domain_ref()` 读取：
+
+```rust
+use qubit_codec::CodecValueDecoder;
+use qubit_codec::TranscodeFailure;
+use qubit_codec_binary::Leb128Codec;
+use qubit_codec_binary::Leb128DecodeErrorKind;
+use qubit_codec_binary::Strict;
+
+fn main() {
+    let mut decoder = CodecValueDecoder::new(Leb128Codec::<u16, Strict>::default());
+    assert_eq!(300, decoder.decode(&[0xac, 0x02]).unwrap());
+
+    let empty = decoder.decode(&[]).unwrap_err();
+    assert!(matches!(empty.failure_ref(), Some(TranscodeFailure::IncompleteInput { .. })));
+
+    let truncated = decoder.decode(&[0xac]).unwrap_err();
+    assert_eq!(
+        Leb128DecodeErrorKind::Incomplete,
+        truncated.domain_ref().unwrap().kind(),
+    );
+
+    let noncanonical = decoder.decode(&[0x80, 0x00]).unwrap_err();
+    assert_eq!(
+        Leb128DecodeErrorKind::NonCanonical,
+        noncanonical.domain_ref().unwrap().kind(),
+    );
+
+    let trailing = decoder.decode(&[0x01, 0x02]).unwrap_err();
+    assert!(matches!(trailing.failure_ref(), Some(TranscodeFailure::TrailingInput { .. })));
+}
+```
+
+后续处理取决于输入边界和错误所属层次：
+
+| 输入 | 错误层次 | 应用动作 |
+| --- | --- | --- |
+| 空 slice | 框架 `IncompleteInput` | 检查切片边界；若数据可能尚未到齐，保留输入，等外层补充后重试。 |
+| `[0xac]` | 领域 `Incomplete` | 本次调用失败；外层可补充数据后重试。若协议已到最终 EOF，则应拒绝该输入。 |
+| `Strict` 下的 `[0x80, 0x00]` | 领域 `NonCanonical` | 按当前协议拒绝；只有协议允许这种表示时才选择 `NonStrict`，不要自动降级。 |
+| `[0x01, 0x02]` | 框架 `TrailingInput` | 检查单值切片边界，或改用记录读取器；不要静默丢弃尾随字节。 |
 
 ## Unsafe 边界与最佳实践
 

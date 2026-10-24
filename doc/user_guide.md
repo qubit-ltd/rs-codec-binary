@@ -63,6 +63,14 @@ let decoded = decoder.decode(&encoded).expect("encoded value is valid");
 assert_eq!(300, decoded);
 ```
 
+`CodecValueDecoder::decode` expects a slice containing exactly one value. An
+empty slice is reported as incomplete input, while bytes after the decoded
+value are reported as trailing input. For fixed-width fields, slice the known
+width before calling the adapter. For variable-width fields, let the protocol
+provide the value boundary, or use a protocol or stream reader that can track
+that boundary. The adapter does not return a consumed prefix or an offset for
+the next field.
+
 ## Core Workflow
 
 ```rust
@@ -115,7 +123,8 @@ instantiate the codec with `NonStrict`.
 integer's declared maximum width. Longer unterminated or over-width payloads
 remain malformed rather than being accepted as arbitrarily long encodings.
 
-`Leb128DecodeError` reports `Incomplete`, `Malformed`, or `NonCanonical`.
+The following `Leb128DecodeError` example uses the direct codec path. It reports
+`Incomplete`, `Malformed`, or `NonCanonical`:
 `start_index()` identifies the attempted value, and `error_index()` identifies
 where failure became observable. For incomplete data, use `required()`,
 `available()`, and `additional()` to decide whether to refill a buffer.
@@ -129,6 +138,51 @@ assert_eq!(Leb128DecodeErrorKind::Incomplete, error.kind());
 assert_eq!(Some(2), error.required().map(|count| count.get()));
 assert_eq!(Some(1), error.available());
 ```
+
+The checked single-value path returns
+`TranscodeDecodeError<Leb128DecodeError>`. Framework failures such as an empty
+slice or trailing bytes are available through `failure_ref()`; codec-specific
+errors are available through `domain_ref()`:
+
+```rust
+use qubit_codec::CodecValueDecoder;
+use qubit_codec::TranscodeFailure;
+use qubit_codec_binary::Leb128Codec;
+use qubit_codec_binary::Leb128DecodeErrorKind;
+use qubit_codec_binary::Strict;
+
+fn main() {
+    let mut decoder = CodecValueDecoder::new(Leb128Codec::<u16, Strict>::default());
+    assert_eq!(300, decoder.decode(&[0xac, 0x02]).unwrap());
+
+    let empty = decoder.decode(&[]).unwrap_err();
+    assert!(matches!(empty.failure_ref(), Some(TranscodeFailure::IncompleteInput { .. })));
+
+    let truncated = decoder.decode(&[0xac]).unwrap_err();
+    assert_eq!(
+        Leb128DecodeErrorKind::Incomplete,
+        truncated.domain_ref().unwrap().kind(),
+    );
+
+    let noncanonical = decoder.decode(&[0x80, 0x00]).unwrap_err();
+    assert_eq!(
+        Leb128DecodeErrorKind::NonCanonical,
+        noncanonical.domain_ref().unwrap().kind(),
+    );
+
+    let trailing = decoder.decode(&[0x01, 0x02]).unwrap_err();
+    assert!(matches!(trailing.failure_ref(), Some(TranscodeFailure::TrailingInput { .. })));
+}
+```
+
+Choose the next action according to the input boundary and error layer:
+
+| Input | Error layer | Application action |
+| --- | --- | --- |
+| Empty slice | Framework `IncompleteInput` | Check the boundary. If more data may arrive, retain the input and retry after the outer layer supplies it. |
+| `[0xac]` | Domain `Incomplete` | This call failed; the outer layer may append data and retry. Reject it if the protocol has reached final EOF. |
+| `[0x80, 0x00]` under `Strict` | Domain `NonCanonical` | Reject it under this protocol. Select `NonStrict` only when the protocol allows that representation; do not downgrade automatically. |
+| `[0x01, 0x02]` | Framework `TrailingInput` | Check the single-value slice boundary or use a record reader; do not silently discard the trailing byte. |
 
 ## Unsafe Boundary and Best Practices
 
