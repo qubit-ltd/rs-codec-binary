@@ -34,7 +34,7 @@ sanitizers = ["address"]
 [dependencies]
 thiserror = "^2.0"
 qubit-utils = "^0.3"
-qubit-codec = { path = "../rs-codec", version = "0.16" }
+qubit-codec = { version = "0.17" }
 
 
 [dev-dependencies]
