@@ -121,6 +121,13 @@ where
     /// - `output`: Destination byte buffer.
     /// - `output_index`: Start index in `output`.
     ///
+    /// # Returns
+    ///
+    /// Returns the number of bytes written, equal to
+    /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+    /// The next output position is `output_index + written`, where `written`
+    /// is the returned byte count.
+    ///
     /// # Safety
     ///
     /// The caller must guarantee that `output.as_mut_ptr().add(output_index)`
@@ -225,6 +232,13 @@ where
     /// - `value`: Value to encode.
     /// - `output`: Destination byte buffer.
     /// - `output_index`: Start index in `output`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of bytes written, equal to
+    /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+    /// The next output position is `output_index + written`, where `written`
+    /// is the returned byte count.
     ///
     /// # Safety
     ///
@@ -340,6 +354,13 @@ macro_rules! impl_integer_binary_codec {
             /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
             /// - `output_index`: Start byte index in `output`.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written, equal to
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+            /// The next output position is `output_index + written`, where `written`
+            /// is the returned byte count.
             ///
             /// # Safety
             ///
@@ -459,6 +480,13 @@ macro_rules! impl_integer_binary_codec {
             /// - `value`: Value to encode.
             /// - `output`: Destination byte buffer.
             /// - `output_index`: Start byte index in `output`.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written, equal to
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+            /// The next output position is `output_index + written`, where `written`
+            /// is the returned byte count.
             ///
             /// # Safety
             ///
@@ -586,6 +614,13 @@ macro_rules! impl_float_binary_codec {
             /// - `output`: Destination byte buffer.
             /// - `output_index`: Start byte index in `output`.
             ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written, equal to
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+            /// The next output position is `output_index + written`, where `written`
+            /// is the returned byte count.
+            ///
             /// # Safety
             ///
             /// The caller must guarantee that:
@@ -708,6 +743,13 @@ macro_rules! impl_float_binary_codec {
             /// - `output`: Destination byte buffer.
             /// - `output_index`: Start byte index in `output`.
             ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written, equal to
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`], independently of `output_index`.
+            /// The next output position is `output_index + written`, where `written`
+            /// is the returned byte count.
+            ///
             /// # Safety
             ///
             /// The caller must guarantee that:
@@ -793,8 +835,10 @@ macro_rules! impl_native_integer_binary_codec {
             /// Returns the decoded value and the fixed number of bytes read.
             ///
             /// # Safety
-            /// `input_index..input_index + size_of::<$ty>()` must be a valid
-            /// readable range within `input`.
+            ///
+            /// The caller must guarantee that at least
+            /// [`Self::MIN_UNITS_PER_VALUE`] bytes are readable from `input_index`
+            /// within `input`.
             #[must_use]
             #[inline]
             pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
@@ -817,8 +861,10 @@ macro_rules! impl_native_integer_binary_codec {
             /// Returns the fixed number of bytes written.
             ///
             /// # Safety
-            /// `output_index..output_index + size_of::<$ty>()` must be a valid
-            /// writable range within `output`.
+            ///
+            /// The caller must guarantee that at least
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes are writable from
+            /// `output_index` within `output`.
             #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
@@ -883,8 +929,10 @@ macro_rules! impl_native_float_binary_codec {
             /// Returns the decoded floating-point value and fixed byte count.
             ///
             /// # Safety
-            /// `input_index..input_index + size_of::<$ty>()` must be a valid
-            /// readable range within `input`.
+            ///
+            /// The caller must guarantee that at least
+            /// [`Self::MIN_UNITS_PER_VALUE`] bytes are readable from `input_index`
+            /// within `input`.
             #[must_use]
             #[inline]
             pub unsafe fn decode(input: &[u8], input_index: usize) -> ($ty, NonZeroUsize) {
@@ -908,8 +956,10 @@ macro_rules! impl_native_float_binary_codec {
             /// Returns the fixed number of bytes written.
             ///
             /// # Safety
-            /// `output_index..output_index + size_of::<$ty>()` must be a valid
-            /// writable range within `output`.
+            ///
+            /// The caller must guarantee that at least
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`] bytes are writable from
+            /// `output_index` within `output`.
             #[inline]
             pub unsafe fn encode(value: $ty, output: &mut [u8], output_index: usize) -> usize {
                 debug_assert!(output.len().saturating_sub(output_index) >= Self::MAX_ENCODE_UNITS_PER_VALUE);
