@@ -16,6 +16,7 @@
 use std::convert::Infallible;
 use std::fmt::Debug;
 use std::hint::black_box;
+use std::num::NonZeroUsize;
 
 use criterion::BatchSize;
 use criterion::BenchmarkId;
@@ -33,6 +34,9 @@ use qubit_codec_binary::Leb128DecodePolicy;
 use qubit_codec_binary::NonStrict;
 use qubit_codec_binary::Strict;
 use qubit_codec_binary::ZigZagCodec;
+
+type Leb128DecodeResult<T> = Result<(T, NonZeroUsize), Leb128DecodeError>;
+type Leb128DecodeFn<T> = unsafe fn(&[u8], usize) -> Leb128DecodeResult<T>;
 
 /// Number of values processed by each benchmark iteration.
 const BATCH_SIZE: usize = 1_024;
@@ -269,6 +273,68 @@ fn zig_zag_payloads(values: &[i64]) -> Vec<ZigZagPayload> {
         .collect()
 }
 
+/// Validates one successful fixture before entering a timed decode loop.
+fn validate_decode_value<T>(
+    decode: Leb128DecodeFn<T>,
+    input: &[u8],
+    index: usize,
+    expected: T,
+    width: usize,
+    label: &str,
+) where
+    T: Debug + PartialEq,
+{
+    assert!(index < input.len(), "{label}: invalid decode index");
+    assert!(width > 0 && width <= input.len() - index, "{label}: invalid width");
+    // SAFETY: The checked index guarantees at least one readable byte.
+    // All callers pass a LEB128-family inherent decode method.
+    let (value, consumed) =
+        unsafe { decode(input, index) }.unwrap_or_else(|error| panic!("{label}: unexpected decode error: {error:?}"));
+    assert_eq!(expected, value, "{label}: decoded value mismatch");
+    assert_eq!(width, consumed.get(), "{label}: consumed width mismatch");
+}
+
+/// Validates the error category advertised by one timed error fixture.
+fn validate_decode_error<T: Debug>(
+    decode: Leb128DecodeFn<T>,
+    input: &[u8],
+    expected: Leb128DecodeErrorKind,
+    label: &str,
+) {
+    assert!(!input.is_empty(), "{label}: empty error fixture");
+    // SAFETY: Every supplied LEB128-family decoder can read byte zero.
+    let error = unsafe { decode(input, 0) }.expect_err(label);
+    assert_eq!(expected, error.kind(), "{label}: error category mismatch");
+}
+
+macro_rules! validate_canonical_payloads {
+    ($codec:ident, $ty:ty, $values:expr, $payloads:expr) => {{
+        let values = &$values;
+        let payloads = &$payloads;
+        assert_eq!(values.len(), payloads.len(), "fixture count mismatch");
+        for (index, (&value, payload)) in values.iter().zip(payloads.iter()).enumerate() {
+            let input = payload.bytes.get(..payload.len).expect("invalid payload length");
+            let label = format!("{}<{}> fixture {index}", stringify!($codec), stringify!($ty));
+            validate_decode_value(
+                $codec::<$ty, NonStrict>::decode,
+                input,
+                0,
+                value,
+                payload.len,
+                &format!("{label} NonStrict"),
+            );
+            validate_decode_value(
+                $codec::<$ty, Strict>::decode,
+                input,
+                0,
+                value,
+                payload.len,
+                &format!("{label} Strict"),
+            );
+        }
+    }};
+}
+
 /// Validates that a named fixture distribution has the promised widths.
 fn validate_distribution_widths(distribution: Distribution, widths: impl IntoIterator<Item = usize>) {
     match distribution {
@@ -409,8 +475,9 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
-        // SAFETY: `validate_distribution_widths` only supplies canonical
-        // payloads produced by the corresponding encoder.
+        // SAFETY: The canonical fixture precheck verified this payload decodes
+        // successfully under this policy, with the expected value and width.
+        // The checked payload slice contains at least one readable byte.
         let (value, consumed) =
             unsafe { Leb128Codec::<u64, P>::decode(&payload.bytes[..payload.len], 0).unwrap_unchecked() };
         checksum = mix_checksum(checksum, value);
@@ -426,8 +493,9 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
-        // SAFETY: `validate_distribution_widths` only supplies canonical
-        // payloads produced by the corresponding encoder.
+        // SAFETY: The canonical fixture precheck verified this payload decodes
+        // successfully under this policy, with the expected value and width.
+        // The checked payload slice contains at least one readable byte.
         let (value, consumed) =
             unsafe { Leb128Codec::<i64, P>::decode(&payload.bytes[..payload.len], 0).unwrap_unchecked() };
         checksum = mix_checksum(checksum, value as u64);
@@ -443,8 +511,9 @@ where
 {
     let mut checksum = 0_u64;
     for payload in black_box(payloads) {
-        // SAFETY: `validate_distribution_widths` only supplies canonical
-        // payloads produced by the corresponding encoder.
+        // SAFETY: The canonical fixture precheck verified this payload decodes
+        // successfully under this policy, with the expected value and width.
+        // The checked payload slice contains at least one readable byte.
         let (value, consumed) =
             unsafe { ZigZagCodec::<i64, P>::decode(&payload.bytes[..payload.len], 0).unwrap_unchecked() };
         checksum = mix_checksum(checksum, value as u64);
@@ -474,7 +543,8 @@ where
 {
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        // SAFETY: The error fixture precheck verified this non-empty input
+        // returns Err with the expected kind under this policy.
         let error = unsafe { Leb128Codec::<u64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
@@ -488,7 +558,8 @@ where
 {
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        // SAFETY: The error fixture precheck verified this non-empty input
+        // returns Err with the expected kind under this policy.
         let error = unsafe { Leb128Codec::<i64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
@@ -502,7 +573,8 @@ where
 {
     let mut checksum = 0_u64;
     for _ in 0..BATCH_SIZE {
-        // SAFETY: callers pass a fixture known to be rejected by this codec.
+        // SAFETY: The error fixture precheck verified this non-empty input
+        // returns Err with the expected kind under this policy.
         let error = unsafe { ZigZagCodec::<i64, P>::decode(black_box(input), 0).unwrap_err_unchecked() };
         checksum = checksum_decode_error(checksum, &error);
     }
@@ -886,6 +958,51 @@ fn mixed_uleb_width(field: &MixedUlebField) -> usize {
     }
 }
 
+/// Checks both input window shapes used by the mixed ULEB128 benchmarks.
+fn validate_mixed_uleb_fixture(fixture: &MixedUlebFixture) {
+    assert_eq!(
+        fixture.fields.len(),
+        fixture.widths.len(),
+        "mixed fixture count mismatch"
+    );
+    let mut offset = 0_usize;
+    for (index, (field, &width)) in fixture.fields.iter().zip(&fixture.widths).enumerate() {
+        let remaining = fixture.encoded.get(offset..).expect("invalid mixed offset");
+        let label = format!("mixed ULEB128 field {index}");
+        macro_rules! validate_field {
+            ($ty:ty, $value:expr) => {{
+                validate_decode_value(
+                    Leb128Codec::<$ty, NonStrict>::decode,
+                    &fixture.encoded,
+                    offset,
+                    $value,
+                    width,
+                    &format!("{label} whole buffer"),
+                );
+                validate_decode_value(
+                    Leb128Codec::<$ty, NonStrict>::decode,
+                    remaining,
+                    0,
+                    $value,
+                    width,
+                    &format!("{label} remaining slice"),
+                );
+            }};
+        }
+        match field {
+            MixedUlebField::U8(value) => validate_field!(u8, *value),
+            MixedUlebField::U16(value) => validate_field!(u16, *value),
+            MixedUlebField::U32(value) => validate_field!(u32, *value),
+            MixedUlebField::U64(value) => validate_field!(u64, *value),
+            MixedUlebField::Usize(value) => validate_field!(usize, *value),
+            MixedUlebField::U128(value) => validate_field!(u128, *value),
+        }
+        // Both validations proved width fits in the remaining input.
+        offset += width;
+    }
+    assert_eq!(fixture.encoded.len(), offset, "mixed fixture trailing bytes");
+}
+
 /// Encodes mixed LEB128 fields without recreating a checked slice.
 fn encode_mixed_uleb_unchecked(fields: &[MixedUlebField], widths: &[usize], output: &mut [u8]) -> u64 {
     debug_assert_eq!(fields.len(), widths.len());
@@ -968,36 +1085,48 @@ fn decode_mixed_uleb_unchecked(fields: &[MixedUlebField], input: &[u8]) -> u64 {
         let input_index = black_box(offset);
         match field {
             MixedUlebField::U8(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u8, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U16(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u16, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U32(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u32, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U64(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u64, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value);
                 offset += consumed.get();
             }
             MixedUlebField::Usize(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<usize, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
                 offset += consumed.get();
             }
             MixedUlebField::U128(_) => {
+                // SAFETY: Whole-buffer boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<u128, NonStrict>::decode(input, input_index).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
@@ -1022,32 +1151,44 @@ fn decode_mixed_uleb_safe_slices(fields: &[MixedUlebField], input: &[u8]) -> u64
         let window = &input[input_index..];
         match field {
             MixedUlebField::U8(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) = unsafe { Leb128Codec::<u8, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U16(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) = unsafe { Leb128Codec::<u16, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U32(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) = unsafe { Leb128Codec::<u32, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, u64::from(value));
                 offset += consumed.get();
             }
             MixedUlebField::U64(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) = unsafe { Leb128Codec::<u64, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value);
                 offset += consumed.get();
             }
             MixedUlebField::Usize(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) =
                     unsafe { Leb128Codec::<usize, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
                 offset += consumed.get();
             }
             MixedUlebField::U128(_) => {
+                // SAFETY: Remaining-slice boundary checks and the final cursor
+                // precheck verified each field's value and width before timing.
                 let (value, consumed) = unsafe { Leb128Codec::<u128, NonStrict>::decode(window, 0).unwrap_unchecked() };
                 checksum = mix_checksum(checksum, value as u64);
                 checksum = mix_checksum(checksum, (value >> 64) as u64);
@@ -1062,6 +1203,7 @@ fn decode_mixed_uleb_safe_slices(fields: &[MixedUlebField], input: &[u8]) -> u64
 /// Benchmarks mixed unsigned LEB128 fields with and without checked slices.
 fn bench_mixed_uleb(c: &mut Criterion) {
     let fixture = build_mixed_uleb_fixture();
+    validate_mixed_uleb_fixture(&fixture);
     let storage_len = fixture.encoded.len();
     let mut unchecked_encoded = vec![0_u8; storage_len];
     let mut safe_encoded = vec![0_u8; storage_len];
@@ -1123,6 +1265,7 @@ fn bench_leb128(c: &mut Criterion) {
         validate_exact_capacity::<Leb128Codec<u64, NonStrict>>(&values);
         let payloads = unsigned_payloads(&values);
         validate_distribution_widths(distribution, payloads.iter().map(|payload| payload.len));
+        validate_canonical_payloads!(Leb128Codec, u64, values, payloads);
 
         group.bench_with_input(BenchmarkId::new("u64_encode_len", name), &values, |bencher, values| {
             bencher.iter(|| black_box(encode_lengths::<Leb128Codec<u64, NonStrict>>(values)));
@@ -1160,6 +1303,7 @@ fn bench_leb128(c: &mut Criterion) {
         validate_exact_capacity::<Leb128Codec<i64, NonStrict>>(&values);
         let payloads = signed_leb128_payloads(&values);
         validate_distribution_widths(distribution, payloads.iter().map(|payload| payload.len));
+        validate_canonical_payloads!(Leb128Codec, i64, values, payloads);
 
         group.bench_with_input(BenchmarkId::new("i64_encode_len", name), &values, |bencher, values| {
             bencher.iter(|| black_box(encode_lengths::<Leb128Codec<i64, NonStrict>>(values)));
@@ -1207,6 +1351,7 @@ fn bench_zig_zag(c: &mut Criterion) {
         validate_exact_capacity::<ZigZagCodec<i64, NonStrict>>(&values);
         let payloads = zig_zag_payloads(&values);
         validate_distribution_widths(distribution, payloads.iter().map(|payload| payload.len));
+        validate_canonical_payloads!(ZigZagCodec, i64, values, payloads);
 
         group.bench_with_input(BenchmarkId::new("i64_encode_len", name), &values, |bencher, values| {
             bencher.iter(|| black_box(encode_lengths::<ZigZagCodec<i64, NonStrict>>(values)));
@@ -1248,6 +1393,31 @@ fn bench_decode_errors(c: &mut Criterion) {
     let incomplete = [0x80_u8];
     let malformed = [0x80_u8; MAX_VARINT_BYTES];
     let non_canonical = [0x80_u8, 0x00];
+    macro_rules! validate_error_family {
+        ($codec:ident, $ty:ty, $incomplete:expr, $malformed:expr, $noncanonical:expr) => {{
+            validate_decode_error(
+                $codec::<$ty, NonStrict>::decode,
+                $incomplete,
+                Leb128DecodeErrorKind::Incomplete,
+                concat!(stringify!($codec), " incomplete"),
+            );
+            validate_decode_error(
+                $codec::<$ty, NonStrict>::decode,
+                $malformed,
+                Leb128DecodeErrorKind::Malformed,
+                concat!(stringify!($codec), " malformed"),
+            );
+            validate_decode_error(
+                $codec::<$ty, Strict>::decode,
+                $noncanonical,
+                Leb128DecodeErrorKind::NonCanonical,
+                concat!(stringify!($codec), " noncanonical"),
+            );
+        }};
+    }
+    validate_error_family!(Leb128Codec, u64, &incomplete, &malformed, &non_canonical);
+    validate_error_family!(Leb128Codec, i64, &incomplete, &malformed, &non_canonical);
+    validate_error_family!(ZigZagCodec, i64, &incomplete, &malformed, &non_canonical);
     let mut group = c.benchmark_group("varint_decode_errors");
     group.throughput(Throughput::Elements(BATCH_SIZE as u64));
 
