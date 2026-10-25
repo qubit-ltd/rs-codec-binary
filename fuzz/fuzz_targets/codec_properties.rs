@@ -8,6 +8,9 @@
 
 #![no_main]
 
+use core::fmt::Debug;
+use core::num::NonZeroUsize;
+
 use libfuzzer_sys::fuzz_target;
 use qubit_codec::BigEndian;
 use qubit_codec::Codec;
@@ -28,6 +31,18 @@ macro_rules! assert_decode_policies {
     ($codec:ident, $ty:ty, $input:expr) => {{
         let non_strict = unsafe { $codec::<$ty, NonStrict>::decode($input, 0) };
         let strict = unsafe { $codec::<$ty, Strict>::decode($input, 0) };
+        assert_decode_offset_equivalence(
+            $codec::<$ty, NonStrict>::decode,
+            $input,
+            &non_strict,
+            concat!(stringify!($codec), "<", stringify!($ty), ", NonStrict>"),
+        );
+        assert_decode_offset_equivalence(
+            $codec::<$ty, Strict>::decode,
+            $input,
+            &strict,
+            concat!(stringify!($codec), "<", stringify!($ty), ", Strict>"),
+        );
         assert_strict_matches_canonical_encoding::<
             $codec<$ty, NonStrict>,
             $ty,
@@ -40,6 +55,69 @@ macro_rules! assert_decode_policies {
             non_strict,
         );
     }};
+}
+
+/// Checks absolute index translation while preserving relative decode counts.
+fn assert_decode_offset_equivalence<T>(
+    decode: unsafe fn(&[u8], usize) -> Result<(T, NonZeroUsize), Leb128DecodeError>,
+    input: &[u8],
+    baseline: &Result<(T, NonZeroUsize), Leb128DecodeError>,
+    label: &str,
+) where
+    T: Debug + PartialEq,
+{
+    assert!(!input.is_empty());
+    assert!(input.len() <= MAX_FUZZ_INPUT_LEN);
+    for offset in [1, 3, 7] {
+        let mut storage = [0_u8; MAX_FUZZ_INPUT_LEN + 7];
+        for (index, byte) in storage[..offset].iter_mut().enumerate() {
+            *byte = [0x00, 0x80, 0xff][index % 3];
+        }
+        let end = offset + input.len();
+        storage[offset..end].copy_from_slice(input);
+        // SAFETY: input is non-empty, offset is within the exposed slice,
+        // and unused storage after end is excluded from the decoder input.
+        let actual = unsafe { decode(&storage[..end], offset) };
+        match (baseline, &actual) {
+            (Ok(expected), Ok(actual)) => {
+                assert_eq!(expected, actual, "{label} offset={offset}: success");
+            }
+            (Err(expected), Err(actual)) => {
+                assert_eq!(expected.kind(), actual.kind(), "{label} offset={offset}: kind");
+                assert_eq!(
+                    expected.start_index() + offset,
+                    actual.start_index(),
+                    "{label} offset={offset}: start_index"
+                );
+                assert_eq!(
+                    expected.error_index() + offset,
+                    actual.error_index(),
+                    "{label} offset={offset}: error_index"
+                );
+                assert_eq!(
+                    expected.consumed(),
+                    actual.consumed(),
+                    "{label} offset={offset}: consumed"
+                );
+                assert_eq!(
+                    expected.required(),
+                    actual.required(),
+                    "{label} offset={offset}: required"
+                );
+                assert_eq!(
+                    expected.available(),
+                    actual.available(),
+                    "{label} offset={offset}: available"
+                );
+                assert_eq!(
+                    expected.additional(),
+                    actual.additional(),
+                    "{label} offset={offset}: additional"
+                );
+            }
+            _ => panic!("{label} offset={offset}: result changed: {baseline:?} -> {actual:?}"),
+        }
+    }
 }
 
 /// Verifies Strict decoding against an independently regenerated canonical
