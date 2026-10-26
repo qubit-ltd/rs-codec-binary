@@ -16,6 +16,22 @@
 
 mod codec;
 
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+mod readme_examples {}
+
+#[doc = include_str!("../README.zh_CN.md")]
+#[cfg(doctest)]
+mod readme_zh_cn_examples {}
+
+#[doc = include_str!("../doc/user_guide.md")]
+#[cfg(doctest)]
+mod user_guide_examples {}
+
+#[doc = include_str!("../doc/user_guide.zh_CN.md")]
+#[cfg(doctest)]
+mod user_guide_zh_cn_examples {}
+
 pub use codec::BinaryCodec;
 pub use codec::Leb128Codec;
 pub use codec::Leb128DecodeError;
