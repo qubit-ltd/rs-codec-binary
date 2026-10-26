@@ -15,7 +15,7 @@
 
 ```toml
 [dependencies]
-qubit-codec-binary = "0.8"
+qubit-codec-binary = "0.9"
 qubit-codec = "0.17"
 ```
 
