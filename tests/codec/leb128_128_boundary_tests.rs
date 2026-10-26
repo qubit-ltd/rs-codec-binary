@@ -34,11 +34,8 @@ fn payload(prefix: u8, terminal: u8) -> [u8; 19] {
 }
 
 /// Checks an independently expected result through inherent and trait APIs.
-fn check<C>(
-    decode: unsafe fn(&[u8], usize) -> DecodeResult<C::Value>,
-    bytes: &[u8],
-    expected: Result<C::Value, &str>,
-) where
+fn check<C>(decode: unsafe fn(&[u8], usize) -> DecodeResult<C::Value>, bytes: &[u8], expected: Result<C::Value, &str>)
+where
     C: Codec<Unit = u8, DecodeError = Leb128DecodeError> + Default,
     C::Value: Copy + Debug + PartialEq,
 {
@@ -71,10 +68,7 @@ fn check<C>(
             if let Some(required) = error.required() {
                 DecodeFailure::incomplete_with_source(error, required)
             } else {
-                DecodeFailure::invalid(
-                    error,
-                    error.consumed().expect("invalid fixture consumes bytes"),
-                )
+                DecodeFailure::invalid(error, error.consumed().expect("invalid fixture consumes bytes"))
             }
         });
         // SAFETY: All tested codecs require one readable byte at offset.
@@ -94,7 +88,13 @@ macro_rules! check_both {
 #[test]
 fn test_128_boundary_unsigned_golden_vectors() {
     check_both!(Leb128Codec, u128, &payload(0xff, 0x03), Ok(u128::MAX), Ok(u128::MAX));
-    check_both!(Leb128Codec, u128, &payload(0x80, 0x01), Ok(1_u128 << 126), Ok(1_u128 << 126));
+    check_both!(
+        Leb128Codec,
+        u128,
+        &payload(0x80, 0x01),
+        Ok(1_u128 << 126),
+        Ok(1_u128 << 126)
+    );
     check_both!(Leb128Codec, u128, &payload(0x80, 0x00), Err("noncanonical"), Ok(0));
 }
 
@@ -102,8 +102,20 @@ fn test_128_boundary_unsigned_golden_vectors() {
 fn test_128_boundary_signed_golden_vectors() {
     check_both!(Leb128Codec, i128, &payload(0xff, 0x01), Ok(i128::MAX), Ok(i128::MAX));
     check_both!(Leb128Codec, i128, &payload(0x80, 0x7e), Ok(i128::MIN), Ok(i128::MIN));
-    check_both!(Leb128Codec, i128, &payload(0x80, 0x01), Ok(1_i128 << 126), Ok(1_i128 << 126));
-    check_both!(Leb128Codec, i128, &payload(0x80, 0x7f), Ok(-(1_i128 << 126)), Ok(-(1_i128 << 126)));
+    check_both!(
+        Leb128Codec,
+        i128,
+        &payload(0x80, 0x01),
+        Ok(1_i128 << 126),
+        Ok(1_i128 << 126)
+    );
+    check_both!(
+        Leb128Codec,
+        i128,
+        &payload(0x80, 0x7f),
+        Ok(-(1_i128 << 126)),
+        Ok(-(1_i128 << 126))
+    );
     check_both!(Leb128Codec, i128, &payload(0x80, 0x00), Err("noncanonical"), Ok(0));
     check_both!(Leb128Codec, i128, &payload(0xff, 0x7f), Err("noncanonical"), Ok(-1));
 }
