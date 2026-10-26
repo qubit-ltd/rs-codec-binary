@@ -193,12 +193,23 @@ macro_rules! assert_leb128_roundtrip {
 }
 
 macro_rules! assert_binary_roundtrip {
-    ($ty:ty, $order:ty, $value:expr) => {{
+    ($ty:ty, $order:ty, $bytes_method:ident, $value:expr) => {{
         let expected: $ty = $value;
+        let expected_bytes = expected.$bytes_method();
         let mut output = [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+        // SAFETY: Index one leaves the declared fixed-width capacity and a trailing
+        // guard.
         let written = unsafe { BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1) };
-        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
         assert_eq!(BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE, written);
+        assert_eq!(
+            expected_bytes.as_slice(),
+            &output[1..1 + written],
+            "{} / {} wire bytes",
+            stringify!($ty),
+            stringify!($order)
+        );
+        // SAFETY: The same fixed-width range is readable from index one.
+        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
         assert_eq!(expected, actual);
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -207,12 +218,23 @@ macro_rules! assert_binary_roundtrip {
 }
 
 macro_rules! assert_binary_float_roundtrip {
-    ($ty:ty, $order:ty, $value:expr) => {{
+    ($ty:ty, $order:ty, $bytes_method:ident, $value:expr) => {{
         let expected: $ty = $value;
+        let expected_bytes = expected.to_bits().$bytes_method();
         let mut output = [0xA5_u8; BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE + 2];
+        // SAFETY: Index one leaves the declared fixed-width capacity and a trailing
+        // guard.
         let written = unsafe { BinaryCodec::<$ty, $order>::encode(expected, &mut output, 1) };
-        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
         assert_eq!(BinaryCodec::<$ty, $order>::MAX_ENCODE_UNITS_PER_VALUE, written);
+        assert_eq!(
+            expected_bytes.as_slice(),
+            &output[1..1 + written],
+            "{} / {} wire bits",
+            stringify!($ty),
+            stringify!($order)
+        );
+        // SAFETY: The same fixed-width range is readable from index one.
+        let (actual, consumed) = unsafe { BinaryCodec::<$ty, $order>::decode(&output, 1) };
         assert_eq!(expected.to_bits(), actual.to_bits());
         assert_eq!(written, consumed.get());
         assert_eq!(0xA5, output[0]);
@@ -406,28 +428,34 @@ fn assert_leb128_roundtrips(bits: u128) {
     assert_leb128_roundtrip!(ZigZagCodec, isize, bits as isize);
 }
 
-/// Verifies binary codec roundtrips at non-zero offsets for every wire type.
+/// Checks every fixed-width wire type and byte order against standard-library
+/// bytes.
 fn assert_binary_roundtrips(bits: u128) {
-    assert_binary_roundtrip!(u8, BigEndian, bits as u8);
-    assert_binary_roundtrip!(u8, NativeEndian, bits as u8);
-    assert_binary_roundtrip!(i8, LittleEndian, bits as i8);
-    assert_binary_roundtrip!(i8, NativeEndian, bits as i8);
-    assert_binary_roundtrip!(u16, BigEndian, bits as u16);
-    assert_binary_roundtrip!(u16, NativeEndian, bits as u16);
-    assert_binary_roundtrip!(u32, LittleEndian, bits as u32);
-    assert_binary_roundtrip!(u32, NativeEndian, bits as u32);
-    assert_binary_roundtrip!(u64, BigEndian, bits as u64);
-    assert_binary_roundtrip!(u64, NativeEndian, bits as u64);
-    assert_binary_roundtrip!(u128, LittleEndian, bits);
-    assert_binary_roundtrip!(u128, NativeEndian, bits);
-    assert_binary_roundtrip!(i16, LittleEndian, bits as i16);
-    assert_binary_roundtrip!(i16, NativeEndian, bits as i16);
-    assert_binary_roundtrip!(i32, BigEndian, bits as i32);
-    assert_binary_roundtrip!(i32, NativeEndian, bits as i32);
-    assert_binary_roundtrip!(i64, LittleEndian, bits as i64);
-    assert_binary_roundtrip!(i64, NativeEndian, bits as i64);
-    assert_binary_float_roundtrip!(f32, BigEndian, f32::from_bits(bits as u32));
-    assert_binary_float_roundtrip!(f32, NativeEndian, f32::from_bits(bits as u32));
-    assert_binary_float_roundtrip!(f64, LittleEndian, f64::from_bits(bits as u64));
-    assert_binary_float_roundtrip!(f64, NativeEndian, f64::from_bits(bits as u64));
+    macro_rules! assert_integer_orders {
+        ($ty:ty, $value:expr) => {{
+            assert_binary_roundtrip!($ty, BigEndian, to_be_bytes, $value);
+            assert_binary_roundtrip!($ty, LittleEndian, to_le_bytes, $value);
+            assert_binary_roundtrip!($ty, NativeEndian, to_ne_bytes, $value);
+        }};
+    }
+    macro_rules! assert_float_orders {
+        ($ty:ty, $value:expr) => {{
+            assert_binary_float_roundtrip!($ty, BigEndian, to_be_bytes, $value);
+            assert_binary_float_roundtrip!($ty, LittleEndian, to_le_bytes, $value);
+            assert_binary_float_roundtrip!($ty, NativeEndian, to_ne_bytes, $value);
+        }};
+    }
+
+    assert_integer_orders!(u8, bits as u8);
+    assert_integer_orders!(i8, bits as i8);
+    assert_integer_orders!(u16, bits as u16);
+    assert_integer_orders!(i16, bits as i16);
+    assert_integer_orders!(u32, bits as u32);
+    assert_integer_orders!(i32, bits as i32);
+    assert_integer_orders!(u64, bits as u64);
+    assert_integer_orders!(i64, bits as i64);
+    assert_integer_orders!(u128, bits);
+    assert_integer_orders!(i128, bits as i128);
+    assert_float_orders!(f32, f32::from_bits(bits as u32));
+    assert_float_orders!(f64, f64::from_bits(bits as u64));
 }
