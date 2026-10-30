@@ -37,6 +37,9 @@ use crate::codec::leb128_codec::uleb_encoded_len;
 ///
 /// The decoding policy is intentionally required so wire-format callers make
 /// the canonicality contract explicit.
+/// The underlying unsigned LEB128 payload remains subject to its target
+/// integer's maximum decode width and terminal payload bits, including under
+/// [`NonStrict`]. See that policy's documentation for the width limits.
 ///
 /// ```compile_fail
 /// use qubit_codec_binary::ZigZagCodec;

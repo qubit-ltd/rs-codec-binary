@@ -52,6 +52,9 @@ pub(in crate::codec) fn map_leb128_decode_failure(error: Leb128DecodeError) -> D
 ///
 /// The decoding policy is intentionally required so wire-format callers make
 /// the canonicality contract explicit.
+/// Non-canonical input accepted by [`crate::NonStrict`] must still fit the
+/// target integer's maximum decode width and terminal payload bits. See that
+/// policy's documentation for the width limits and an example.
 ///
 /// ```compile_fail
 /// use qubit_codec_binary::Leb128Codec;
