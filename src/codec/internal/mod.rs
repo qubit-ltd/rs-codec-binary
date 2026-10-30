@@ -8,5 +8,8 @@
 
 //! Private implementation details for the binary codec module.
 
+/// Holds diagnostic details for LEB128 decoding failures.
 pub(super) mod leb128_decode_error_details;
+
+/// Restricts decode policies to implementations defined by this crate.
 pub(super) mod sealed;

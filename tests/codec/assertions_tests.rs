@@ -5,6 +5,7 @@
 //
 //    Licensed under the Apache License, Version 2.0.
 // =============================================================================
+
 use core::num::NonZeroUsize;
 
 /// Compares a decoded value and its non-zero consumed unit count.

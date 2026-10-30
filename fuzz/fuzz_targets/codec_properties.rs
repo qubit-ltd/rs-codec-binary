@@ -124,19 +124,19 @@ fn assert_decode_offset_equivalence<T>(
 /// representation of every NonStrict-successful input.
 fn assert_strict_matches_canonical_encoding<C, T, const N: usize>(
     input: &[u8],
-    strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
-    non_strict: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    strict: &Result<(T, NonZeroUsize), Leb128DecodeError>,
+    non_strict: &Result<(T, NonZeroUsize), Leb128DecodeError>,
 ) where
-    C: qubit_codec::Codec<Value = T, Unit = u8, DecodeError = Leb128DecodeError> + Default,
-    C::EncodeError: core::fmt::Debug,
-    T: Copy + core::fmt::Debug + PartialEq,
+    C: Codec<Value = T, Unit = u8, DecodeError = Leb128DecodeError> + Default,
+    C::EncodeError: Debug,
+    T: Copy + Debug + PartialEq,
 {
     let Ok((value, consumed)) = non_strict else {
         return;
     };
 
     let mut canonical = [0_u8; N];
-    let written = unsafe { qubit_codec::Codec::encode(&mut C::default(), value, &mut canonical, 0) }
+    let written = unsafe { Codec::encode(&mut C::default(), value, &mut canonical, 0) }
         .expect("LEB128-family canonical encoding is infallible");
     let canonical = &canonical[..written];
     let encoded_prefix = &input[..consumed.get()];
@@ -293,10 +293,10 @@ fn decode_arbitrary_input(input: &[u8]) {
 fn assert_policy_results<T>(
     input: &[u8],
     max_bytes: usize,
-    strict: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
-    non_strict: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    strict: Result<(T, NonZeroUsize), Leb128DecodeError>,
+    non_strict: Result<(T, NonZeroUsize), Leb128DecodeError>,
 ) where
-    T: Copy + core::fmt::Debug + PartialEq,
+    T: Copy + Debug + PartialEq,
 {
     assert_decode_result_metadata(input, max_bytes, &strict, true);
     assert_decode_result_metadata(input, max_bytes, &non_strict, false);
@@ -321,7 +321,7 @@ fn assert_policy_results<T>(
 fn assert_decode_result_metadata<T>(
     input: &[u8],
     max_bytes: usize,
-    result: &Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
+    result: &Result<(T, NonZeroUsize), Leb128DecodeError>,
     strict: bool,
 ) {
     match result {
@@ -380,11 +380,9 @@ fn assert_reference_decoders(input: &[u8]) {
 }
 
 /// Compares one codec result with an independent permissive decoder result.
-fn assert_matches_reference<T>(
-    actual: Result<(T, core::num::NonZeroUsize), Leb128DecodeError>,
-    expected: Option<(T, usize)>,
-) where
-    T: core::fmt::Debug + PartialEq,
+fn assert_matches_reference<T>(actual: Result<(T, NonZeroUsize), Leb128DecodeError>, expected: Option<(T, usize)>)
+where
+    T: Debug + PartialEq,
 {
     let actual = actual.ok().map(|(value, consumed)| (value, consumed.get()));
     assert_eq!(expected, actual);

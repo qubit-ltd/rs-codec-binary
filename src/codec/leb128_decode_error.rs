@@ -9,6 +9,7 @@ use core::fmt;
 use core::fmt::Display;
 use core::fmt::Formatter;
 use core::num::NonZeroUsize;
+use std::error::Error;
 
 use qubit_utils::nonzero;
 
@@ -192,7 +193,6 @@ impl Leb128DecodeError {
     /// // The unread 0x01 may still belong to the rejected over-width value.
     /// // An outer framing boundary is needed before decoding the next field.
     /// ```
-    #[must_use]
     #[inline]
     pub const fn consumed(self) -> Option<NonZeroUsize> {
         match self.details {
@@ -257,7 +257,6 @@ impl Leb128DecodeError {
     /// required from [`Self::start_index`] before decoding can make progress;
     /// it does not guarantee that the value will be complete at exactly that
     /// length.
-    #[must_use]
     #[inline]
     pub const fn required(self) -> Option<NonZeroUsize> {
         match self.details {
@@ -272,7 +271,6 @@ impl Leb128DecodeError {
     ///
     /// Returns `Some(additional)` for incomplete input, or `None` otherwise.
     /// The value is `required - available` and is guaranteed to be non-zero.
-    #[must_use]
     #[inline]
     pub const fn additional(self) -> Option<NonZeroUsize> {
         match self.details {
@@ -289,7 +287,6 @@ impl Leb128DecodeError {
     /// # Returns
     ///
     /// Returns `Some(available)` for incomplete input, or `None` otherwise.
-    #[must_use]
     #[inline]
     pub const fn available(self) -> Option<usize> {
         match self.details {
@@ -324,7 +321,7 @@ impl Display for Leb128DecodeError {
     }
 }
 
-impl std::error::Error for Leb128DecodeError {}
+impl Error for Leb128DecodeError {}
 
 /// Adds an absolute byte offset to an index.
 ///
