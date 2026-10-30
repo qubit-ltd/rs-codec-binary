@@ -21,8 +21,9 @@ use crate::Leb128DecodePolicy;
 /// Maps detailed LEB128 decoding failures to the generic codec failure type.
 ///
 /// Incomplete input preserves its minimum total byte requirement. Malformed
-/// and non-canonical input retains the original error and its consumed byte
-/// count so callers can advance past the invalid payload.
+/// and non-canonical input retain the original error and its consumed byte
+/// count for progress under the caller's invalid-input policy. This count
+/// does not guarantee recovery at a protocol field boundary.
 #[inline]
 pub(in crate::codec) fn map_leb128_decode_failure(error: Leb128DecodeError) -> DecodeFailure<Leb128DecodeError> {
     if let Some(required) = error.required() {

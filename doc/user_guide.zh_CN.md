@@ -126,6 +126,13 @@ assert_eq!(Some(2), error.required().map(|count| count.get()));
 assert_eq!(Some(1), error.available());
 ```
 
+对无效输入，`consumed()` 返回调用者或驱动器可按错误策略消费的非零字节数，
+不代表可信的下一字段边界。例如，将 `80 80 01 2a` 按 `u8` 解码会得到
+`Malformed`，消费量为 2；剩余的 `01` 仍可能是被拒绝的超宽编码的尾部。
+应在外层分帧边界或可信检查点恢复，不应自动把剩余字节当成下一字段。
+直接 codec 调用不会推进调用者持有的游标。不完整输入没有消费量；
+若外层还能补充数据，应保留该前缀。
+
 检查型单值路径返回 `TranscodeDecodeError<Leb128DecodeError>`。空输入或尾随字节等框架
 错误可通过 `failure_ref()` 读取；codec 自身的领域错误可通过 `domain_ref()` 读取：
 

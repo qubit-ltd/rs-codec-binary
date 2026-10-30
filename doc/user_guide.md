@@ -139,6 +139,16 @@ assert_eq!(Some(2), error.required().map(|count| count.get()));
 assert_eq!(Some(1), error.available());
 ```
 
+For invalid input, `consumed()` reports a non-zero byte count that a caller or
+driver may consume under its error policy; it does not identify a trusted
+next-field boundary. For example, decoding `80 80 01 2a` as `u8` reports
+`Malformed` with a consumed count of 2. The remaining `01` may still be the tail
+of the rejected over-width value. Recover at an outer framing boundary or a
+trusted checkpoint instead of automatically treating the remaining bytes as
+the next field. Direct codec calls do not advance a caller-owned cursor.
+Incomplete input has no consumed count; retain its prefix when the outer layer
+can supply more bytes.
+
 The checked single-value path returns
 `TranscodeDecodeError<Leb128DecodeError>`. Framework failures such as an empty
 slice or trailing bytes are available through `failure_ref()`; codec-specific

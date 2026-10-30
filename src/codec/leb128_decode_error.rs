@@ -171,6 +171,27 @@ impl Leb128DecodeError {
     ///
     /// Returns `Some(consumed)` for invalid input, or `None` for incomplete
     /// input.
+    ///
+    /// An unterminated over-width value may leave its tail unread after this
+    /// count. Advancing by the reported count does not establish the start of
+    /// the next protocol field. Recover only at an outer framing boundary or
+    /// a trusted checkpoint. The codec itself does not advance a caller-owned
+    /// cursor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use qubit_codec_binary::{Leb128Codec, Leb128DecodeErrorKind, NonStrict};
+    ///
+    /// let input = [0x80, 0x80, 0x01, 0x2a];
+    /// // SAFETY: The non-empty slice provides the required first readable byte.
+    /// let error = unsafe { Leb128Codec::<u8, NonStrict>::decode(&input, 0) }
+    ///     .expect_err("u8 cannot use two unterminated LEB128 bytes");
+    /// assert_eq!(Leb128DecodeErrorKind::Malformed, error.kind());
+    /// assert_eq!(Some(2), error.consumed().map(|count| count.get()));
+    /// // The unread 0x01 may still belong to the rejected over-width value.
+    /// // An outer framing boundary is needed before decoding the next field.
+    /// ```
     #[must_use]
     #[inline]
     pub const fn consumed(self) -> Option<NonZeroUsize> {
