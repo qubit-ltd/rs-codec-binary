@@ -316,7 +316,7 @@ impl Display for Leb128DecodeError {
             Leb128DecodeErrorDetails::Invalid { kind, consumed } => {
                 write!(
                     formatter,
-                    "{} at byte {}: detected at byte {} after consuming {} bytes",
+                    "{} at byte {}: detected at byte {}; consumable byte count: {}",
                     kind, self.start_index, self.error_index, consumed,
                 )
             }

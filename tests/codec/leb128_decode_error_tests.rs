@@ -74,11 +74,11 @@ fn test_invalid_errors_store_start_error_and_consumed_units() {
     assert_eq!(None, malformed.additional());
     assert_eq!(None, noncanonical.available());
     assert_eq!(
-        "malformed LEB128 integer at byte 5: detected at byte 7 after consuming 4 bytes",
+        "malformed LEB128 integer at byte 5: detected at byte 7; consumable byte count: 4",
         malformed.to_string(),
     );
     assert_eq!(
-        "non-canonical LEB128 integer at byte 9: detected at byte 10 after consuming 2 bytes",
+        "non-canonical LEB128 integer at byte 9: detected at byte 10; consumable byte count: 2",
         noncanonical.to_string(),
     );
 }
