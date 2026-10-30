@@ -7,6 +7,7 @@
 // =============================================================================
 
 use core::any::type_name;
+use core::convert::Infallible;
 use core::fmt::Debug;
 use core::num::NonZeroUsize;
 
@@ -22,6 +23,48 @@ type DecodeResult<T> = Result<(T, NonZeroUsize), Leb128DecodeError>;
 
 fn count(value: usize) -> NonZeroUsize {
     NonZeroUsize::new(value).expect("fixture counts are non-zero")
+}
+
+fn check_encoding<C>(encode: unsafe fn(C::Value, &mut [u8], usize) -> usize, value: C::Value, expected: &[u8])
+where
+    C: Codec<Unit = u8, EncodeError = Infallible> + Default,
+    C::Value: Copy + Debug,
+{
+    let maximum = C::MAX_ENCODE_UNITS_PER_VALUE;
+    assert!(!expected.is_empty() && expected.len() <= maximum);
+    for offset in [0, 3] {
+        let label = format!("{} value={value:?} offset={offset}", type_name::<C>());
+        let mut direct = vec![0xa5; offset + maximum + 1];
+        let mut via_trait = direct.clone();
+        // SAFETY: The valid offset exposes the declared maximum writable width.
+        let written = unsafe { encode(value, &mut direct, offset) };
+        // SAFETY: The valid offset exposes the declared maximum writable width.
+        let trait_written = unsafe { Codec::encode(&mut C::default(), &value, &mut via_trait, offset) }
+            .expect("every scalar fixture is encodable");
+        assert_eq!(expected.len(), written, "{label}: inherent length");
+        assert_eq!(expected.len(), trait_written, "{label}: trait length");
+        for (api, output) in [("inherent", direct), ("trait", via_trait)] {
+            let end = offset + expected.len();
+            assert_eq!(expected, &output[offset..end], "{label}: {api} bytes");
+            assert!(
+                output[..offset].iter().all(|&byte| byte == 0xa5),
+                "{label}: {api} prefix guard"
+            );
+            assert!(
+                output[end..].iter().all(|&byte| byte == 0xa5),
+                "{label}: {api} suffix guard"
+            );
+        }
+    }
+}
+
+macro_rules! encode_both {
+    ($codec:ident, $ty:ty, $value:expr, $expected:expr) => {{
+        let value: $ty = $value;
+        let expected: &[u8] = $expected;
+        check_encoding::<$codec<$ty, Strict>>($codec::<$ty, Strict>::encode, value, expected);
+        check_encoding::<$codec<$ty, NonStrict>>($codec::<$ty, NonStrict>::encode, value, expected);
+    }};
 }
 
 /// Constructs eighteen fixed continuation bytes and one terminal payload.
@@ -150,4 +193,38 @@ fn test_128_boundary_continuation_limits() {
     check_both!(Leb128Codec, u128, &[0x80; 19], Err("malformed"), Err("malformed"));
     check_both!(Leb128Codec, i128, &[0x80; 19], Err("malformed"), Err("malformed"));
     check_both!(ZigZagCodec, i128, &[0x80; 19], Err("malformed"), Err("malformed"));
+}
+
+#[test]
+fn test_128_encoding_unsigned_golden_vectors() {
+    encode_both!(Leb128Codec, u128, u128::MAX, &payload(0xff, 0x03));
+    encode_both!(Leb128Codec, u128, 1_u128 << 126, &payload(0x80, 0x01));
+    let before = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f];
+    let after = [0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01];
+    encode_both!(Leb128Codec, u128, (1_u128 << 70) - 1, &before);
+    encode_both!(Leb128Codec, u128, 1_u128 << 70, &after);
+}
+
+#[test]
+fn test_128_encoding_signed_golden_vectors() {
+    encode_both!(Leb128Codec, i128, i128::MAX, &payload(0xff, 0x01));
+    encode_both!(Leb128Codec, i128, i128::MIN, &payload(0x80, 0x7e));
+    encode_both!(Leb128Codec, i128, 1_i128 << 126, &payload(0x80, 0x01));
+    encode_both!(Leb128Codec, i128, -(1_i128 << 126), &payload(0x80, 0x7f));
+    let before = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f];
+    let after = [0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0xc0, 0x00];
+    encode_both!(Leb128Codec, i128, (1_i128 << 69) - 1, &before);
+    encode_both!(Leb128Codec, i128, 1_i128 << 69, &after);
+}
+
+#[test]
+fn test_128_encoding_zig_zag_golden_vectors() {
+    encode_both!(ZigZagCodec, i128, i128::MIN, &payload(0xff, 0x03));
+    let mut maximum = payload(0xff, 0x03);
+    maximum[0] = 0xfe;
+    encode_both!(ZigZagCodec, i128, i128::MAX, &maximum);
+    let before = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f];
+    let after = [0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01];
+    encode_both!(ZigZagCodec, i128, -(1_i128 << 69), &before);
+    encode_both!(ZigZagCodec, i128, -(1_i128 << 69) - 1, &after);
 }
