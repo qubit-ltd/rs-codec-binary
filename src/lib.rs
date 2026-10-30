@@ -13,6 +13,43 @@
 //! This crate provides fixed-width scalar, LEB128, and ZigZag codecs for
 //! caller-managed byte buffers. Stream-oriented readers and writers live in
 //! `qubit-io-binary`.
+//!
+//! # Checked single-value conversion
+//!
+//! For ordinary one-value conversion, prefer [`qubit_codec::CodecValueEncoder`]
+//! and [`qubit_codec::CodecValueDecoder`]. These checked adapters own the
+//! temporary buffer and keep the unsafe boundary inside the adapter:
+//!
+//! ```
+//! use qubit_codec::{CodecValueDecoder, CodecValueEncoder};
+//! use qubit_codec_binary::{Leb128Codec, NonStrict, Strict};
+//!
+//! let mut encoder = CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
+//! let encoded = encoder.encode(&300).expect("u64 is always encodable");
+//!
+//! let mut decoder = CodecValueDecoder::new(Leb128Codec::<u64, Strict>::default());
+//! let decoded = decoder.decode(&encoded).expect("the encoding is canonical");
+//! assert_eq!(300, decoded);
+//! ```
+//!
+//! Each adapter handles exactly one value. The decoder rejects empty input and
+//! trailing bytes, and does not return a consumed prefix. Encoding is always
+//! canonical; `NonStrict` is the conventional policy marker for this
+//! encode-only path, while `Strict` verifies the canonical encoded value.
+//!
+//! # API navigation
+//!
+//! For fixed-width fields, see [`BinaryCodec`] and
+//! [`qubit_codec::BigEndian`], [`qubit_codec::LittleEndian`], and
+//! [`qubit_codec::NativeEndian`]. For variable-width fields, see
+//! [`Leb128Codec`], [`ZigZagCodec`], [`Strict`], and [`NonStrict`].
+//!
+//! Direct calls to the low-level `unsafe` methods require the surrounding code
+//! to guarantee valid input/output indices and sufficient readable/writable
+//! capacity. See [`qubit_codec::Codec`] for the low-level contract.
+//!
+//! Read the [English user guide](https://github.com/qubit-ltd/rs-codec-binary/blob/main/doc/user_guide.md)
+//! or the [中文用户指南](https://github.com/qubit-ltd/rs-codec-binary/blob/main/doc/user_guide.zh_CN.md).
 
 mod codec;
 
