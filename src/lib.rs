@@ -16,12 +16,14 @@
 //!
 //! # Checked single-value conversion
 //!
-//! For ordinary one-value conversion, prefer [`qubit_codec::CodecValueEncoder`]
-//! and [`qubit_codec::CodecValueDecoder`]. These checked adapters own the
-//! temporary buffer and keep the unsafe boundary inside the adapter:
+//! For ordinary one-value conversion, prefer
+//! [`qubit_codec::CodecValueEncoder`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/struct.CodecValueEncoder.html)
+//! and [`qubit_codec::CodecValueDecoder`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/struct.CodecValueDecoder.html).
+//! These checked adapters own the temporary buffer and keep the unsafe
+//! boundary inside the adapter:
 //!
 //! ```
-//! use qubit_codec::{CodecValueDecoder, CodecValueEncoder};
+//! use qubit_codec::{CodecValueDecoder, CodecValueEncoder, ValueEncoder};
 //! use qubit_codec_binary::{Leb128Codec, NonStrict, Strict};
 //!
 //! let mut encoder = CodecValueEncoder::new(Leb128Codec::<u64, NonStrict>::default());
@@ -40,13 +42,16 @@
 //! # API navigation
 //!
 //! For fixed-width fields, see [`BinaryCodec`] and
-//! [`qubit_codec::BigEndian`], [`qubit_codec::LittleEndian`], and
-//! [`qubit_codec::NativeEndian`]. For variable-width fields, see
+//! [`qubit_codec::BigEndian`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/struct.BigEndian.html),
+//! [`qubit_codec::LittleEndian`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/struct.LittleEndian.html),
+//! and [`qubit_codec::NativeEndian`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/struct.NativeEndian.html).
+//! For variable-width fields, see
 //! [`Leb128Codec`], [`ZigZagCodec`], [`Strict`], and [`NonStrict`].
 //!
 //! Direct calls to the low-level `unsafe` methods require the surrounding code
 //! to guarantee valid input/output indices and sufficient readable/writable
-//! capacity. See [`qubit_codec::Codec`] for the low-level contract.
+//! capacity. See [`qubit_codec::Codec`](https://docs.rs/qubit-codec/0.17.1/qubit_codec/trait.Codec.html)
+//! for the low-level contract.
 //!
 //! Read the [English user guide](https://github.com/qubit-ltd/rs-codec-binary/blob/main/doc/user_guide.md)
 //! or the [中文用户指南](https://github.com/qubit-ltd/rs-codec-binary/blob/main/doc/user_guide.zh_CN.md).
