@@ -7,4 +7,6 @@
 // =============================================================================
 
 /// Marker trait preventing external LEB128 decode policy implementations.
-pub trait Sealed {}
+pub trait Sealed {
+    // empty
+}

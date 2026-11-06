@@ -182,7 +182,9 @@ impl Leb128DecodeError {
     /// # Examples
     ///
     /// ```
-    /// use qubit_codec_binary::{Leb128Codec, Leb128DecodeErrorKind, NonStrict};
+    /// use qubit_codec_binary::Leb128Codec;
+    /// use qubit_codec_binary::Leb128DecodeErrorKind;
+    /// use qubit_codec_binary::NonStrict;
     ///
     /// let input = [0x80, 0x80, 0x01, 0x2a];
     /// // SAFETY: The non-empty slice provides the required first readable byte.
@@ -297,6 +299,15 @@ impl Leb128DecodeError {
 }
 
 impl Display for Leb128DecodeError {
+    /// Formats the error with its kind, byte positions, and recovery context.
+    ///
+    /// # Parameters
+    ///
+    /// - `formatter`: Destination formatter for the error message.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`fmt::Error`] if writing the formatted message fails.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self.details {
             Leb128DecodeErrorDetails::Incomplete { required, available } => {

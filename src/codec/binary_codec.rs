@@ -148,9 +148,15 @@ impl<O> Codec for BinaryCodec<u8, O>
 where
     O: ByteOrderSpec,
 {
+    /// Logical unsigned byte decoded from or encoded into the unit buffer.
     type Value = u8;
+    /// One byte used as both the input and output unit.
     type Unit = u8;
+    /// Decoding a byte cannot fail after the caller satisfies the safety
+    /// contract.
     type DecodeError = Infallible;
+    /// Encoding a byte cannot fail after the caller satisfies the safety
+    /// contract.
     type EncodeError = Infallible;
 
     const MIN_UNITS_PER_VALUE: usize = 1;
@@ -158,6 +164,21 @@ where
 
     const MAX_DECODE_UNITS_PER_VALUE: usize = 1;
 
+    /// Decodes one byte from the supplied input slice.
+    ///
+    /// # Parameters
+    ///
+    /// - `input`: Source byte buffer.
+    /// - `input_index`: Index of the byte to decode.
+    ///
+    /// # Returns
+    ///
+    /// Returns the decoded byte and the number of bytes consumed.
+    ///
+    /// # Safety
+    ///
+    /// The caller must satisfy the `Codec::decode` buffer and index
+    /// preconditions; the input must contain the byte at `input_index`.
     #[inline]
     unsafe fn decode(
         &mut self,
@@ -168,6 +189,22 @@ where
         Ok(unsafe { Self::decode(input, input_index) })
     }
 
+    /// Encodes one byte into the supplied output slice.
+    ///
+    /// # Parameters
+    ///
+    /// - `value`: Byte value to encode.
+    /// - `output`: Destination byte buffer.
+    /// - `output_index`: Index where the encoded byte is written.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Safety
+    ///
+    /// The caller must satisfy the `Codec::encode` buffer and index
+    /// preconditions; the output must have space at `output_index`.
     #[inline]
     unsafe fn encode(
         &mut self,
@@ -260,9 +297,15 @@ impl<O> Codec for BinaryCodec<i8, O>
 where
     O: ByteOrderSpec,
 {
+    /// Logical signed byte decoded from or encoded into the unit buffer.
     type Value = i8;
+    /// One byte used as both the input and output unit.
     type Unit = u8;
+    /// Decoding a byte cannot fail after the caller satisfies the safety
+    /// contract.
     type DecodeError = Infallible;
+    /// Encoding a byte cannot fail after the caller satisfies the safety
+    /// contract.
     type EncodeError = Infallible;
 
     const MIN_UNITS_PER_VALUE: usize = 1;
@@ -270,6 +313,21 @@ where
 
     const MAX_DECODE_UNITS_PER_VALUE: usize = 1;
 
+    /// Decodes one signed byte from the supplied input slice.
+    ///
+    /// # Parameters
+    ///
+    /// - `input`: Source byte buffer.
+    /// - `input_index`: Index of the byte to decode.
+    ///
+    /// # Returns
+    ///
+    /// Returns the decoded signed byte and the number of bytes consumed.
+    ///
+    /// # Safety
+    ///
+    /// The caller must satisfy the `Codec::decode` buffer and index
+    /// preconditions; the input must contain the byte at `input_index`.
     #[inline]
     unsafe fn decode(
         &mut self,
@@ -280,6 +338,22 @@ where
         Ok(unsafe { Self::decode(input, input_index) })
     }
 
+    /// Encodes one signed byte into the supplied output slice.
+    ///
+    /// # Parameters
+    ///
+    /// - `value`: Signed byte value to encode.
+    /// - `output`: Destination byte buffer.
+    /// - `output_index`: Index where the encoded byte is written.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of bytes written.
+    ///
+    /// # Safety
+    ///
+    /// The caller must satisfy the `Codec::encode` buffer and index
+    /// preconditions; the output must have space at `output_index`.
     #[inline]
     unsafe fn encode(
         &mut self,
@@ -386,9 +460,13 @@ macro_rules! impl_integer_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, BigEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = $len;
@@ -396,6 +474,21 @@ macro_rules! impl_integer_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -407,6 +500,22 @@ macro_rules! impl_integer_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,
@@ -512,9 +621,13 @@ macro_rules! impl_integer_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, LittleEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = $len;
@@ -522,6 +635,21 @@ macro_rules! impl_integer_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -533,6 +661,22 @@ macro_rules! impl_integer_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,
@@ -645,9 +789,13 @@ macro_rules! impl_float_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, BigEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = $len;
@@ -655,6 +803,21 @@ macro_rules! impl_float_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -666,6 +829,22 @@ macro_rules! impl_float_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,
@@ -774,9 +953,13 @@ macro_rules! impl_float_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, LittleEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
 
             const MIN_UNITS_PER_VALUE: usize = $len;
@@ -784,6 +967,21 @@ macro_rules! impl_float_binary_codec {
 
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -795,6 +993,22 @@ macro_rules! impl_float_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,
@@ -875,14 +1089,33 @@ macro_rules! impl_native_integer_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, NativeEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
             const MIN_UNITS_PER_VALUE: usize = $len;
             const MAX_ENCODE_UNITS_PER_VALUE: usize = $len;
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -892,6 +1125,22 @@ macro_rules! impl_native_integer_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,
@@ -970,14 +1219,33 @@ macro_rules! impl_native_float_binary_codec {
         }
 
         impl Codec for BinaryCodec<$ty, NativeEndian> {
+            /// The scalar value represented by this codec implementation.
             type Value = $ty;
+            /// One byte of the encoded representation.
             type Unit = u8;
+            /// Decoding cannot fail after the buffer preconditions are met.
             type DecodeError = Infallible;
+            /// Encoding cannot fail after the buffer preconditions are met.
             type EncodeError = Infallible;
             const MIN_UNITS_PER_VALUE: usize = $len;
             const MAX_ENCODE_UNITS_PER_VALUE: usize = $len;
             const MAX_DECODE_UNITS_PER_VALUE: usize = $len;
 
+            /// Decodes one scalar value from the supplied input slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source byte buffer.
+            /// - `input_index`: Index where decoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the decoded scalar and the number of bytes consumed.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::decode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -987,6 +1255,22 @@ macro_rules! impl_native_float_binary_codec {
                 Ok(unsafe { Self::decode(input, input_index) })
             }
 
+            /// Encodes one scalar value into the supplied output slice.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Scalar value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Index where encoding starts.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written.
+            ///
+            /// # Safety
+            ///
+            /// The caller must satisfy the `Codec::encode` buffer and index
+            /// preconditions for this scalar's fixed encoded width.
             #[inline]
             unsafe fn encode(
                 &mut self,

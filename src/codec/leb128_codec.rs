@@ -24,6 +24,11 @@ use crate::Leb128DecodePolicy;
 /// and non-canonical input retain the original error and its consumed byte
 /// count for progress under the caller's invalid-input policy. This count
 /// does not guarantee recovery at a protocol field boundary.
+///
+/// # Parameters
+///
+/// - `error`: Detailed LEB128 decode failure to preserve in the generic codec
+///   failure.
 #[inline]
 pub(in crate::codec) fn map_leb128_decode_failure(error: Leb128DecodeError) -> DecodeFailure<Leb128DecodeError> {
     if let Some(required) = error.required() {
@@ -773,6 +778,10 @@ unsafe fn write_uleb_unchecked(output: &mut [u8], index: usize, mut value: u128)
 }
 
 /// Computes the canonical unsigned LEB128 byte width for `value`.
+///
+/// # Parameters
+///
+/// - `value`: Unsigned integer value whose canonical encoded width is measured.
 #[must_use]
 #[inline]
 pub(in crate::codec) fn uleb_encoded_len(mut value: u128) -> usize {
@@ -825,6 +834,10 @@ unsafe fn write_sleb_unchecked(output: &mut [u8], index: usize, mut value: i128)
 }
 
 /// Computes the canonical signed LEB128 byte width for `value`.
+///
+/// # Parameters
+///
+/// - `value`: Signed integer value whose canonical encoded width is measured.
 #[must_use]
 #[inline]
 fn sleb_encoded_len(mut value: i128) -> usize {
