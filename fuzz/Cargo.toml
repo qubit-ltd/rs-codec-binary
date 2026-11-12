@@ -12,7 +12,7 @@ cargo-fuzz = true
 leb128 = "^0.2"
 libfuzzer-sys = "^0.4"
 qubit-codec = "^0.17"
-qubit-codec-binary = { path = ".." }
+qubit-codec-binary = { path = "../", version = "^0.9" }
 
 [[bin]]
 name = "codec_properties"
