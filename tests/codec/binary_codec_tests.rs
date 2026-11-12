@@ -116,9 +116,12 @@ fn test_binary_codec_writes_to_explicit_index_unchecked() {
     assert_eq!([0xaa, 0x78, 0x56, 0x34, 0x12, 0xbb], output);
 }
 
+// These tests check debug-only defensive diagnostics for invalid unsafe calls.
+// They rely on the assertions running before memory access and do not establish
+// that violating the unsafe buffer contract is safe.
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec decode requires sufficient readable bytes")]
 fn test_binary_codec_big_endian_decode_checks_readable_width() {
     unsafe {
         let _ = BinaryCodec::<u32, BigEndian>::decode(&[0; 3], 0);
@@ -127,7 +130,7 @@ fn test_binary_codec_big_endian_decode_checks_readable_width() {
 
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec encode requires sufficient writable bytes")]
 fn test_binary_codec_little_endian_encode_checks_writable_width() {
     unsafe {
         BinaryCodec::<u32, LittleEndian>::encode(0, &mut [0; 3], 0);
@@ -136,7 +139,7 @@ fn test_binary_codec_little_endian_encode_checks_writable_width() {
 
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec decode requires sufficient readable bytes")]
 fn test_binary_codec_big_endian_float_decode_checks_readable_width() {
     unsafe {
         let _ = BinaryCodec::<f32, BigEndian>::decode(&[0; 3], 0);
@@ -145,7 +148,7 @@ fn test_binary_codec_big_endian_float_decode_checks_readable_width() {
 
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec encode requires sufficient writable bytes")]
 fn test_binary_codec_little_endian_float_encode_checks_writable_width() {
     unsafe {
         BinaryCodec::<f64, LittleEndian>::encode(0.0, &mut [0; 7], 0);
@@ -154,7 +157,7 @@ fn test_binary_codec_little_endian_float_encode_checks_writable_width() {
 
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec decode requires sufficient readable bytes")]
 fn test_binary_codec_native_endian_decode_checks_readable_width() {
     unsafe {
         let _ = BinaryCodec::<u64, NativeEndian>::decode(&[0; 7], 0);
@@ -163,7 +166,7 @@ fn test_binary_codec_native_endian_decode_checks_readable_width() {
 
 #[cfg(debug_assertions)]
 #[test]
-#[should_panic]
+#[should_panic(expected = "BinaryCodec encode requires sufficient writable bytes")]
 fn test_binary_codec_native_endian_float_encode_checks_writable_width() {
     unsafe {
         BinaryCodec::<f64, NativeEndian>::encode(0.0, &mut [0; 7], 0);
