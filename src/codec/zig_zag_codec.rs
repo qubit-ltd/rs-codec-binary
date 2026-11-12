@@ -163,21 +163,69 @@ macro_rules! impl_zig_zag_codec {
         where
             P: Leb128DecodePolicy,
         {
+            /// The signed integer represented by this codec.
             type Value = $signed;
+            /// One byte of the ZigZag LEB128 representation.
             type Unit = u8;
+            /// Detailed errors for incomplete, malformed, or policy-rejected input.
             type DecodeError = Leb128DecodeError;
+            /// Encoding is infallible for every value of this signed integer type.
             type EncodeError = Infallible;
 
+            /// Minimum bytes readable before decoding can be attempted.
             const MIN_UNITS_PER_VALUE: usize = 1;
+            /// Maximum bytes emitted by canonical ZigZag plus unsigned LEB128 encoding.
             const MAX_ENCODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_ENCODE_UNITS_PER_VALUE;
+            /// Maximum bytes consumed by decoding this signed integer type.
             const MAX_DECODE_UNITS_PER_VALUE: usize = Leb128Codec::<$unsigned, NonStrict>::MAX_DECODE_UNITS_PER_VALUE;
 
+            /// Returns the exact width of the canonical unsigned LEB128 encoding
+            /// of `value` after ZigZag mapping.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Signed integer value whose encoded width is queried.
+            ///
+            /// # Returns
+            ///
+            /// Returns a width of at least one byte and no more than
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`]. The decoding policy does not
+            /// affect this length.
             #[inline]
             fn encode_len(&self, value: &$signed) -> usize {
                 let encoded = ((*value as $unsigned) << 1) ^ ((*value >> $shift) as $unsigned);
                 uleb_encoded_len(encoded as u128)
             }
 
+            /// Decodes one ZigZag-mapped unsigned LEB128 value and reports its
+            /// byte consumption.
+            ///
+            /// # Parameters
+            ///
+            /// - `input`: Source bytes.
+            /// - `input_index`: Start index of the encoded value.
+            ///
+            /// # Returns
+            ///
+            /// Returns the signed value and the non-zero number of bytes consumed.
+            ///
+            /// # Errors
+            ///
+            /// Returns [`DecodeFailure::Incomplete`] with the detailed error
+            /// retained as its source and a minimum total byte requirement when
+            /// a valid prefix needs more input. Returns [`DecodeFailure::Invalid`]
+            /// with the detailed error and consumed-byte count for malformed
+            /// input or, under [`crate::Strict`], a non-canonical underlying
+            /// unsigned LEB128 representation. The required count is a lower
+            /// bound, not a guarantee that decoding will succeed at that length.
+            /// The consumed count is not a guaranteed protocol-field recovery
+            /// boundary. Non-strict decoding still enforces the target integer's
+            /// maximum width and terminal payload-bit limits.
+            ///
+            /// # Safety
+            ///
+            /// `input_index` must be a valid boundary and at least
+            /// [`Self::MIN_UNITS_PER_VALUE`] bytes must be readable there.
             #[inline]
             unsafe fn decode(
                 &mut self,
@@ -191,6 +239,31 @@ macro_rules! impl_zig_zag_codec {
                 unsafe { Self::decode(input, input_index) }.map_err(map_leb128_decode_failure)
             }
 
+            /// Encodes one value using canonical ZigZag mapping followed by
+            /// unsigned LEB128 encoding.
+            ///
+            /// # Parameters
+            ///
+            /// - `value`: Signed integer value to encode.
+            /// - `output`: Destination byte buffer.
+            /// - `output_index`: Start index in `output`.
+            ///
+            /// # Returns
+            ///
+            /// Returns the number of bytes written, equal to
+            /// [`Self::encode_len`] for `value`.
+            ///
+            /// # Errors
+            ///
+            /// This implementation uses [`Infallible`]; every value of the
+            /// signed integer type can be encoded.
+            ///
+            /// # Safety
+            ///
+            /// The caller must ensure [`Codec::can_encode_value`] returned
+            /// `true` for `value`. Starting at `output_index`, provide either
+            /// the exact [`Self::encode_len`] capacity for `value` or at least
+            /// [`Self::MAX_ENCODE_UNITS_PER_VALUE`] writable bytes.
             #[inline]
             unsafe fn encode(
                 &mut self,
